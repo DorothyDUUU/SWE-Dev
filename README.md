@@ -1,3 +1,5 @@
+![logo](assets/logo.png)
+
 # 💻 SWE‑Dev: Evaluating and Training Autonomous Feature‑Driven Software Development
 
 [![project](https://img.shields.io/badge/project-Page-blue)](https://dorothyduuu.github.io/SWE-Dev-dataset/)
