@@ -2,7 +2,7 @@
 
 # 💻 SWE‑Dev: Evaluating and Training Autonomous Feature‑Driven Software Development
 
-[![project](https://img.shields.io/badge/project-Page-blue)](https://dorothyduuu.github.io/SWE-Dev-dataset/)
+[![project](https://img.shields.io/badge/project-Page-blue)](https://dorothyduuu.github.io/SWE-Dev/)
 [![arXiv](https://img.shields.io/badge/arXiv-2505.16975-b31b1b.svg)](https://arxiv.org/abs/2505.16975)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
 [![Kaggle](https://img.shields.io/badge/Kaggle-dataset-blue.svg)](https://www.kaggle.com/datasets/dorothydu/fdd-bench)
