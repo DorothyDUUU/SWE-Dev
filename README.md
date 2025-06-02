@@ -9,7 +9,7 @@
 > 🎯 **SWE‑Dev** is the **first large‑scale benchmark and training corpus** for **feature‑driven development (FDD)** — the real‑world task of adding new functionality to existing codebases.
 > It ships **14 000 training** and **500 test** tasks, each with a **runnable environment** and **developer‑written unit tests**, enabling both *supervised fine‑tuning* and *reinforcement learning from executable rewards*.
 
-[📄 Dataset Overview](assets/overview.pdf)
+![📄 Dataset Overview](assets/overview.jpg)
 
 ---
 
@@ -90,14 +90,14 @@ We also integrate 10 Multi-Agent Systems inference in the [MASLab](https://githu
 |:---:|:------------------------------------------------------------------------------------------------|:------------:|:-------:|:-------:|:----:|:-----------------:|
 | 1   | [Reflexion](https://arxiv.org/abs/2303.11366)                                                   | NeurIPS 2023 | Fixed   | Fixed   | No   | Yes               |
 | 2   | [Self-Consistency](https://arxiv.org/abs/2203.11171)                                            | ICLR 2024    | Fixed   | Fixed   | No   | Yes               |
-| 3   | [LLM Debate (Improving Factuality...)](https://arxiv.org/abs/2305.14325)                         | ICML 2024    | Fixed   | Fixed   | No   | Pre-defined Roles |
-| 4   | [MAD (Multi-Agent Discussion Framework)](https://arxiv.org/abs/2402.18034)                       | EMNLP 2024   | Fixed   | Fixed   | No   | Pre-defined Roles |
+| 3   | [LLM Debate](https://arxiv.org/abs/2305.14325)                         | ICML 2024    | Fixed   | Fixed   | No   | Pre-defined Roles |
+| 4   | [MAD](https://arxiv.org/abs/2402.18034)                       | EMNLP 2024   | Fixed   | Fixed   | No   | Pre-defined Roles |
 | 5   | [Self-Refine](https://arxiv.org/abs/2303.17651)                                                  | NeurIPS 2024 | Fixed   | Fixed   | No   | Yes               |
 | 6   | [AgentVerse](https://openreview.net/forum?id=qPrrV093o0)                                         | ICLR 2024    | Dynamic | Fixed   | No   | Yes               |
 | 7   | [MetaGPT](https://openreview.net/forum?id=VtmBAGCN7o)                                           | ICLR 2024    | Fixed   | Fixed   | Yes  | Coding-Specific   |
 | 8   | [ChatDev](https://arxiv.org/abs/2307.07924)                                                      | ACL 2024     | Fixed   | Fixed   | Yes  | Coding-Specific   |
 | 9   | [MapCoder](https://arxiv.org/abs/2405.08586)                                                      | ACL 2024     | Fixed   | Fixed   | Yes  | Coding-Specific   |
-| 10  | [EvoMAC (Evolving LLM-based Multi-Agent Systems)](https://arxiv.org/abs/2405.03340)                | ICLR 2025    | Dynamic | Dynamic | Yes  | Coding-Specific   |
+| 10  | [EvoMAC](https://arxiv.org/abs/2405.03340)                | ICLR 2025    | Dynamic | Dynamic | Yes  | Coding-Specific   |
 
 
 ### 4. Fine‑tuning
@@ -123,6 +123,7 @@ We also integrate 10 Multi-Agent Systems inference in the [MASLab](https://githu
 | Reasoning LLMs      | 10       | 51.21 %           | 22.51 %           |
 | Multi‑Agent Systems | 10       | -                 | -                 |
 
+![Single LLM][assets/single_infer.pdf]
 ---
 
 ## 📢 News
