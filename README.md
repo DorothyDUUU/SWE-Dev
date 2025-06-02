@@ -9,7 +9,7 @@
 > 🎯 **SWE‑Dev** is the **first large‑scale benchmark and training corpus** for **feature‑driven development (FDD)** — the real‑world task of adding new functionality to existing codebases.
 > It ships **14 000 training** and **500 test** tasks, each with a **runnable environment** and **developer‑written unit tests**, enabling both *supervised fine‑tuning* and *reinforcement learning from executable rewards*.
 
-![📄 Dataset Overview](assets/overview.pdf)
+![📄 Dataset Overview](assets/overview.jpg)
 
 ---
 
@@ -123,7 +123,7 @@ We also integrate 10 Multi-Agent Systems inference in the [MASLab](https://githu
 | Reasoning LLMs      | 10       | 51.21 %           | 22.51 %           |
 | Multi‑Agent Systems | 10       | -                 | -                 |
 
-![Single LLM](assets/single_infer.pdf)
+![Single LLM](assets/single_infer.jpg)
 
 ---
 
