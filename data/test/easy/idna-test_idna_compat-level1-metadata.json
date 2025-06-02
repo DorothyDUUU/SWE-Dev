@@ -1,0 +1,121 @@
+{
+  "dir_path": "/app/idna",
+  "package_name": "idna",
+  "sample_name": "idna-test_idna_compat",
+  "src_dir": "idna/",
+  "test_dir": "tests/",
+  "test_file": "tests/test_idna_compat.py",
+  "test_code": "#!/usr/bin/env python\n\nimport unittest\n\nimport idna.compat\n\n\nclass IDNACompatTests(unittest.TestCase):\n    def testToASCII(self):\n        self.assertEqual(\n            idna.compat.ToASCII(\"\\u30c6\\u30b9\\u30c8.xn--zckzah\"),\n            b\"xn--zckzah.xn--zckzah\",\n        )\n\n    def testToUnicode(self):\n        self.assertEqual(\n            idna.compat.ToUnicode(b\"xn--zckzah.xn--zckzah\"),\n            \"\\u30c6\\u30b9\\u30c8.\\u30c6\\u30b9\\u30c8\",\n        )\n\n    def test_nameprep(self):\n        self.assertRaises(NotImplementedError, idna.compat.nameprep, \"a\")\n\n\nif __name__ == \"__main__\":\n    unittest.main()\n",
+  "GT_file_code": {
+    "idna/compat.py": "from typing import Any, Union\n\nfrom .core import decode, encode\n\n\ndef ToASCII(label: str) -> bytes:\n    return encode(label)\n\n\ndef ToUnicode(label: Union[bytes, bytearray]) -> str:\n    return decode(label)\n\n\ndef nameprep(s: Any) -> None:\n    raise NotImplementedError(\"IDNA 2008 does not utilise nameprep protocol\")\n"
+  },
+  "GT_src_dict": {
+    "idna/compat.py": {
+      "ToASCII": {
+        "code": "def ToASCII(label: str) -> bytes:\n    \"\"\"Converts a string label to its ASCII representation.\n\nParameters:\n- label (str): The input string label to be encoded into ASCII. \n\nReturns:\n- bytes: The ASCII-encoded byte representation of the input label.\n\nDependencies:\nThis function relies on the `encode` function imported from the `.core` module, which performs the actual encoding process. Ensure that the `encode` function is correctly implemented to handle the conversion.\"\"\"\n    return encode(label)",
+        "docstring": "Converts a string label to its ASCII representation.\n\nParameters:\n- label (str): The input string label to be encoded into ASCII. \n\nReturns:\n- bytes: The ASCII-encoded byte representation of the input label.\n\nDependencies:\nThis function relies on the `encode` function imported from the `.core` module, which performs the actual encoding process. Ensure that the `encode` function is correctly implemented to handle the conversion.",
+        "signature": "def ToASCII(label: str) -> bytes:",
+        "type": "Function",
+        "class_signature": null
+      },
+      "ToUnicode": {
+        "code": "def ToUnicode(label: Union[bytes, bytearray]) -> str:\n    \"\"\"Converts a given byte sequence or bytearray representation of a label into its Unicode string equivalent.\n\nParameters:\n- label (Union[bytes, bytearray]): The byte sequence or bytearray to be decoded into a Unicode string.\n\nReturns:\n- str: The decoded Unicode string representation of the input label.\n\nDependencies:\n- The function relies on the `decode` function from the `core` module, which performs the actual decoding of the byte sequence into a string.\"\"\"\n    return decode(label)",
+        "docstring": "Converts a given byte sequence or bytearray representation of a label into its Unicode string equivalent.\n\nParameters:\n- label (Union[bytes, bytearray]): The byte sequence or bytearray to be decoded into a Unicode string.\n\nReturns:\n- str: The decoded Unicode string representation of the input label.\n\nDependencies:\n- The function relies on the `decode` function from the `core` module, which performs the actual decoding of the byte sequence into a string.",
+        "signature": "def ToUnicode(label: Union[bytes, bytearray]) -> str:",
+        "type": "Function",
+        "class_signature": null
+      },
+      "nameprep": {
+        "code": "def nameprep(s: Any) -> None:\n    \"\"\"Raises a NotImplementedError indicating that the nameprep protocol is not used in IDNA 2008. This function takes a single parameter, `s`, of type `Any`, but it has no expected return value as it is designed to always raise an exception. The function serves to clarify that name preparation, a step in older versions of IDNA, is not relevant to the current implementation. This is part of the IDNA handling implemented in conjunction with the `encode` and `decode` functions imported from the `core` module.\"\"\"\n    raise NotImplementedError('IDNA 2008 does not utilise nameprep protocol')",
+        "docstring": "Raises a NotImplementedError indicating that the nameprep protocol is not used in IDNA 2008. This function takes a single parameter, `s`, of type `Any`, but it has no expected return value as it is designed to always raise an exception. The function serves to clarify that name preparation, a step in older versions of IDNA, is not relevant to the current implementation. This is part of the IDNA handling implemented in conjunction with the `encode` and `decode` functions imported from the `core` module.",
+        "signature": "def nameprep(s: Any) -> None:",
+        "type": "Function",
+        "class_signature": null
+      }
+    }
+  },
+  "dependency_dict": {
+    "idna/compat.py:ToASCII": {
+      "idna/core.py": {
+        "encode": {
+          "code": "def encode(\n    s: Union[str, bytes, bytearray],\n    strict: bool = False,\n    uts46: bool = False,\n    std3_rules: bool = False,\n    transitional: bool = False,\n) -> bytes:\n    if not isinstance(s, str):\n        try:\n            s = str(s, \"ascii\")\n        except UnicodeDecodeError:\n            raise IDNAError(\"should pass a unicode string to the function rather than a byte string.\")\n    if uts46:\n        s = uts46_remap(s, std3_rules, transitional)\n    trailing_dot = False\n    result = []\n    if strict:\n        labels = s.split(\".\")\n    else:\n        labels = _unicode_dots_re.split(s)\n    if not labels or labels == [\"\"]:\n        raise IDNAError(\"Empty domain\")\n    if labels[-1] == \"\":\n        del labels[-1]\n        trailing_dot = True\n    for label in labels:\n        s = alabel(label)\n        if s:\n            result.append(s)\n        else:\n            raise IDNAError(\"Empty label\")\n    if trailing_dot:\n        result.append(b\"\")\n    s = b\".\".join(result)\n    if not valid_string_length(s, trailing_dot):\n        raise IDNAError(\"Domain too long\")\n    return s",
+          "docstring": "",
+          "signature": "def encode(s: Union[str, bytes, bytearray], strict: bool=False, uts46: bool=False, std3_rules: bool=False, transitional: bool=False) -> bytes:",
+          "type": "Function",
+          "class_signature": null
+        }
+      }
+    },
+    "idna/compat.py:ToUnicode": {
+      "idna/core.py": {
+        "decode": {
+          "code": "def decode(\n    s: Union[str, bytes, bytearray],\n    strict: bool = False,\n    uts46: bool = False,\n    std3_rules: bool = False,\n) -> str:\n    try:\n        if not isinstance(s, str):\n            s = str(s, \"ascii\")\n    except UnicodeDecodeError:\n        raise IDNAError(\"Invalid ASCII in A-label\")\n    if uts46:\n        s = uts46_remap(s, std3_rules, False)\n    trailing_dot = False\n    result = []\n    if not strict:\n        labels = _unicode_dots_re.split(s)\n    else:\n        labels = s.split(\".\")\n    if not labels or labels == [\"\"]:\n        raise IDNAError(\"Empty domain\")\n    if not labels[-1]:\n        del labels[-1]\n        trailing_dot = True\n    for label in labels:\n        s = ulabel(label)\n        if s:\n            result.append(s)\n        else:\n            raise IDNAError(\"Empty label\")\n    if trailing_dot:\n        result.append(\"\")\n    return \".\".join(result)",
+          "docstring": "",
+          "signature": "def decode(s: Union[str, bytes, bytearray], strict: bool=False, uts46: bool=False, std3_rules: bool=False) -> str:",
+          "type": "Function",
+          "class_signature": null
+        }
+      }
+    }
+  },
+  "PRD": "# PROJECT NAME: idna-test_idna_compat\n\n# FOLDER STRUCTURE:\n```\n..\n\u2514\u2500\u2500 idna/\n    \u2514\u2500\u2500 compat.py\n        \u251c\u2500\u2500 ToASCII\n        \u251c\u2500\u2500 ToUnicode\n        \u2514\u2500\u2500 nameprep\n```\n\n# IMPLEMENTATION REQUIREMENTS:\n## MODULE DESCRIPTION:\nThis module focuses on ensuring compatibility and validation for operations involving Internationalized Domain Names (IDNs) by providing core functionality for converting between ASCII-compatible encoding (ACE) and Unicode representations. It enables developers to seamlessly transform domain names to their ASCII form (ToASCII) for proper DNS usage or back to their Unicode form (ToUnicode) for user-friendly readability. Additionally, the module includes provisions for testing compliance with name preparation standards, though certain aspects, such as nameprep implementation, are flagged as unsupported. By addressing encoding and compatibility challenges, it resolves key issues in handling internationalized domain names, ensuring conformity with domain name standards and improving usability for software working in multilingual or globalized environments.\n\n## FILE 1: idna/compat.py\n\n- FUNCTION NAME: nameprep\n  - SIGNATURE: def nameprep(s: Any) -> None:\n  - DOCSTRING: \n```python\n\"\"\"\nRaises a NotImplementedError indicating that the nameprep protocol is not used in IDNA 2008. This function takes a single parameter, `s`, of type `Any`, but it has no expected return value as it is designed to always raise an exception. The function serves to clarify that name preparation, a step in older versions of IDNA, is not relevant to the current implementation. This is part of the IDNA handling implemented in conjunction with the `encode` and `decode` functions imported from the `core` module.\n\"\"\"\n```\n\n- FUNCTION NAME: ToASCII\n  - SIGNATURE: def ToASCII(label: str) -> bytes:\n  - DOCSTRING: \n```python\n\"\"\"\nConverts a string label to its ASCII representation.\n\nParameters:\n- label (str): The input string label to be encoded into ASCII. \n\nReturns:\n- bytes: The ASCII-encoded byte representation of the input label.\n\nDependencies:\nThis function relies on the `encode` function imported from the `.core` module, which performs the actual encoding process. Ensure that the `encode` function is correctly implemented to handle the conversion.\n\"\"\"\n```\n  - DEPENDENCIES:\n    - idna/core.py:encode\n\n- FUNCTION NAME: ToUnicode\n  - SIGNATURE: def ToUnicode(label: Union[bytes, bytearray]) -> str:\n  - DOCSTRING: \n```python\n\"\"\"\nConverts a given byte sequence or bytearray representation of a label into its Unicode string equivalent.\n\nParameters:\n- label (Union[bytes, bytearray]): The byte sequence or bytearray to be decoded into a Unicode string.\n\nReturns:\n- str: The decoded Unicode string representation of the input label.\n\nDependencies:\n- The function relies on the `decode` function from the `core` module, which performs the actual decoding of the byte sequence into a string.\n\"\"\"\n```\n  - DEPENDENCIES:\n    - idna/core.py:decode\n\n# TASK DESCRIPTION:\nIn this project, you need to implement the functions and methods listed above. The functions have been removed from the code but their docstrings remain.\nYour task is to:\n1. Read and understand the docstrings of each function/method\n2. Understand the dependencies and how they interact with the target functions\n3. Implement the functions/methods according to their docstrings and signatures\n4. Ensure your implementations work correctly with the rest of the codebase\n",
+  "file_code": {
+    "idna/compat.py": "from typing import Any, Union\nfrom .core import decode, encode"
+  },
+  "call_tree": {
+    "tests/test_idna_compat.py:IDNACompatTests:testToASCII": {
+      "idna/compat.py:ToASCII": {
+        "idna/core.py:encode": {
+          "idna/core.py:alabel": {
+            "idna/core.py:check_label": {
+              "idna/core.py:check_nfc": {},
+              "idna/core.py:check_hyphen_ok": {},
+              "idna/core.py:check_initial_combiner": {},
+              "idna/intranges.py:intranges_contain": {
+                "idna/intranges.py:_encode_range": {},
+                "idna/intranges.py:_decode_range": {}
+              },
+              "idna/core.py:check_bidi": {}
+            },
+            "idna/core.py:_punycode": {},
+            "idna/core.py:valid_label_length": {},
+            "idna/core.py:ulabel": {
+              "idna/core.py:check_label": {
+                "idna/core.py:check_nfc": {},
+                "idna/core.py:check_hyphen_ok": {},
+                "idna/core.py:check_initial_combiner": {},
+                "idna/intranges.py:intranges_contain": {
+                  "idna/intranges.py:_encode_range": {},
+                  "idna/intranges.py:_decode_range": {}
+                },
+                "idna/core.py:check_bidi": {}
+              }
+            }
+          },
+          "idna/core.py:valid_string_length": {}
+        }
+      }
+    },
+    "tests/test_idna_compat.py:IDNACompatTests:testToUnicode": {
+      "idna/compat.py:ToUnicode": {
+        "idna/core.py:decode": {
+          "idna/core.py:ulabel": {
+            "idna/core.py:check_label": {
+              "idna/core.py:check_nfc": {},
+              "idna/core.py:check_hyphen_ok": {},
+              "idna/core.py:check_initial_combiner": {},
+              "idna/intranges.py:intranges_contain": {
+                "idna/intranges.py:_encode_range": {},
+                "idna/intranges.py:_decode_range": {}
+              },
+              "idna/core.py:check_bidi": {}
+            }
+          }
+        }
+      }
+    },
+    "tests/test_idna_compat.py:IDNACompatTests:test_nameprep": {
+      "idna/compat.py:nameprep": {}
+    }
+  }
+}

@@ -1,0 +1,112 @@
+{
+  "dir_path": "/app/vulture",
+  "package_name": "vulture",
+  "sample_name": "vulture-test_utils",
+  "src_dir": "vulture/",
+  "test_dir": "tests/",
+  "test_file": "tests/test_utils.py",
+  "test_code": "import ast\nimport os\nimport pathlib\nimport sys\n\nimport pytest\n\nfrom vulture import utils\n\n\nclass TestFormatPath:\n    @pytest.fixture\n    def tmp_cwd(self, tmp_path, monkeypatch):\n        cwd = tmp_path / \"workingdir\"\n        cwd.mkdir()\n        monkeypatch.chdir(cwd)\n        return cwd\n\n    def test_relative_inside(self):\n        filepath = pathlib.Path(\"testfile.py\")\n        formatted = utils.format_path(filepath)\n        assert formatted == filepath\n        assert not formatted.is_absolute()\n\n    def test_relative_outside(self, tmp_cwd):\n        filepath = pathlib.Path(os.pardir) / \"testfile.py\"\n        formatted = utils.format_path(filepath)\n        assert formatted == filepath\n        assert not formatted.is_absolute()\n\n    def test_absolute_inside(self, tmp_cwd):\n        filepath = tmp_cwd / \"testfile.py\"\n        formatted = utils.format_path(filepath)\n        assert formatted == pathlib.Path(\"testfile.py\")\n        assert not formatted.is_absolute()\n\n    def test_absolute_outside(self, tmp_cwd):\n        filepath = (tmp_cwd / os.pardir / \"testfile.py\").resolve()\n        formatted = utils.format_path(filepath)\n        assert formatted == filepath\n        assert formatted.is_absolute()\n\n\ndef check_decorator_names(code, expected_names):\n    decorator_names = []\n\n    def visit_FunctionDef(node):\n        for decorator in node.decorator_list:\n            decorator_names.append(utils.get_decorator_name(decorator))\n\n    node_visitor = ast.NodeVisitor()\n    node_visitor.visit_AsyncFunctionDef = visit_FunctionDef\n    node_visitor.visit_ClassDef = visit_FunctionDef\n    node_visitor.visit_FunctionDef = visit_FunctionDef\n    node_visitor.visit(ast.parse(code))\n    assert expected_names == decorator_names\n\n\ndef test_get_decorator_name_simple():\n    code = \"\"\"\\\n@foobar\ndef hoo():\n    pass\n\"\"\"\n    check_decorator_names(code, [\"@foobar\"])\n\n\ndef test_get_decorator_name_call():\n    code = \"\"\"\\\n@xyz()\ndef bar():\n    pass\n\"\"\"\n    check_decorator_names(code, [\"@xyz\"])\n\n\ndef test_get_decorator_name_async():\n    code = \"\"\"\\\n@foo.bar.route('/foobar')\nasync def async_function(request):\n    print(request)\n\"\"\"\n    check_decorator_names(code, [\"@foo.bar.route\"])\n\n\ndef test_get_decorator_name_multiple_attrs():\n    code = \"\"\"\\\n@x.y.z\ndef doo():\n    pass\n\"\"\"\n    check_decorator_names(code, [\"@x.y.z\"])\n\n\ndef test_get_decorator_name_multiple_attrs_called():\n    code = \"\"\"\\\n@a.b.c.d.foo(\"Foo and Bar\")\ndef hoofoo():\n    pass\n\"\"\"\n    check_decorator_names(code, [\"@a.b.c.d.foo\"])\n\n\ndef test_get_decorator_name_multiple_decorators():\n    code = \"\"\"\\\n@foo\n@bar()\n@x.y.z.a('foobar')\ndef func():\n    pass\n\"\"\"\n    check_decorator_names(code, [\"@foo\", \"@bar\", \"@x.y.z.a\"])\n\n\ndef test_get_decorator_name_class():\n    code = \"\"\"\\\n@foo\n@bar.yz\nclass Foo:\n    pass\n\"\"\"\n    check_decorator_names(code, [\"@foo\", \"@bar.yz\"])\n\n\ndef test_get_decorator_name_end_function_call():\n    code = \"\"\"\\\n@foo.bar(x, y, z)\ndef bar():\n    pass\n\"\"\"\n    check_decorator_names(code, [\"@foo.bar\"])\n\n\n@pytest.mark.skipif(\n    sys.version_info < (3, 9), reason=\"requires Python 3.9 or higher\"\n)\n@pytest.mark.parametrize(\n    \"decorated\",\n    [\n        (\"def foo():\"),\n        (\"async def foo():\"),\n        (\"class Foo:\"),\n    ],\n)\ndef test_get_decorator_name_multiple_callables(decorated):\n    decorated = f\"{decorated}\\n    pass\"\n    code = f\"\"\"\\\n@foo\n@bar.prop\n@z.func(\"hi\").bar().k.foo\n@k(\"hello\").doo(\"world\").x\n@k.hello(\"world\")\n@foo[2]\n{decorated}\n\"\"\"\n    check_decorator_names(\n        code,\n        [\"@foo\", \"@bar.prop\", \"@\", \"@\", \"@k.hello\", \"@\"],\n    )\n",
+  "GT_file_code": {
+    "vulture/utils.py": "import ast\nfrom enum import IntEnum\nimport pathlib\nimport sys\nimport tokenize\n\n\nclass VultureInputException(Exception):\n    pass\n\n\nclass ExitCode(IntEnum):\n    NoDeadCode = 0\n    InvalidInput = 1\n    InvalidCmdlineArguments = 2\n    DeadCode = 3\n\n\ndef _safe_eval(node, default):\n    \"\"\"\n    Safely evaluate the Boolean expression under the given AST node.\n\n    Substitute `default` for all sub-expressions that cannot be\n    evaluated (because variables or functions are undefined).\n\n    We could use eval() to evaluate more sub-expressions. However, this\n    function is not safe for arbitrary Python code. Even after\n    overwriting the \"__builtins__\" dictionary, the original dictionary\n    can be restored\n    (https://nedbatchelder.com/blog/201206/eval_really_is_dangerous.html).\n\n    \"\"\"\n    if isinstance(node, ast.BoolOp):\n        results = [_safe_eval(value, default) for value in node.values]\n        if isinstance(node.op, ast.And):\n            return all(results)\n        else:\n            return any(results)\n    elif isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):\n        return not _safe_eval(node.operand, not default)\n    else:\n        try:\n            return ast.literal_eval(node)\n        except ValueError:\n            return default\n\n\ndef condition_is_always_false(condition):\n    return not _safe_eval(condition, True)\n\n\ndef condition_is_always_true(condition):\n    return _safe_eval(condition, False)\n\n\ndef is_ast_string(node):\n    return isinstance(node, ast.Constant) and isinstance(node.value, str)\n\n\ndef format_path(path):\n    try:\n        return path.relative_to(pathlib.Path.cwd())\n    except ValueError:\n        # Path is not below the current directory.\n        return path\n\n\ndef get_decorator_name(decorator):\n    if isinstance(decorator, ast.Call):\n        decorator = decorator.func\n    try:\n        parts = []\n        while isinstance(decorator, ast.Attribute):\n            parts.append(decorator.attr)\n            decorator = decorator.value\n        parts.append(decorator.id)\n    except AttributeError:\n        parts = []\n    return \"@\" + \".\".join(reversed(parts))\n\n\ndef get_modules(paths):\n    \"\"\"Retrieve Python files to check.\n\n    Loop over all given paths, abort if any ends with .pyc, add the other given\n    files (even those not ending with .py) and collect all .py files under the\n    given directories.\n\n    \"\"\"\n    modules = []\n    for path in paths:\n        path = path.resolve()\n        if path.is_file():\n            if path.suffix == \".pyc\":\n                sys.exit(f\"Error: *.pyc files are not supported: {path}\")\n            else:\n                modules.append(path)\n        elif path.is_dir():\n            modules.extend(path.rglob(\"*.py\"))\n        else:\n            sys.exit(f\"Error: {path} could not be found.\")\n    return modules\n\n\ndef read_file(filename):\n    try:\n        # Use encoding detected by tokenize.detect_encoding().\n        with tokenize.open(filename) as f:\n            return f.read()\n    except (SyntaxError, UnicodeDecodeError) as err:\n        raise VultureInputException from err\n\n\nclass LoggingList(list):\n    def __init__(self, typ, verbose):\n        self.typ = typ\n        self._verbose = verbose\n        return super().__init__()\n\n    def append(self, item):\n        if self._verbose:\n            print(f'define {self.typ} \"{item.name}\"')\n        super().append(item)\n\n\nclass LoggingSet(set):\n    def __init__(self, typ, verbose):\n        self.typ = typ\n        self._verbose = verbose\n        return super().__init__()\n\n    def add(self, name):\n        if self._verbose:\n            print(f'use {self.typ} \"{name}\"')\n        super().add(name)\n"
+  },
+  "GT_src_dict": {
+    "vulture/utils.py": {
+      "format_path": {
+        "code": "def format_path(path):\n    \"\"\"Format a given path relative to the current working directory.\n\nParameters:\n- path (pathlib.Path): The path to format, which can be either a file or directory path.\n\nReturns:\n- pathlib.Path: The relative path to the current working directory if the input path is below it; otherwise, returns the original path.\n\nThis function interacts with `pathlib.Path` to handle file system path representations. It raises a `ValueError` if the specified path is not beneath the current working directory, in which case the original path is returned unmodified.\"\"\"\n    try:\n        return path.relative_to(pathlib.Path.cwd())\n    except ValueError:\n        return path",
+        "docstring": "Format a given path relative to the current working directory.\n\nParameters:\n- path (pathlib.Path): The path to format, which can be either a file or directory path.\n\nReturns:\n- pathlib.Path: The relative path to the current working directory if the input path is below it; otherwise, returns the original path.\n\nThis function interacts with `pathlib.Path` to handle file system path representations. It raises a `ValueError` if the specified path is not beneath the current working directory, in which case the original path is returned unmodified.",
+        "signature": "def format_path(path):",
+        "type": "Function",
+        "class_signature": null
+      },
+      "get_decorator_name": {
+        "code": "def get_decorator_name(decorator):\n    \"\"\"Retrieve the fully qualified name of a decorator from its AST node.\n\nParameters:\n- decorator (ast.AST): The AST node representing a decorator, which can be a function call or a chained attribute.\n\nReturns:\n- str: The decorator's name, formatted as a string starting with '@', representing its full path in a dot-separated format.\n\nThis function supports interaction with AST nodes provided by Python's `ast` module, particularly `ast.Call` and `ast.Attribute`. If the decorator is an `ast.Call`, it will extract the function being called; if it's an attribute, it will traverse back to collect all parts of the attribute chain.\"\"\"\n    if isinstance(decorator, ast.Call):\n        decorator = decorator.func\n    try:\n        parts = []\n        while isinstance(decorator, ast.Attribute):\n            parts.append(decorator.attr)\n            decorator = decorator.value\n        parts.append(decorator.id)\n    except AttributeError:\n        parts = []\n    return '@' + '.'.join(reversed(parts))",
+        "docstring": "Retrieve the fully qualified name of a decorator from its AST node.\n\nParameters:\n- decorator (ast.AST): The AST node representing a decorator, which can be a function call or a chained attribute.\n\nReturns:\n- str: The decorator's name, formatted as a string starting with '@', representing its full path in a dot-separated format.\n\nThis function supports interaction with AST nodes provided by Python's `ast` module, particularly `ast.Call` and `ast.Attribute`. If the decorator is an `ast.Call`, it will extract the function being called; if it's an attribute, it will traverse back to collect all parts of the attribute chain.",
+        "signature": "def get_decorator_name(decorator):",
+        "type": "Function",
+        "class_signature": null
+      }
+    }
+  },
+  "dependency_dict": {},
+  "call_tree": {
+    "tests/test_utils.py:TestFormatPath:test_relative_inside": {
+      "vulture/utils.py:format_path": {}
+    },
+    "../../../../../app/vulture/tests/test_utils.py:test_relative_outside": {
+      "../../../../../app/vulture/vulture/utils.py:format_path": {}
+    },
+    "../../../../../app/vulture/tests/test_utils.py:test_absolute_inside": {
+      "../../../../../app/vulture/vulture/utils.py:format_path": {}
+    },
+    "../../../../../app/vulture/tests/test_utils.py:test_absolute_outside": {
+      "../../../../../app/vulture/vulture/utils.py:format_path": {}
+    },
+    "tests/test_utils.py:test_get_decorator_name_simple": {
+      "tests/test_utils.py:check_decorator_names": {
+        "tests/test_utils.py:visit_FunctionDef": {
+          "vulture/utils.py:get_decorator_name": {}
+        }
+      }
+    },
+    "tests/test_utils.py:test_get_decorator_name_call": {
+      "tests/test_utils.py:check_decorator_names": {
+        "tests/test_utils.py:visit_FunctionDef": {
+          "vulture/utils.py:get_decorator_name": {}
+        }
+      }
+    },
+    "tests/test_utils.py:test_get_decorator_name_async": {
+      "tests/test_utils.py:check_decorator_names": {
+        "tests/test_utils.py:visit_FunctionDef": {
+          "vulture/utils.py:get_decorator_name": {}
+        }
+      }
+    },
+    "tests/test_utils.py:test_get_decorator_name_multiple_attrs": {
+      "tests/test_utils.py:check_decorator_names": {
+        "tests/test_utils.py:visit_FunctionDef": {
+          "vulture/utils.py:get_decorator_name": {}
+        }
+      }
+    },
+    "tests/test_utils.py:test_get_decorator_name_multiple_attrs_called": {
+      "tests/test_utils.py:check_decorator_names": {
+        "tests/test_utils.py:visit_FunctionDef": {
+          "vulture/utils.py:get_decorator_name": {}
+        }
+      }
+    },
+    "tests/test_utils.py:test_get_decorator_name_multiple_decorators": {
+      "tests/test_utils.py:check_decorator_names": {
+        "tests/test_utils.py:visit_FunctionDef": {
+          "vulture/utils.py:get_decorator_name": {}
+        }
+      }
+    },
+    "tests/test_utils.py:test_get_decorator_name_class": {
+      "tests/test_utils.py:check_decorator_names": {
+        "tests/test_utils.py:visit_FunctionDef": {
+          "vulture/utils.py:get_decorator_name": {}
+        }
+      }
+    },
+    "tests/test_utils.py:test_get_decorator_name_end_function_call": {
+      "tests/test_utils.py:check_decorator_names": {
+        "tests/test_utils.py:visit_FunctionDef": {
+          "vulture/utils.py:get_decorator_name": {}
+        }
+      }
+    },
+    "tests/test_utils.py:test_get_decorator_name_multiple_callables": {
+      "tests/test_utils.py:check_decorator_names": {
+        "tests/test_utils.py:visit_FunctionDef": {
+          "vulture/utils.py:get_decorator_name": {}
+        }
+      }
+    }
+  },
+  "PRD": "# PROJECT NAME: vulture-test_utils\n\n# FOLDER STRUCTURE:\n```\n..\n\u2514\u2500\u2500 vulture/\n    \u2514\u2500\u2500 utils.py\n        \u251c\u2500\u2500 format_path\n        \u2514\u2500\u2500 get_decorator_name\n```\n\n# IMPLEMENTATION REQUIREMENTS:\n## MODULE DESCRIPTION:\nThis module focuses on utility functionalities for handling and formatting paths and extracting metadata from Python code, specifically decorator names. It enables robust path normalization to distinguish between relative and absolute paths and ensures consistency in file path handling across different contexts. Additionally, it includes capabilities to parse Python source code to identify and retrieve decorator names applied to functions, classes, or asynchronous functions, supporting both simple and complex decorator structures. By providing these features, the module simplifies file path management and enhances the analysis of code structure, allowing developers to inspect and process code metadata programmatically with minimal effort.\n\n## FILE 1: vulture/utils.py\n\n- FUNCTION NAME: get_decorator_name\n  - SIGNATURE: def get_decorator_name(decorator):\n  - DOCSTRING: \n```python\n\"\"\"\nRetrieve the fully qualified name of a decorator from its AST node.\n\nParameters:\n- decorator (ast.AST): The AST node representing a decorator, which can be a function call or a chained attribute.\n\nReturns:\n- str: The decorator's name, formatted as a string starting with '@', representing its full path in a dot-separated format.\n\nThis function supports interaction with AST nodes provided by Python's `ast` module, particularly `ast.Call` and `ast.Attribute`. If the decorator is an `ast.Call`, it will extract the function being called; if it's an attribute, it will traverse back to collect all parts of the attribute chain.\n\"\"\"\n```\n\n- FUNCTION NAME: format_path\n  - SIGNATURE: def format_path(path):\n  - DOCSTRING: \n```python\n\"\"\"\nFormat a given path relative to the current working directory.\n\nParameters:\n- path (pathlib.Path): The path to format, which can be either a file or directory path.\n\nReturns:\n- pathlib.Path: The relative path to the current working directory if the input path is below it; otherwise, returns the original path.\n\nThis function interacts with `pathlib.Path` to handle file system path representations. It raises a `ValueError` if the specified path is not beneath the current working directory, in which case the original path is returned unmodified.\n\"\"\"\n```\n\n# TASK DESCRIPTION:\nIn this project, you need to implement the functions and methods listed above. The functions have been removed from the code but their docstrings remain.\nYour task is to:\n1. Read and understand the docstrings of each function/method\n2. Understand the dependencies and how they interact with the target functions\n3. Implement the functions/methods according to their docstrings and signatures\n4. Ensure your implementations work correctly with the rest of the codebase\n",
+  "file_code": {
+    "vulture/utils.py": "import ast\nfrom enum import IntEnum\nimport pathlib\nimport sys\nimport tokenize\n\nclass VultureInputException(Exception):\n    pass\n\nclass ExitCode(IntEnum):\n    NoDeadCode = 0\n    InvalidInput = 1\n    InvalidCmdlineArguments = 2\n    DeadCode = 3\n\ndef _safe_eval(node, default):\n    \"\"\"\n    Safely evaluate the Boolean expression under the given AST node.\n\n    Substitute `default` for all sub-expressions that cannot be\n    evaluated (because variables or functions are undefined).\n\n    We could use eval() to evaluate more sub-expressions. However, this\n    function is not safe for arbitrary Python code. Even after\n    overwriting the \"__builtins__\" dictionary, the original dictionary\n    can be restored\n    (https://nedbatchelder.com/blog/201206/eval_really_is_dangerous.html).\n\n    \"\"\"\n    if isinstance(node, ast.BoolOp):\n        results = [_safe_eval(value, default) for value in node.values]\n        if isinstance(node.op, ast.And):\n            return all(results)\n        else:\n            return any(results)\n    elif isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):\n        return not _safe_eval(node.operand, not default)\n    else:\n        try:\n            return ast.literal_eval(node)\n        except ValueError:\n            return default\n\ndef condition_is_always_false(condition):\n    return not _safe_eval(condition, True)\n\ndef condition_is_always_true(condition):\n    return _safe_eval(condition, False)\n\ndef is_ast_string(node):\n    return isinstance(node, ast.Constant) and isinstance(node.value, str)\n\ndef get_modules(paths):\n    \"\"\"Retrieve Python files to check.\n\n    Loop over all given paths, abort if any ends with .pyc, add the other given\n    files (even those not ending with .py) and collect all .py files under the\n    given directories.\n\n    \"\"\"\n    modules = []\n    for path in paths:\n        path = path.resolve()\n        if path.is_file():\n            if path.suffix == '.pyc':\n                sys.exit(f'Error: *.pyc files are not supported: {path}')\n            else:\n                modules.append(path)\n        elif path.is_dir():\n            modules.extend(path.rglob('*.py'))\n        else:\n            sys.exit(f'Error: {path} could not be found.')\n    return modules\n\ndef read_file(filename):\n    try:\n        with tokenize.open(filename) as f:\n            return f.read()\n    except (SyntaxError, UnicodeDecodeError) as err:\n        raise VultureInputException from err\n\nclass LoggingList(list):\n\n    def __init__(self, typ, verbose):\n        self.typ = typ\n        self._verbose = verbose\n        return super().__init__()\n\n    def append(self, item):\n        if self._verbose:\n            print(f'define {self.typ} \"{item.name}\"')\n        super().append(item)\n\nclass LoggingSet(set):\n\n    def __init__(self, typ, verbose):\n        self.typ = typ\n        self._verbose = verbose\n        return super().__init__()\n\n    def add(self, name):\n        if self._verbose:\n            print(f'use {self.typ} \"{name}\"')\n        super().add(name)"
+  }
+}

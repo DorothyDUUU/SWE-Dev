@@ -1,0 +1,394 @@
+{
+  "dir_path": "/app/mypy_boto3_s3",
+  "package_name": "mypy_boto3_s3",
+  "sample_name": "mypy_boto3_s3-test_type_annotation",
+  "src_dir": "examples/",
+  "test_dir": "tests/",
+  "test_file": "tests/type_annotations/test_type_annotation.py",
+  "test_code": "import pytest\n\nfrom mypy_boto3_builder.exceptions import TypeAnnotationError\nfrom mypy_boto3_builder.type_annotations.type import Type\nfrom mypy_boto3_builder.type_annotations.type_annotation import TypeAnnotation\n\n\nclass TestTypeAnnotation:\n    def setup_method(self) -> None:\n        self.dict = TypeAnnotation(\"Dict\")\n\n    def test_init(self) -> None:\n        assert self.dict.get_import_name() == \"Dict\"\n        assert hash(self.dict)\n\n        with pytest.raises(TypeAnnotationError):\n            TypeAnnotation(\"str\")\n\n    def test_render(self) -> None:\n        assert self.dict.render() == \"Dict\"\n\n    def test_get_import_name(self) -> None:\n        assert self.dict.get_import_name() == \"Dict\"\n\n    def test_get_import_record(self) -> None:\n        import_records = sorted(self.dict.get_import_records())\n        assert len(import_records) == 1\n        assert import_records[0].render() == \"from typing import Dict\"\n\n    def test_get_import_records(self) -> None:\n        result = sorted(self.dict.get_import_records())\n        assert len(result) == 1\n        assert result[0].render() == \"from typing import Dict\"\n\n        result = sorted(TypeAnnotation(\"Literal\").get_import_records())\n        assert len(result) == 1\n        assert result[0].render() == \"from typing import Literal\"\n\n        result = sorted(Type.DictStrAny.get_import_records())\n        assert len(result) == 2\n        assert result[0].render() == \"from typing import Any\"\n        assert result[1].render() == \"from typing import Dict\"\n\n    def test_copy(self) -> None:\n        assert self.dict.copy().get_import_name() == \"Dict\"\n\n    def test_no_fallback(self) -> None:\n        sample = TypeAnnotation(\"Awaitable\")\n        import_records = sorted(sample.get_import_records())\n        assert len(import_records) == 1\n        assert import_records[0].render() == \"from typing import Awaitable\"\n        assert import_records[0].fallback is None\n\n    def test_fallback(self) -> None:\n        sample = TypeAnnotation(\"NotRequired\")\n        assert sample.render() == \"NotRequired\"\n        import_records = sorted(sample.get_import_records())\n        assert len(import_records) == 1\n        assert import_records[0].render() == \"from typing import NotRequired\"\n\n        fallback = import_records[0].fallback\n        assert fallback is not None\n        assert fallback.render() == \"from typing_extensions import NotRequired\"\n",
+  "GT_file_code": {
+    "mypy_boto3_builder/type_annotations/type_annotation.py": "\"\"\"\nWrapper for `typing` type annotation.\n\nCopyright 2024 Vlad Emelianov\n\"\"\"\n\nfrom collections.abc import Mapping\nfrom typing import Final, Self\n\nfrom mypy_boto3_builder.exceptions import TypeAnnotationError\nfrom mypy_boto3_builder.import_helpers.import_record import ImportRecord\nfrom mypy_boto3_builder.import_helpers.import_string import ImportString\nfrom mypy_boto3_builder.type_annotations.fake_annotation import FakeAnnotation\n\n\nclass TypeAnnotation(FakeAnnotation):\n    \"\"\"\n    Wrapper for `typing` type annotation.\n\n    Arguments:\n        wrapped_type -- Original type annotation as a string.\n    \"\"\"\n\n    _TYPING: Final = ImportString(\"typing\")\n    _TYPING_EXTENSIONS: Final = ImportString(\"typing_extensions\")\n\n    # Set of supported type annotations. value is default import module\n    _SUPPORTED_TYPES: Final[Mapping[str, ImportString]] = {\n        \"Union\": _TYPING,  # typing.Union\n        \"Any\": _TYPING,  # typing.Any\n        \"Dict\": _TYPING,  # typing.Dict\n        \"List\": _TYPING,  # typing.List\n        \"Set\": _TYPING,  # typing.Set\n        \"Optional\": _TYPING,  # typing.Optional\n        \"IO\": _TYPING,  # typing.IO\n        \"overload\": _TYPING,  # typing.overload\n        \"Type\": _TYPING,  # typing.Type\n        \"NoReturn\": _TYPING,  # typing.NoReturn\n        \"TypedDict\": _TYPING,  # typing_extensions.TypedDict / typing.TypedDict\n        \"Literal\": _TYPING,  # typing_extensions.Literal / typing.Literal\n        \"Mapping\": _TYPING,  # typing.Mapping\n        \"Sequence\": _TYPING,  # typing.Sequence\n        \"Callable\": _TYPING,  # typing.Callable\n        \"Iterator\": _TYPING,  # typing.Iterator\n        \"Awaitable\": _TYPING,  # typing.Awaitable\n        \"AsyncIterator\": _TYPING,  # typing.AsyncIterator\n        \"NotRequired\": _TYPING,  # typing_extensions.NotRequired / typing.NotRequired\n        \"Unpack\": _TYPING,  # typing_extensions.Unpack / typing.Unpack\n    }\n\n    # Set of fallback type annotations\n    _FALLBACK: Final[Mapping[str, tuple[tuple[int, int] | None, ImportString]]] = {\n        \"NotRequired\": ((3, 12), _TYPING_EXTENSIONS),\n        \"TypedDict\": ((3, 12), _TYPING_EXTENSIONS),\n        \"Literal\": ((3, 12), _TYPING_EXTENSIONS),\n        \"Unpack\": ((3, 12), _TYPING_EXTENSIONS),\n    }\n\n    def __init__(self, wrapped_type: str) -> None:\n        if wrapped_type not in self._SUPPORTED_TYPES:\n            raise TypeAnnotationError(f\"Cannot wrap {wrapped_type}\")\n\n        self._wrapped_type: str = wrapped_type\n\n    def render(self) -> str:\n        \"\"\"\n        Render type annotation to a valid Python code for local usage.\n\n        Returns:\n            A string with a valid type annotation.\n        \"\"\"\n        return self.get_import_name()\n\n    def get_import_name(self) -> str:\n        \"\"\"\n        Create a safe name for imported annotation.\n        \"\"\"\n        return self._wrapped_type\n\n    def _get_import_records(self) -> set[ImportRecord]:\n        \"\"\"\n        Create a safe Import Record for annotation.\n        \"\"\"\n        name = self.get_import_name()\n        source = self._SUPPORTED_TYPES[name]\n        if name not in self._FALLBACK:\n            return {ImportRecord(source=source, name=name)}\n\n        fallback_min_version, fallback_source = self._FALLBACK[name]\n\n        return {\n            ImportRecord(\n                source=source,\n                name=name,\n                fallback=ImportRecord(source=fallback_source, name=name),\n                min_version=fallback_min_version,\n            ),\n        }\n\n    def is_dict(self) -> bool:\n        \"\"\"\n        Whether annotation is a plain Dict.\n        \"\"\"\n        return self._wrapped_type == \"Dict\"\n\n    def is_list(self) -> bool:\n        \"\"\"\n        Whether annotation is a plain List.\n        \"\"\"\n        return self._wrapped_type == \"List\"\n\n    def __copy__(self) -> Self:\n        \"\"\"\n        Create a copy of type annotation wrapper.\n        \"\"\"\n        return self.__class__(self._wrapped_type)\n",
+    "mypy_boto3_builder/type_annotations/fake_annotation.py": "\"\"\"\nParent class for all type annotation wrappers.\n\nCopyright 2024 Vlad Emelianov\n\"\"\"\n\nimport copy\nimport functools\nfrom abc import ABC, abstractmethod\nfrom collections.abc import Iterator\nfrom typing import Self\n\nfrom mypy_boto3_builder.exceptions import BuildInternalError\nfrom mypy_boto3_builder.import_helpers.import_record import ImportRecord\n\n\n@functools.total_ordering\nclass FakeAnnotation(ABC):\n    \"\"\"\n    Parent class for all type annotation wrappers.\n    \"\"\"\n\n    def __hash__(self) -> int:\n        \"\"\"\n        Calculate hash value based on string render.\n        \"\"\"\n        return hash(self.get_sort_key())\n\n    def __eq__(self, other: object) -> bool:\n        \"\"\"\n        Whether two annotations are equal.\n        \"\"\"\n        if not isinstance(other, FakeAnnotation):\n            raise BuildInternalError(f\"{other} is not FakeAnnotation\")\n\n        return self.get_sort_key() == other.get_sort_key()\n\n    def __gt__(self: Self, other: \"FakeAnnotation\") -> bool:\n        \"\"\"\n        Compare two annotations for sorting.\n        \"\"\"\n        return self.get_sort_key() > other.get_sort_key()\n\n    def get_sort_key(self) -> str:\n        \"\"\"\n        Get string to sort annotations.\n        \"\"\"\n        return str(self)\n\n    def __str__(self) -> str:\n        \"\"\"\n        Render annotation usage as a valid Python statement.\n        \"\"\"\n        return self.render()\n\n    @abstractmethod\n    def render(self) -> str:\n        \"\"\"\n        Render type annotation to a valid Python code for local usage.\n        \"\"\"\n\n    def _get_import_records(self) -> set[ImportRecord]:\n        \"\"\"\n        Get import record required for using type annotation.\n        \"\"\"\n        return set()\n\n    def get_import_records(self) -> set[ImportRecord]:\n        \"\"\"\n        Get all import records required for using type annotation.\n        \"\"\"\n        return {\n            import_record\n            for import_record in self._get_import_records()\n            if not import_record.source.is_builtins()\n        }\n\n    def iterate_types(self) -> Iterator[\"FakeAnnotation\"]:\n        \"\"\"\n        Iterate over all used type annotations recursively including self.\n        \"\"\"\n        yield self\n\n    def is_dict(self) -> bool:\n        \"\"\"\n        Whether type annotation is `Dict` or `TypedDict`.\n        \"\"\"\n        return False\n\n    def is_list(self) -> bool:\n        \"\"\"\n        Whether type annotation is `List`.\n        \"\"\"\n        return False\n\n    def is_literal(self) -> bool:\n        \"\"\"\n        Whether type annotation is `Literal`.\n        \"\"\"\n        return False\n\n    @abstractmethod\n    def __copy__(self: Self) -> Self:\n        \"\"\"\n        Create a copy of type annotation wrapper.\n        \"\"\"\n\n    def copy(self: Self) -> Self:\n        \"\"\"\n        Create a copy of type annotation wrapper.\n        \"\"\"\n        return copy.copy(self)\n\n    def get_local_types(self) -> list[\"FakeAnnotation\"]:\n        \"\"\"\n        Get internal types generated by builder.\n        \"\"\"\n        return []\n\n    def render_definition(self) -> str:\n        \"\"\"\n        Render type annotation for debug purposes.\n        \"\"\"\n        return self.render()\n",
+    "mypy_boto3_builder/type_annotations/type_subscript.py": "\"\"\"\nWrapper for subscript type annotations, like `List[str]`.\n\nCopyright 2024 Vlad Emelianov\n\"\"\"\n\nfrom collections.abc import Iterable, Iterator\nfrom typing import Self\n\nfrom mypy_boto3_builder.exceptions import TypeAnnotationError\nfrom mypy_boto3_builder.import_helpers.import_record import ImportRecord\nfrom mypy_boto3_builder.type_annotations.fake_annotation import FakeAnnotation\nfrom mypy_boto3_builder.type_annotations.type_parent import TypeParent\n\n\nclass TypeSubscript(TypeParent):\n    \"\"\"\n    Wrapper for subscript type annotations, like `List[str]`.\n\n    Arguments:\n        parent -- Parent type annotation.\n        children -- Children type annotations.\n        stringify -- Convert type annotation to string.\n    \"\"\"\n\n    def __init__(\n        self,\n        parent: FakeAnnotation,\n        children: Iterable[FakeAnnotation] = (),\n        *,\n        stringify: bool = False,\n    ) -> None:\n        self.parent: FakeAnnotation = parent\n        self.children: list[FakeAnnotation] = list(children)\n        self._stringify = stringify\n\n    def render(self) -> str:\n        \"\"\"\n        Render type annotation to a valid Python code for local usage.\n\n        Returns:\n            A string with a valid type annotation.\n        \"\"\"\n        result = self.parent.render()\n        if self.children:\n            children = \", \".join([i.render() for i in self.children])\n            result = f\"{result}[{children}]\"\n\n        if self._stringify:\n            result = f'\"{result}\"'\n        return result\n\n    def get_import_records(self) -> set[ImportRecord]:\n        \"\"\"\n        Get all import records required for using type annotation.\n        \"\"\"\n        result: set[ImportRecord] = set()\n        result.update(self.parent.get_import_records())\n        for child in self.children:\n            result.update(child.get_import_records())\n        return result\n\n    def iterate_types(self) -> Iterator[FakeAnnotation]:\n        \"\"\"\n        Extract type annotations from children.\n        \"\"\"\n        yield from self.parent.iterate_types()\n        for child in self.children:\n            yield from child.iterate_types()\n\n    def add_child(self, child: FakeAnnotation) -> None:\n        \"\"\"\n        Add new child to Substcript.\n        \"\"\"\n        self.children.append(child)\n\n    def is_dict(self) -> bool:\n        \"\"\"\n        Whether subscript parent is Dict.\n        \"\"\"\n        return self.parent.is_dict()\n\n    def is_list(self) -> bool:\n        \"\"\"\n        Whether subscript parent is List.\n        \"\"\"\n        return self.parent.is_list()\n\n    def __copy__(self) -> Self:\n        \"\"\"\n        Create a copy of type annotation wrapper.\n        \"\"\"\n        return self.__class__(\n            parent=self.parent,\n            children=list(self.children),\n            stringify=self._stringify,\n        )\n\n    def get_local_types(self) -> list[FakeAnnotation]:\n        \"\"\"\n        Get internal types generated by builder.\n        \"\"\"\n        result: list[FakeAnnotation] = []\n        for child in self.children:\n            result.extend(child.get_local_types())\n        return result\n\n    def iterate_children_type_annotations(self) -> Iterator[FakeAnnotation]:\n        \"\"\"\n        Extract required type annotations from attributes.\n        \"\"\"\n        yield from self.children\n\n    def get_children_types(self) -> set[FakeAnnotation]:\n        \"\"\"\n        Extract required type annotations from attributes.\n        \"\"\"\n        result: set[FakeAnnotation] = set()\n        for child in self.children:\n            result.update(child.iterate_types())\n        return result\n\n    def replace_child(self, child: FakeAnnotation, new_child: FakeAnnotation) -> Self:\n        \"\"\"\n        Replace child type annotation with a new one.\n        \"\"\"\n        if child not in self.children:\n            raise TypeAnnotationError(f\"Child not found: {child}\")\n\n        index = self.children.index(child)\n        self.children[index] = new_child\n        return self\n\n    def iterate_children(self) -> Iterator[FakeAnnotation]:\n        \"\"\"\n        Iterate over children.\n        \"\"\"\n        yield from self.children\n",
+    "mypy_boto3_builder/import_helpers/import_record.py": "\"\"\"\nHelper for Python import strings.\n\nCopyright 2024 Vlad Emelianov\n\"\"\"\n\nimport functools\nfrom typing import Self\n\nfrom mypy_boto3_builder.exceptions import StructureError\nfrom mypy_boto3_builder.import_helpers.import_string import ImportString\n\n\n@functools.total_ordering\nclass ImportRecord:\n    \"\"\"\n    Helper for Python import strings.\n\n    Arguments:\n        source -- Source of import.\n        name -- Import name.\n        alias -- Import local name.\n        min_version -- Minimum Python version, used for fallback.\n        fallback -- Fallback ImportRecord.\n    \"\"\"\n\n    def __init__(\n        self,\n        source: ImportString,\n        name: str = \"\",\n        alias: str = \"\",\n        min_version: tuple[int, ...] | None = None,\n        fallback: Self | None = None,\n    ) -> None:\n        self.source = source\n        self.name = name\n        self.alias = alias\n        self.min_version = min_version\n        self.fallback = fallback\n\n    def render_name(self) -> str:\n        \"\"\"\n        Get rendered import name.\n        \"\"\"\n        if not self.name:\n            raise StructureError(f\"ImportRecord {self} has no name\")\n\n        if self.alias:\n            return f\"{self.name} as {self.alias}\"\n\n        return self.name\n\n    def render(self) -> str:\n        \"\"\"\n        Get rendered string.\n        \"\"\"\n        if self.name:\n            return f\"from {self.source} import {self.render_name()}\"\n        if self.alias:\n            return f\"import {self.source} as {self.alias}\"\n\n        return f\"import {self.source}\"\n\n    def __str__(self) -> str:\n        \"\"\"\n        Render as a valid Python import statement.\n        \"\"\"\n        return self.render()\n\n    def __hash__(self) -> int:\n        \"\"\"\n        Calculate hash value based on source, name and alias.\n        \"\"\"\n        return hash(\n            (\n                self.source,\n                self.name,\n                self.alias,\n                self.min_version,\n                self.fallback,\n            ),\n        )\n\n    def __eq__(self, other: object) -> bool:\n        \"\"\"\n        Whether two import records produce the same render.\n        \"\"\"\n        if not isinstance(other, ImportRecord):\n            return False\n\n        return str(self) == str(other)\n\n    def __gt__(self: Self, other: Self) -> bool:\n        \"\"\"\n        Compare two import records for sorting.\n\n        Emulates `isort` logic.\n        \"\"\"\n        if self == other:\n            return False\n\n        if self.min_version != other.min_version:\n            return (self.min_version or ()) > (other.min_version or ())\n\n        if bool(self.fallback) != bool(other.fallback):\n            return bool(self.fallback) > bool(other.fallback)\n\n        if self.source != other.source:\n            return self.source > other.source\n\n        return self.name > other.name\n\n    def get_local_name(self) -> str:\n        \"\"\"\n        Get local import name.\n        \"\"\"\n        return self.alias or self.name or self.source.render()\n\n    def needs_sys_fallback(self) -> bool:\n        \"\"\"\n        Whether ImportString requires `sys` module.\n        \"\"\"\n        return bool(self.fallback and self.min_version)\n"
+  },
+  "GT_src_dict": {
+    "mypy_boto3_builder/type_annotations/type_annotation.py": {
+      "TypeAnnotation.__init__": {
+        "code": "    def __init__(self, wrapped_type: str) -> None:\n        \"\"\"Initialization method for the TypeAnnotation class, which wraps a type annotation as a string.\n\nParameters:\n    wrapped_type (str): The original type annotation to be wrapped. It must be a key in the _SUPPORTED_TYPES mapping.\n\nRaises:\n    TypeAnnotationError: If the provided wrapped_type is not supported, indicating that it cannot be wrapped.\n\nAttributes:\n    _wrapped_type (str): The type annotation string that has been validated and stored for later use.\n\nConstants:\n    _SUPPORTED_TYPES (Mapping[str, ImportString]): Defined at the class level, this mapping includes supported type annotations and their corresponding import module sources. It is used to validate the wrapped_type parameter during initialization.\"\"\"\n        if wrapped_type not in self._SUPPORTED_TYPES:\n            raise TypeAnnotationError(f'Cannot wrap {wrapped_type}')\n        self._wrapped_type: str = wrapped_type",
+        "docstring": "Initialization method for the TypeAnnotation class, which wraps a type annotation as a string.\n\nParameters:\n    wrapped_type (str): The original type annotation to be wrapped. It must be a key in the _SUPPORTED_TYPES mapping.\n\nRaises:\n    TypeAnnotationError: If the provided wrapped_type is not supported, indicating that it cannot be wrapped.\n\nAttributes:\n    _wrapped_type (str): The type annotation string that has been validated and stored for later use.\n\nConstants:\n    _SUPPORTED_TYPES (Mapping[str, ImportString]): Defined at the class level, this mapping includes supported type annotations and their corresponding import module sources. It is used to validate the wrapped_type parameter during initialization.",
+        "signature": "def __init__(self, wrapped_type: str) -> None:",
+        "type": "Method",
+        "class_signature": "class TypeAnnotation(FakeAnnotation):"
+      },
+      "TypeAnnotation.render": {
+        "code": "    def render(self) -> str:\n        \"\"\"Render the type annotation to a valid Python code representation for local usage.\n\nThis method does not take any parameters and calls the `get_import_name()` method to retrieve the name of the wrapped type. It ensures that the appropriate import string is provided for the type annotation defined during the initialization of the `TypeAnnotation` object. \n\nReturns:\n    A string that represents the valid type annotation corresponding to the wrapped type.\n\nDependencies:\n    - `self._wrapped_type`: Holds the name of the wrapped type, which must be in the `_SUPPORTED_TYPES` mapping defined in the class.\"\"\"\n        '\\n        Render type annotation to a valid Python code for local usage.\\n\\n        Returns:\\n            A string with a valid type annotation.\\n        '\n        return self.get_import_name()",
+        "docstring": "Render the type annotation to a valid Python code representation for local usage.\n\nThis method does not take any parameters and calls the `get_import_name()` method to retrieve the name of the wrapped type. It ensures that the appropriate import string is provided for the type annotation defined during the initialization of the `TypeAnnotation` object. \n\nReturns:\n    A string that represents the valid type annotation corresponding to the wrapped type.\n\nDependencies:\n    - `self._wrapped_type`: Holds the name of the wrapped type, which must be in the `_SUPPORTED_TYPES` mapping defined in the class.",
+        "signature": "def render(self) -> str:",
+        "type": "Method",
+        "class_signature": "class TypeAnnotation(FakeAnnotation):"
+      },
+      "TypeAnnotation.get_import_name": {
+        "code": "    def get_import_name(self) -> str:\n        \"\"\"Create a safe name for the imported type annotation.\n\nThis method returns the wrapped type as a string, which corresponds to the type annotation being used. The wrapped type is validated against the supported types defined in the class's `_SUPPORTED_TYPES` constant. There are no input parameters, and the return value is a string representing the name of the type to be imported.\n\nThe method interacts with the `_wrapped_type` attribute, which is set upon instance initialization and represents the specific type annotation being wrapped by the `TypeAnnotation` class.\"\"\"\n        '\\n        Create a safe name for imported annotation.\\n        '\n        return self._wrapped_type",
+        "docstring": "Create a safe name for the imported type annotation.\n\nThis method returns the wrapped type as a string, which corresponds to the type annotation being used. The wrapped type is validated against the supported types defined in the class's `_SUPPORTED_TYPES` constant. There are no input parameters, and the return value is a string representing the name of the type to be imported.\n\nThe method interacts with the `_wrapped_type` attribute, which is set upon instance initialization and represents the specific type annotation being wrapped by the `TypeAnnotation` class.",
+        "signature": "def get_import_name(self) -> str:",
+        "type": "Method",
+        "class_signature": "class TypeAnnotation(FakeAnnotation):"
+      }
+    },
+    "mypy_boto3_builder/type_annotations/fake_annotation.py": {
+      "FakeAnnotation.__hash__": {
+        "code": "    def __hash__(self) -> int:\n        \"\"\"Calculate the hash value for the instance of the FakeAnnotation class. This method generates a hash based on the string representation of the object, specifically using the output of the get_sort_key() method. The use of get_sort_key() ensures that the hash value is consistent with the sorting order defined by the annotation's representation. This method does not take any parameters and returns an integer that represents the hash value of the FakeAnnotation instance.\"\"\"\n        '\\n        Calculate hash value based on string render.\\n        '\n        return hash(self.get_sort_key())",
+        "docstring": "Calculate the hash value for the instance of the FakeAnnotation class. This method generates a hash based on the string representation of the object, specifically using the output of the get_sort_key() method. The use of get_sort_key() ensures that the hash value is consistent with the sorting order defined by the annotation's representation. This method does not take any parameters and returns an integer that represents the hash value of the FakeAnnotation instance.",
+        "signature": "def __hash__(self) -> int:",
+        "type": "Method",
+        "class_signature": "class FakeAnnotation(ABC):"
+      },
+      "FakeAnnotation.get_import_records": {
+        "code": "    def get_import_records(self) -> set[ImportRecord]:\n        \"\"\"Retrieve and return a set of import records necessary for utilizing the type annotation represented by the instance. This method filters the records obtained from the internal `_get_import_records` method, excluding any that are sourced from built-in modules, as determined by the `is_builtins()` method on the `ImportRecord.source`. The result helps in identifying external dependencies that need to be imported when using the type annotation in Python code.\"\"\"\n        '\\n        Get all import records required for using type annotation.\\n        '\n        return {import_record for import_record in self._get_import_records() if not import_record.source.is_builtins()}",
+        "docstring": "Retrieve and return a set of import records necessary for utilizing the type annotation represented by the instance. This method filters the records obtained from the internal `_get_import_records` method, excluding any that are sourced from built-in modules, as determined by the `is_builtins()` method on the `ImportRecord.source`. The result helps in identifying external dependencies that need to be imported when using the type annotation in Python code.",
+        "signature": "def get_import_records(self) -> set[ImportRecord]:",
+        "type": "Method",
+        "class_signature": "class FakeAnnotation(ABC):"
+      },
+      "FakeAnnotation.copy": {
+        "code": "    def copy(self: Self) -> Self:\n        \"\"\"Create and return a shallow copy of the current type annotation wrapper instance. This method leverages the `copy` module to instantiate a copy of the object. It ensures that the original object's state is unaffected by changes made to the copied instance. The method does not take any parameters and returns a new instance of the same type as the original. The usage of `copy.copy(self)` indicates that this method is intended for creating shallow copies, which means nested objects are not duplicated but referenced. This is important for managing complexity and memory usage in type annotations that may share references to other objects.\"\"\"\n        '\\n        Create a copy of type annotation wrapper.\\n        '\n        return copy.copy(self)",
+        "docstring": "Create and return a shallow copy of the current type annotation wrapper instance. This method leverages the `copy` module to instantiate a copy of the object. It ensures that the original object's state is unaffected by changes made to the copied instance. The method does not take any parameters and returns a new instance of the same type as the original. The usage of `copy.copy(self)` indicates that this method is intended for creating shallow copies, which means nested objects are not duplicated but referenced. This is important for managing complexity and memory usage in type annotations that may share references to other objects.",
+        "signature": "def copy(self: Self) -> Self:",
+        "type": "Method",
+        "class_signature": "class FakeAnnotation(ABC):"
+      }
+    },
+    "mypy_boto3_builder/type_annotations/type_subscript.py": {
+      "TypeSubscript.get_import_records": {
+        "code": "    def get_import_records(self) -> set[ImportRecord]:\n        \"\"\"Get all import records required for using the type annotation represented by this instance of `TypeSubscript`. This method aggregates import records from the parent type annotation and any child type annotations, ensuring that all necessary imports for the complete type are included. The result is a set of `ImportRecord` instances that encapsulate the import requirements needed for proper usage of the type annotation. There are no input parameters. The output is a set containing the collected import records. This relies on the `get_import_records` method of both the parent and child annotations, ensuring comprehensive coverage of all dependent types.\"\"\"\n        '\\n        Get all import records required for using type annotation.\\n        '\n        result: set[ImportRecord] = set()\n        result.update(self.parent.get_import_records())\n        for child in self.children:\n            result.update(child.get_import_records())\n        return result",
+        "docstring": "Get all import records required for using the type annotation represented by this instance of `TypeSubscript`. This method aggregates import records from the parent type annotation and any child type annotations, ensuring that all necessary imports for the complete type are included. The result is a set of `ImportRecord` instances that encapsulate the import requirements needed for proper usage of the type annotation. There are no input parameters. The output is a set containing the collected import records. This relies on the `get_import_records` method of both the parent and child annotations, ensuring comprehensive coverage of all dependent types.",
+        "signature": "def get_import_records(self) -> set[ImportRecord]:",
+        "type": "Method",
+        "class_signature": "class TypeSubscript(TypeParent):"
+      }
+    },
+    "mypy_boto3_builder/import_helpers/import_record.py": {
+      "ImportRecord.render": {
+        "code": "    def render(self) -> str:\n        \"\"\"Get the rendered import string for the ImportRecord.\n\nThis method generates a string representation of the import statement based on the attributes of the instance. If an import name is provided, the method constructs a 'from ... import ...' statement. If only an alias is defined, it returns an 'import ... as ...' statement. If neither is present, it defaults to returning a simple 'import ...' statement using the source.\n\nReturns:\n    str: The constructed import statement representing the ImportRecord.\n\nDependencies:\n    - self.source: An instance of the ImportString class, providing the source for the import.\n    - self.name: The name of the import, used when constructing the import statement.\n    - self.alias: An optional local alias for the import, affecting the format of the output.\n    \nRaises:\n    StructureError: If self.name is not provided, this exception indicates that the import record is incomplete.\"\"\"\n        '\\n        Get rendered string.\\n        '\n        if self.name:\n            return f'from {self.source} import {self.render_name()}'\n        if self.alias:\n            return f'import {self.source} as {self.alias}'\n        return f'import {self.source}'",
+        "docstring": "Get the rendered import string for the ImportRecord.\n\nThis method generates a string representation of the import statement based on the attributes of the instance. If an import name is provided, the method constructs a 'from ... import ...' statement. If only an alias is defined, it returns an 'import ... as ...' statement. If neither is present, it defaults to returning a simple 'import ...' statement using the source.\n\nReturns:\n    str: The constructed import statement representing the ImportRecord.\n\nDependencies:\n    - self.source: An instance of the ImportString class, providing the source for the import.\n    - self.name: The name of the import, used when constructing the import statement.\n    - self.alias: An optional local alias for the import, affecting the format of the output.\n    \nRaises:\n    StructureError: If self.name is not provided, this exception indicates that the import record is incomplete.",
+        "signature": "def render(self) -> str:",
+        "type": "Method",
+        "class_signature": "class ImportRecord:"
+      },
+      "ImportRecord.__eq__": {
+        "code": "    def __eq__(self, other: object) -> bool:\n        \"\"\"Determine equality between two ImportRecord instances based on their rendered string representation.\n\nArgs:\n    other (object): The object to compare against, expected to be an instance of ImportRecord.\n\nReturns:\n    bool: True if the rendered string representations of both ImportRecord instances are identical, otherwise False.\n\nThis method leverages the __str__ method to obtain the rendered representation of the ImportRecord, which formats the import based on the source, name, and alias attributes. It is essential for establishing equality within collections and sorting operations, as two ImportRecord instances that render to the same import statement are considered equal.\"\"\"\n        '\\n        Whether two import records produce the same render.\\n        '\n        if not isinstance(other, ImportRecord):\n            return False\n        return str(self) == str(other)",
+        "docstring": "Determine equality between two ImportRecord instances based on their rendered string representation.\n\nArgs:\n    other (object): The object to compare against, expected to be an instance of ImportRecord.\n\nReturns:\n    bool: True if the rendered string representations of both ImportRecord instances are identical, otherwise False.\n\nThis method leverages the __str__ method to obtain the rendered representation of the ImportRecord, which formats the import based on the source, name, and alias attributes. It is essential for establishing equality within collections and sorting operations, as two ImportRecord instances that render to the same import statement are considered equal.",
+        "signature": "def __eq__(self, other: object) -> bool:",
+        "type": "Method",
+        "class_signature": "class ImportRecord:"
+      },
+      "ImportRecord.__gt__": {
+        "code": "    def __gt__(self: Self, other: Self) -> bool:\n        \"\"\"Compare two ImportRecord instances for sorting in accordance with `isort` logic.\n\nParameters:\n- other (Self): Another ImportRecord instance to be compared against.\n\nReturns:\n- bool: True if the current ImportRecord is greater than the other, which is determined based on the following criteria in order:\n  1. Minimum Python version (greater versions come first, with None treated as less than any version).\n  2. Presence of a fallback (records with a fallback are greater).\n  3. Source of import (lexicographically compared).\n  4. Import name (lexicographically compared).\n\nThis method interacts with the `min_version` and `fallback` attributes, which denote the minimum required Python version and an optional fallback ImportRecord, respectively. The instance method `__eq__` is used to check if the two records are identical, leading to an early return of False if they are.\"\"\"\n        '\\n        Compare two import records for sorting.\\n\\n        Emulates `isort` logic.\\n        '\n        if self == other:\n            return False\n        if self.min_version != other.min_version:\n            return (self.min_version or ()) > (other.min_version or ())\n        if bool(self.fallback) != bool(other.fallback):\n            return bool(self.fallback) > bool(other.fallback)\n        if self.source != other.source:\n            return self.source > other.source\n        return self.name > other.name",
+        "docstring": "Compare two ImportRecord instances for sorting in accordance with `isort` logic.\n\nParameters:\n- other (Self): Another ImportRecord instance to be compared against.\n\nReturns:\n- bool: True if the current ImportRecord is greater than the other, which is determined based on the following criteria in order:\n  1. Minimum Python version (greater versions come first, with None treated as less than any version).\n  2. Presence of a fallback (records with a fallback are greater).\n  3. Source of import (lexicographically compared).\n  4. Import name (lexicographically compared).\n\nThis method interacts with the `min_version` and `fallback` attributes, which denote the minimum required Python version and an optional fallback ImportRecord, respectively. The instance method `__eq__` is used to check if the two records are identical, leading to an early return of False if they are.",
+        "signature": "def __gt__(self: Self, other: Self) -> bool:",
+        "type": "Method",
+        "class_signature": "class ImportRecord:"
+      }
+    }
+  },
+  "dependency_dict": {
+    "mypy_boto3_builder/type_annotations/fake_annotation.py:FakeAnnotation:__hash__": {
+      "mypy_boto3_builder/type_annotations/fake_annotation.py": {
+        "FakeAnnotation.get_sort_key": {
+          "code": "    def get_sort_key(self) -> str:\n        \"\"\"\n        Get string to sort annotations.\n        \"\"\"\n        return str(self)",
+          "docstring": "Get string to sort annotations.",
+          "signature": "def get_sort_key(self) -> str:",
+          "type": "Method",
+          "class_signature": "class FakeAnnotation(ABC):"
+        }
+      }
+    },
+    "mypy_boto3_builder/type_annotations/type_annotation.py:TypeAnnotation:render": {},
+    "mypy_boto3_builder/type_annotations/fake_annotation.py:FakeAnnotation:get_import_records": {
+      "mypy_boto3_builder/type_annotations/type_annotation.py": {
+        "TypeAnnotation._get_import_records": {
+          "code": "    def _get_import_records(self) -> set[ImportRecord]:\n        \"\"\"\n        Create a safe Import Record for annotation.\n        \"\"\"\n        name = self.get_import_name()\n        source = self._SUPPORTED_TYPES[name]\n        if name not in self._FALLBACK:\n            return {ImportRecord(source=source, name=name)}\n        fallback_min_version, fallback_source = self._FALLBACK[name]\n        return {ImportRecord(source=source, name=name, fallback=ImportRecord(source=fallback_source, name=name), min_version=fallback_min_version)}",
+          "docstring": "Create a safe Import Record for annotation.",
+          "signature": "def _get_import_records(self) -> set[ImportRecord]:",
+          "type": "Method",
+          "class_signature": "class TypeAnnotation(FakeAnnotation):"
+        }
+      },
+      "mypy_boto3_builder/import_helpers/import_string.py": {
+        "ImportString.is_builtins": {
+          "code": "    def is_builtins(self) -> bool:\n        \"\"\"\n        Whether import is from Python `builtins` module.\n        \"\"\"\n        return self.parent == self.BUILTINS",
+          "docstring": "Whether import is from Python `builtins` module.",
+          "signature": "def is_builtins(self) -> bool:",
+          "type": "Method",
+          "class_signature": "class ImportString:"
+        }
+      },
+      "mypy_boto3_builder/import_helpers/import_record.py": {
+        "ImportRecord.__hash__": {
+          "code": "    def __hash__(self) -> int:\n        \"\"\"\n        Calculate hash value based on source, name and alias.\n        \"\"\"\n        return hash((self.source, self.name, self.alias, self.min_version, self.fallback))",
+          "docstring": "Calculate hash value based on source, name and alias.",
+          "signature": "def __hash__(self) -> int:",
+          "type": "Method",
+          "class_signature": "class ImportRecord:"
+        }
+      }
+    },
+    "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:render": {
+      "mypy_boto3_builder/import_helpers/import_record.py": {
+        "ImportRecord.render_name": {
+          "code": "    def render_name(self) -> str:\n        \"\"\"\n        Get rendered import name.\n        \"\"\"\n        if not self.name:\n            raise StructureError(f'ImportRecord {self} has no name')\n        if self.alias:\n            return f'{self.name} as {self.alias}'\n        return self.name",
+          "docstring": "Get rendered import name.",
+          "signature": "def render_name(self) -> str:",
+          "type": "Method",
+          "class_signature": "class ImportRecord:"
+        }
+      },
+      "mypy_boto3_builder/import_helpers/import_string.py": {
+        "ImportString.__str__": {
+          "code": "    def __str__(self) -> str:\n        \"\"\"\n        Render as a part of a valid Python import statement.\n        \"\"\"\n        return self.render()",
+          "docstring": "Render as a part of a valid Python import statement.",
+          "signature": "def __str__(self) -> str:",
+          "type": "Method",
+          "class_signature": "class ImportString:"
+        }
+      }
+    },
+    "mypy_boto3_builder/type_annotations/type_subscript.py:TypeSubscript:get_import_records": {},
+    "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__gt__": {
+      "mypy_boto3_builder/import_helpers/import_string.py": {
+        "ImportString.__eq__": {
+          "code": "    def __eq__(self, other: object) -> bool:\n        \"\"\"\n        Whether import strings produce the same render.\n        \"\"\"\n        if not isinstance(other, ImportString):\n            raise BuildInternalError(f\"{other} is not ImportString\")\n\n        return self.parts == other.parts",
+          "docstring": "Whether import strings produce the same render.",
+          "signature": "def __eq__(self, other: object) -> bool:",
+          "type": "Method",
+          "class_signature": "class ImportString:"
+        }
+      }
+    },
+    "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__eq__": {
+      "mypy_boto3_builder/import_helpers/import_record.py": {
+        "ImportRecord.__str__": {
+          "code": "    def __str__(self) -> str:\n        \"\"\"\n        Render as a valid Python import statement.\n        \"\"\"\n        return self.render()",
+          "docstring": "Render as a valid Python import statement.",
+          "signature": "def __str__(self) -> str:",
+          "type": "Method",
+          "class_signature": "class ImportRecord:"
+        }
+      }
+    },
+    "mypy_boto3_builder/type_annotations/fake_annotation.py:FakeAnnotation:copy": {
+      "mypy_boto3_builder/type_annotations/type_annotation.py": {
+        "TypeAnnotation.__copy__": {
+          "code": "    def __copy__(self) -> Self:\n        \"\"\"\n        Create a copy of type annotation wrapper.\n        \"\"\"\n        return self.__class__(self._wrapped_type)",
+          "docstring": "Create a copy of type annotation wrapper.",
+          "signature": "def __copy__(self) -> Self:",
+          "type": "Method",
+          "class_signature": "class TypeAnnotation(FakeAnnotation):"
+        }
+      }
+    }
+  },
+  "call_tree": {
+    "tests/type_annotations/test_type_annotation.py:TestTypeAnnotation:setup_method": {
+      "mypy_boto3_builder/type_annotations/type_annotation.py:TypeAnnotation:__init__": {}
+    },
+    "tests/type_annotations/test_type_annotation.py:TestTypeAnnotation:test_init": {
+      "mypy_boto3_builder/type_annotations/type_annotation.py:TypeAnnotation:get_import_name": {},
+      "mypy_boto3_builder/type_annotations/fake_annotation.py:FakeAnnotation:__hash__": {
+        "mypy_boto3_builder/type_annotations/fake_annotation.py:FakeAnnotation:get_sort_key": {
+          "mypy_boto3_builder/type_annotations/fake_annotation.py:FakeAnnotation:__str__": {
+            "mypy_boto3_builder/type_annotations/type_annotation.py:TypeAnnotation:render": {
+              "mypy_boto3_builder/type_annotations/type_annotation.py:TypeAnnotation:get_import_name": {}
+            }
+          }
+        }
+      },
+      "mypy_boto3_builder/type_annotations/type_annotation.py:TypeAnnotation:__init__": {}
+    },
+    "tests/type_annotations/test_type_annotation.py:TestTypeAnnotation:test_render": {
+      "mypy_boto3_builder/type_annotations/type_annotation.py:TypeAnnotation:render": {
+        "mypy_boto3_builder/type_annotations/type_annotation.py:TypeAnnotation:get_import_name": {}
+      }
+    },
+    "tests/type_annotations/test_type_annotation.py:TestTypeAnnotation:test_get_import_name": {
+      "mypy_boto3_builder/type_annotations/type_annotation.py:TypeAnnotation:get_import_name": {}
+    },
+    "tests/type_annotations/test_type_annotation.py:TestTypeAnnotation:test_get_import_record": {
+      "mypy_boto3_builder/type_annotations/fake_annotation.py:FakeAnnotation:get_import_records": {
+        "mypy_boto3_builder/type_annotations/type_annotation.py:TypeAnnotation:_get_import_records": {
+          "mypy_boto3_builder/type_annotations/type_annotation.py:TypeAnnotation:get_import_name": {},
+          "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__init__": {},
+          "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {}
+          }
+        },
+        "mypy_boto3_builder/import_helpers/import_string.py:ImportString:is_builtins": {
+          "mypy_boto3_builder/import_helpers/import_string.py:ImportString:parent": {}
+        },
+        "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+          "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {}
+        }
+      },
+      "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:render": {
+        "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__str__": {
+          "mypy_boto3_builder/import_helpers/import_string.py:ImportString:render": {}
+        },
+        "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:render_name": {}
+      }
+    },
+    "tests/type_annotations/test_type_annotation.py:TestTypeAnnotation:test_get_import_records": {
+      "mypy_boto3_builder/type_annotations/fake_annotation.py:FakeAnnotation:get_import_records": {
+        "mypy_boto3_builder/type_annotations/type_annotation.py:TypeAnnotation:_get_import_records": {
+          "mypy_boto3_builder/type_annotations/type_annotation.py:TypeAnnotation:get_import_name": {},
+          "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__init__": {},
+          "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {},
+            "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+              "[ignored_or_cut_off]": "..."
+            }
+          }
+        },
+        "mypy_boto3_builder/import_helpers/import_string.py:ImportString:is_builtins": {
+          "mypy_boto3_builder/import_helpers/import_string.py:ImportString:parent": {}
+        },
+        "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+          "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {},
+          "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+            "[ignored_or_cut_off]": "..."
+          }
+        }
+      },
+      "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:render": {
+        "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__str__": {
+          "mypy_boto3_builder/import_helpers/import_string.py:ImportString:render": {}
+        },
+        "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:render_name": {}
+      },
+      "mypy_boto3_builder/type_annotations/type_annotation.py:TypeAnnotation:__init__": {},
+      "mypy_boto3_builder/type_annotations/type_subscript.py:TypeSubscript:get_import_records": {
+        "mypy_boto3_builder/type_annotations/fake_annotation.py:FakeAnnotation:get_import_records": {
+          "mypy_boto3_builder/type_annotations/type_annotation.py:TypeAnnotation:_get_import_records": {
+            "mypy_boto3_builder/type_annotations/type_annotation.py:TypeAnnotation:get_import_name": {},
+            "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__init__": {},
+            "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+              "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {}
+            }
+          },
+          "mypy_boto3_builder/import_helpers/import_string.py:ImportString:is_builtins": {
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:parent": {}
+          },
+          "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {}
+          },
+          "mypy_boto3_builder/type_annotations/external_import.py:ExternalImport:_get_import_records": {
+            "mypy_boto3_builder/type_annotations/external_import.py:ExternalImport:import_record": {
+              "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__init__": {}
+            },
+            "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+              "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {}
+            }
+          }
+        }
+      },
+      "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__gt__": {
+        "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__eq__": {
+          "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord": {},
+          "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__str__": {
+            "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:render": {
+              "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__str__": {
+                "mypy_boto3_builder/import_helpers/import_string.py:ImportString:render": {}
+              },
+              "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:render_name": {}
+            }
+          }
+        },
+        "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__eq__": {
+          "mypy_boto3_builder/import_helpers/import_string.py:ImportString": {}
+        }
+      },
+      "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__eq__": {
+        "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__str__": {
+          "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:render": {
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__str__": {
+              "mypy_boto3_builder/import_helpers/import_string.py:ImportString:render": {}
+            },
+            "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:render_name": {}
+          }
+        }
+      }
+    },
+    "tests/type_annotations/test_type_annotation.py:TestTypeAnnotation:test_copy": {
+      "mypy_boto3_builder/type_annotations/fake_annotation.py:FakeAnnotation:copy": {
+        "mypy_boto3_builder/type_annotations/type_annotation.py:TypeAnnotation:__copy__": {
+          "mypy_boto3_builder/type_annotations/type_annotation.py:TypeAnnotation:__init__": {}
+        }
+      },
+      "mypy_boto3_builder/type_annotations/type_annotation.py:TypeAnnotation:get_import_name": {}
+    },
+    "tests/type_annotations/test_type_annotation.py:TestTypeAnnotation:test_no_fallback": {
+      "mypy_boto3_builder/type_annotations/type_annotation.py:TypeAnnotation:__init__": {},
+      "mypy_boto3_builder/type_annotations/fake_annotation.py:FakeAnnotation:get_import_records": {
+        "mypy_boto3_builder/type_annotations/type_annotation.py:TypeAnnotation:_get_import_records": {
+          "mypy_boto3_builder/type_annotations/type_annotation.py:TypeAnnotation:get_import_name": {},
+          "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__init__": {},
+          "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {}
+          }
+        },
+        "mypy_boto3_builder/import_helpers/import_string.py:ImportString:is_builtins": {
+          "mypy_boto3_builder/import_helpers/import_string.py:ImportString:parent": {}
+        },
+        "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+          "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {}
+        }
+      },
+      "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:render": {
+        "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__str__": {
+          "mypy_boto3_builder/import_helpers/import_string.py:ImportString:render": {}
+        },
+        "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:render_name": {}
+      }
+    },
+    "tests/type_annotations/test_type_annotation.py:TestTypeAnnotation:test_fallback": {
+      "mypy_boto3_builder/type_annotations/type_annotation.py:TypeAnnotation:__init__": {},
+      "mypy_boto3_builder/type_annotations/type_annotation.py:TypeAnnotation:render": {
+        "mypy_boto3_builder/type_annotations/type_annotation.py:TypeAnnotation:get_import_name": {}
+      },
+      "mypy_boto3_builder/type_annotations/fake_annotation.py:FakeAnnotation:get_import_records": {
+        "mypy_boto3_builder/type_annotations/type_annotation.py:TypeAnnotation:_get_import_records": {
+          "mypy_boto3_builder/type_annotations/type_annotation.py:TypeAnnotation:get_import_name": {},
+          "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__init__": {},
+          "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {},
+            "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+              "[ignored_or_cut_off]": "..."
+            }
+          }
+        },
+        "mypy_boto3_builder/import_helpers/import_string.py:ImportString:is_builtins": {
+          "mypy_boto3_builder/import_helpers/import_string.py:ImportString:parent": {}
+        },
+        "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+          "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {},
+          "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+            "[ignored_or_cut_off]": "..."
+          }
+        }
+      },
+      "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:render": {
+        "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__str__": {
+          "mypy_boto3_builder/import_helpers/import_string.py:ImportString:render": {}
+        },
+        "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:render_name": {}
+      }
+    }
+  },
+  "PRD": "# PROJECT NAME: mypy_boto3_s3-test_type_annotation\n\n# FOLDER STRUCTURE:\n```\n..\n\u2514\u2500\u2500 mypy_boto3_builder/\n    \u251c\u2500\u2500 import_helpers/\n    \u2502   \u2514\u2500\u2500 import_record.py\n    \u2502       \u251c\u2500\u2500 ImportRecord.__eq__\n    \u2502       \u251c\u2500\u2500 ImportRecord.__gt__\n    \u2502       \u2514\u2500\u2500 ImportRecord.render\n    \u2514\u2500\u2500 type_annotations/\n        \u251c\u2500\u2500 fake_annotation.py\n        \u2502   \u251c\u2500\u2500 FakeAnnotation.__hash__\n        \u2502   \u251c\u2500\u2500 FakeAnnotation.copy\n        \u2502   \u2514\u2500\u2500 FakeAnnotation.get_import_records\n        \u251c\u2500\u2500 type_annotation.py\n        \u2502   \u251c\u2500\u2500 TypeAnnotation.__init__\n        \u2502   \u251c\u2500\u2500 TypeAnnotation.get_import_name\n        \u2502   \u2514\u2500\u2500 TypeAnnotation.render\n        \u2514\u2500\u2500 type_subscript.py\n            \u2514\u2500\u2500 TypeSubscript.get_import_records\n```\n\n# IMPLEMENTATION REQUIREMENTS:\n## MODULE DESCRIPTION:\nThe module is designed to validate, manage, and test type annotations within a Python codebase, particularly those related to the `typing` and `typing_extensions` libraries. It provides functionality for retrieving import records, rendering type annotations, and handling fallback mechanisms for non-standard or extended type hints, ensuring consistency and correctness in type hinting. By encapsulating type annotation operations, the module simplifies the process of generating and maintaining accurate import statements and handling compatibility between standard and extended type annotations. This solves the problem of managing complex type imports, reducing potential errors, and enhancing code maintainability for developers integrating static type checking in their Python projects.\n\n## FILE 1: mypy_boto3_builder/type_annotations/type_annotation.py\n\n- CLASS METHOD: TypeAnnotation.__init__\n  - CLASS SIGNATURE: class TypeAnnotation(FakeAnnotation):\n  - SIGNATURE: def __init__(self, wrapped_type: str) -> None:\n  - DOCSTRING: \n```python\n\"\"\"\nInitialization method for the TypeAnnotation class, which wraps a type annotation as a string.\n\nParameters:\n    wrapped_type (str): The original type annotation to be wrapped. It must be a key in the _SUPPORTED_TYPES mapping.\n\nRaises:\n    TypeAnnotationError: If the provided wrapped_type is not supported, indicating that it cannot be wrapped.\n\nAttributes:\n    _wrapped_type (str): The type annotation string that has been validated and stored for later use.\n\nConstants:\n    _SUPPORTED_TYPES (Mapping[str, ImportString]): Defined at the class level, this mapping includes supported type annotations and their corresponding import module sources. It is used to validate the wrapped_type parameter during initialization.\n\"\"\"\n```\n\n- CLASS METHOD: TypeAnnotation.render\n  - CLASS SIGNATURE: class TypeAnnotation(FakeAnnotation):\n  - SIGNATURE: def render(self) -> str:\n  - DOCSTRING: \n```python\n\"\"\"\nRender the type annotation to a valid Python code representation for local usage.\n\nThis method does not take any parameters and calls the `get_import_name()` method to retrieve the name of the wrapped type. It ensures that the appropriate import string is provided for the type annotation defined during the initialization of the `TypeAnnotation` object. \n\nReturns:\n    A string that represents the valid type annotation corresponding to the wrapped type.\n\nDependencies:\n    - `self._wrapped_type`: Holds the name of the wrapped type, which must be in the `_SUPPORTED_TYPES` mapping defined in the class.\n\"\"\"\n```\n\n- CLASS METHOD: TypeAnnotation.get_import_name\n  - CLASS SIGNATURE: class TypeAnnotation(FakeAnnotation):\n  - SIGNATURE: def get_import_name(self) -> str:\n  - DOCSTRING: \n```python\n\"\"\"\nCreate a safe name for the imported type annotation.\n\nThis method returns the wrapped type as a string, which corresponds to the type annotation being used. The wrapped type is validated against the supported types defined in the class's `_SUPPORTED_TYPES` constant. There are no input parameters, and the return value is a string representing the name of the type to be imported.\n\nThe method interacts with the `_wrapped_type` attribute, which is set upon instance initialization and represents the specific type annotation being wrapped by the `TypeAnnotation` class.\n\"\"\"\n```\n\n## FILE 2: mypy_boto3_builder/type_annotations/fake_annotation.py\n\n- CLASS METHOD: FakeAnnotation.__hash__\n  - CLASS SIGNATURE: class FakeAnnotation(ABC):\n  - SIGNATURE: def __hash__(self) -> int:\n  - DOCSTRING: \n```python\n\"\"\"\nCalculate the hash value for the instance of the FakeAnnotation class. This method generates a hash based on the string representation of the object, specifically using the output of the get_sort_key() method. The use of get_sort_key() ensures that the hash value is consistent with the sorting order defined by the annotation's representation. This method does not take any parameters and returns an integer that represents the hash value of the FakeAnnotation instance.\n\"\"\"\n```\n\n- CLASS METHOD: FakeAnnotation.get_import_records\n  - CLASS SIGNATURE: class FakeAnnotation(ABC):\n  - SIGNATURE: def get_import_records(self) -> set[ImportRecord]:\n  - DOCSTRING: \n```python\n\"\"\"\nRetrieve and return a set of import records necessary for utilizing the type annotation represented by the instance. This method filters the records obtained from the internal `_get_import_records` method, excluding any that are sourced from built-in modules, as determined by the `is_builtins()` method on the `ImportRecord.source`. The result helps in identifying external dependencies that need to be imported when using the type annotation in Python code.\n\"\"\"\n```\n\n- CLASS METHOD: FakeAnnotation.copy\n  - CLASS SIGNATURE: class FakeAnnotation(ABC):\n  - SIGNATURE: def copy(self: Self) -> Self:\n  - DOCSTRING: \n```python\n\"\"\"\nCreate and return a shallow copy of the current type annotation wrapper instance. This method leverages the `copy` module to instantiate a copy of the object. It ensures that the original object's state is unaffected by changes made to the copied instance. The method does not take any parameters and returns a new instance of the same type as the original. The usage of `copy.copy(self)` indicates that this method is intended for creating shallow copies, which means nested objects are not duplicated but referenced. This is important for managing complexity and memory usage in type annotations that may share references to other objects.\n\"\"\"\n```\n\n## FILE 3: mypy_boto3_builder/type_annotations/type_subscript.py\n\n- CLASS METHOD: TypeSubscript.get_import_records\n  - CLASS SIGNATURE: class TypeSubscript(TypeParent):\n  - SIGNATURE: def get_import_records(self) -> set[ImportRecord]:\n  - DOCSTRING: \n```python\n\"\"\"\nGet all import records required for using the type annotation represented by this instance of `TypeSubscript`. This method aggregates import records from the parent type annotation and any child type annotations, ensuring that all necessary imports for the complete type are included. The result is a set of `ImportRecord` instances that encapsulate the import requirements needed for proper usage of the type annotation. There are no input parameters. The output is a set containing the collected import records. This relies on the `get_import_records` method of both the parent and child annotations, ensuring comprehensive coverage of all dependent types.\n\"\"\"\n```\n\n## FILE 4: mypy_boto3_builder/import_helpers/import_record.py\n\n- CLASS METHOD: ImportRecord.__gt__\n  - CLASS SIGNATURE: class ImportRecord:\n  - SIGNATURE: def __gt__(self: Self, other: Self) -> bool:\n  - DOCSTRING: \n```python\n\"\"\"\nCompare two ImportRecord instances for sorting in accordance with `isort` logic.\n\nParameters:\n- other (Self): Another ImportRecord instance to be compared against.\n\nReturns:\n- bool: True if the current ImportRecord is greater than the other, which is determined based on the following criteria in order:\n  1. Minimum Python version (greater versions come first, with None treated as less than any version).\n  2. Presence of a fallback (records with a fallback are greater).\n  3. Source of import (lexicographically compared).\n  4. Import name (lexicographically compared).\n\nThis method interacts with the `min_version` and `fallback` attributes, which denote the minimum required Python version and an optional fallback ImportRecord, respectively. The instance method `__eq__` is used to check if the two records are identical, leading to an early return of False if they are.\n\"\"\"\n```\n\n- CLASS METHOD: ImportRecord.render\n  - CLASS SIGNATURE: class ImportRecord:\n  - SIGNATURE: def render(self) -> str:\n  - DOCSTRING: \n```python\n\"\"\"\nGet the rendered import string for the ImportRecord.\n\nThis method generates a string representation of the import statement based on the attributes of the instance. If an import name is provided, the method constructs a 'from ... import ...' statement. If only an alias is defined, it returns an 'import ... as ...' statement. If neither is present, it defaults to returning a simple 'import ...' statement using the source.\n\nReturns:\n    str: The constructed import statement representing the ImportRecord.\n\nDependencies:\n    - self.source: An instance of the ImportString class, providing the source for the import.\n    - self.name: The name of the import, used when constructing the import statement.\n    - self.alias: An optional local alias for the import, affecting the format of the output.\n    \nRaises:\n    StructureError: If self.name is not provided, this exception indicates that the import record is incomplete.\n\"\"\"\n```\n\n- CLASS METHOD: ImportRecord.__eq__\n  - CLASS SIGNATURE: class ImportRecord:\n  - SIGNATURE: def __eq__(self, other: object) -> bool:\n  - DOCSTRING: \n```python\n\"\"\"\nDetermine equality between two ImportRecord instances based on their rendered string representation.\n\nArgs:\n    other (object): The object to compare against, expected to be an instance of ImportRecord.\n\nReturns:\n    bool: True if the rendered string representations of both ImportRecord instances are identical, otherwise False.\n\nThis method leverages the __str__ method to obtain the rendered representation of the ImportRecord, which formats the import based on the source, name, and alias attributes. It is essential for establishing equality within collections and sorting operations, as two ImportRecord instances that render to the same import statement are considered equal.\n\"\"\"\n```\n\n# TASK DESCRIPTION:\nIn this project, you need to implement the functions and methods listed above. The functions have been removed from the code but their docstrings remain.\nYour task is to:\n1. Read and understand the docstrings of each function/method\n2. Understand the dependencies and how they interact with the target functions\n3. Implement the functions/methods according to their docstrings and signatures\n4. Ensure your implementations work correctly with the rest of the codebase\n",
+  "file_code": {
+    "mypy_boto3_builder/type_annotations/type_annotation.py": "\"\"\"\nWrapper for `typing` type annotation.\n\nCopyright 2024 Vlad Emelianov\n\"\"\"\nfrom collections.abc import Mapping\nfrom typing import Final, Self\nfrom mypy_boto3_builder.exceptions import TypeAnnotationError\nfrom mypy_boto3_builder.import_helpers.import_record import ImportRecord\nfrom mypy_boto3_builder.import_helpers.import_string import ImportString\nfrom mypy_boto3_builder.type_annotations.fake_annotation import FakeAnnotation\n\nclass TypeAnnotation(FakeAnnotation):\n    \"\"\"\n    Wrapper for `typing` type annotation.\n\n    Arguments:\n        wrapped_type -- Original type annotation as a string.\n    \"\"\"\n    _TYPING: Final = ImportString('typing')\n    _TYPING_EXTENSIONS: Final = ImportString('typing_extensions')\n    _SUPPORTED_TYPES: Final[Mapping[str, ImportString]] = {'Union': _TYPING, 'Any': _TYPING, 'Dict': _TYPING, 'List': _TYPING, 'Set': _TYPING, 'Optional': _TYPING, 'IO': _TYPING, 'overload': _TYPING, 'Type': _TYPING, 'NoReturn': _TYPING, 'TypedDict': _TYPING, 'Literal': _TYPING, 'Mapping': _TYPING, 'Sequence': _TYPING, 'Callable': _TYPING, 'Iterator': _TYPING, 'Awaitable': _TYPING, 'AsyncIterator': _TYPING, 'NotRequired': _TYPING, 'Unpack': _TYPING}\n    _FALLBACK: Final[Mapping[str, tuple[tuple[int, int] | None, ImportString]]] = {'NotRequired': ((3, 12), _TYPING_EXTENSIONS), 'TypedDict': ((3, 12), _TYPING_EXTENSIONS), 'Literal': ((3, 12), _TYPING_EXTENSIONS), 'Unpack': ((3, 12), _TYPING_EXTENSIONS)}\n\n    def _get_import_records(self) -> set[ImportRecord]:\n        \"\"\"\n        Create a safe Import Record for annotation.\n        \"\"\"\n        name = self.get_import_name()\n        source = self._SUPPORTED_TYPES[name]\n        if name not in self._FALLBACK:\n            return {ImportRecord(source=source, name=name)}\n        fallback_min_version, fallback_source = self._FALLBACK[name]\n        return {ImportRecord(source=source, name=name, fallback=ImportRecord(source=fallback_source, name=name), min_version=fallback_min_version)}\n\n    def is_dict(self) -> bool:\n        \"\"\"\n        Whether annotation is a plain Dict.\n        \"\"\"\n        return self._wrapped_type == 'Dict'\n\n    def is_list(self) -> bool:\n        \"\"\"\n        Whether annotation is a plain List.\n        \"\"\"\n        return self._wrapped_type == 'List'\n\n    def __copy__(self) -> Self:\n        \"\"\"\n        Create a copy of type annotation wrapper.\n        \"\"\"\n        return self.__class__(self._wrapped_type)",
+    "mypy_boto3_builder/type_annotations/fake_annotation.py": "\"\"\"\nParent class for all type annotation wrappers.\n\nCopyright 2024 Vlad Emelianov\n\"\"\"\nimport copy\nimport functools\nfrom abc import ABC, abstractmethod\nfrom collections.abc import Iterator\nfrom typing import Self\nfrom mypy_boto3_builder.exceptions import BuildInternalError\nfrom mypy_boto3_builder.import_helpers.import_record import ImportRecord\n\n@functools.total_ordering\nclass FakeAnnotation(ABC):\n    \"\"\"\n    Parent class for all type annotation wrappers.\n    \"\"\"\n\n    def __eq__(self, other: object) -> bool:\n        \"\"\"\n        Whether two annotations are equal.\n        \"\"\"\n        if not isinstance(other, FakeAnnotation):\n            raise BuildInternalError(f'{other} is not FakeAnnotation')\n        return self.get_sort_key() == other.get_sort_key()\n\n    def __gt__(self: Self, other: 'FakeAnnotation') -> bool:\n        \"\"\"\n        Compare two annotations for sorting.\n        \"\"\"\n        return self.get_sort_key() > other.get_sort_key()\n\n    def get_sort_key(self) -> str:\n        \"\"\"\n        Get string to sort annotations.\n        \"\"\"\n        return str(self)\n\n    def __str__(self) -> str:\n        \"\"\"\n        Render annotation usage as a valid Python statement.\n        \"\"\"\n        return self.render()\n\n    @abstractmethod\n    def render(self) -> str:\n        \"\"\"\n        Render type annotation to a valid Python code for local usage.\n        \"\"\"\n\n    def _get_import_records(self) -> set[ImportRecord]:\n        \"\"\"\n        Get import record required for using type annotation.\n        \"\"\"\n        return set()\n\n    def iterate_types(self) -> Iterator['FakeAnnotation']:\n        \"\"\"\n        Iterate over all used type annotations recursively including self.\n        \"\"\"\n        yield self\n\n    def is_dict(self) -> bool:\n        \"\"\"\n        Whether type annotation is `Dict` or `TypedDict`.\n        \"\"\"\n        return False\n\n    def is_list(self) -> bool:\n        \"\"\"\n        Whether type annotation is `List`.\n        \"\"\"\n        return False\n\n    def is_literal(self) -> bool:\n        \"\"\"\n        Whether type annotation is `Literal`.\n        \"\"\"\n        return False\n\n    @abstractmethod\n    def __copy__(self: Self) -> Self:\n        \"\"\"\n        Create a copy of type annotation wrapper.\n        \"\"\"\n\n    def get_local_types(self) -> list['FakeAnnotation']:\n        \"\"\"\n        Get internal types generated by builder.\n        \"\"\"\n        return []\n\n    def render_definition(self) -> str:\n        \"\"\"\n        Render type annotation for debug purposes.\n        \"\"\"\n        return self.render()",
+    "mypy_boto3_builder/type_annotations/type_subscript.py": "\"\"\"\nWrapper for subscript type annotations, like `List[str]`.\n\nCopyright 2024 Vlad Emelianov\n\"\"\"\nfrom collections.abc import Iterable, Iterator\nfrom typing import Self\nfrom mypy_boto3_builder.exceptions import TypeAnnotationError\nfrom mypy_boto3_builder.import_helpers.import_record import ImportRecord\nfrom mypy_boto3_builder.type_annotations.fake_annotation import FakeAnnotation\nfrom mypy_boto3_builder.type_annotations.type_parent import TypeParent\n\nclass TypeSubscript(TypeParent):\n    \"\"\"\n    Wrapper for subscript type annotations, like `List[str]`.\n\n    Arguments:\n        parent -- Parent type annotation.\n        children -- Children type annotations.\n        stringify -- Convert type annotation to string.\n    \"\"\"\n\n    def __init__(self, parent: FakeAnnotation, children: Iterable[FakeAnnotation]=(), *, stringify: bool=False) -> None:\n        self.parent: FakeAnnotation = parent\n        self.children: list[FakeAnnotation] = list(children)\n        self._stringify = stringify\n\n    def render(self) -> str:\n        \"\"\"\n        Render type annotation to a valid Python code for local usage.\n\n        Returns:\n            A string with a valid type annotation.\n        \"\"\"\n        result = self.parent.render()\n        if self.children:\n            children = ', '.join([i.render() for i in self.children])\n            result = f'{result}[{children}]'\n        if self._stringify:\n            result = f'\"{result}\"'\n        return result\n\n    def iterate_types(self) -> Iterator[FakeAnnotation]:\n        \"\"\"\n        Extract type annotations from children.\n        \"\"\"\n        yield from self.parent.iterate_types()\n        for child in self.children:\n            yield from child.iterate_types()\n\n    def add_child(self, child: FakeAnnotation) -> None:\n        \"\"\"\n        Add new child to Substcript.\n        \"\"\"\n        self.children.append(child)\n\n    def is_dict(self) -> bool:\n        \"\"\"\n        Whether subscript parent is Dict.\n        \"\"\"\n        return self.parent.is_dict()\n\n    def is_list(self) -> bool:\n        \"\"\"\n        Whether subscript parent is List.\n        \"\"\"\n        return self.parent.is_list()\n\n    def __copy__(self) -> Self:\n        \"\"\"\n        Create a copy of type annotation wrapper.\n        \"\"\"\n        return self.__class__(parent=self.parent, children=list(self.children), stringify=self._stringify)\n\n    def get_local_types(self) -> list[FakeAnnotation]:\n        \"\"\"\n        Get internal types generated by builder.\n        \"\"\"\n        result: list[FakeAnnotation] = []\n        for child in self.children:\n            result.extend(child.get_local_types())\n        return result\n\n    def iterate_children_type_annotations(self) -> Iterator[FakeAnnotation]:\n        \"\"\"\n        Extract required type annotations from attributes.\n        \"\"\"\n        yield from self.children\n\n    def get_children_types(self) -> set[FakeAnnotation]:\n        \"\"\"\n        Extract required type annotations from attributes.\n        \"\"\"\n        result: set[FakeAnnotation] = set()\n        for child in self.children:\n            result.update(child.iterate_types())\n        return result\n\n    def replace_child(self, child: FakeAnnotation, new_child: FakeAnnotation) -> Self:\n        \"\"\"\n        Replace child type annotation with a new one.\n        \"\"\"\n        if child not in self.children:\n            raise TypeAnnotationError(f'Child not found: {child}')\n        index = self.children.index(child)\n        self.children[index] = new_child\n        return self\n\n    def iterate_children(self) -> Iterator[FakeAnnotation]:\n        \"\"\"\n        Iterate over children.\n        \"\"\"\n        yield from self.children",
+    "mypy_boto3_builder/import_helpers/import_record.py": "\"\"\"\nHelper for Python import strings.\n\nCopyright 2024 Vlad Emelianov\n\"\"\"\nimport functools\nfrom typing import Self\nfrom mypy_boto3_builder.exceptions import StructureError\nfrom mypy_boto3_builder.import_helpers.import_string import ImportString\n\n@functools.total_ordering\nclass ImportRecord:\n    \"\"\"\n    Helper for Python import strings.\n\n    Arguments:\n        source -- Source of import.\n        name -- Import name.\n        alias -- Import local name.\n        min_version -- Minimum Python version, used for fallback.\n        fallback -- Fallback ImportRecord.\n    \"\"\"\n\n    def __init__(self, source: ImportString, name: str='', alias: str='', min_version: tuple[int, ...] | None=None, fallback: Self | None=None) -> None:\n        self.source = source\n        self.name = name\n        self.alias = alias\n        self.min_version = min_version\n        self.fallback = fallback\n\n    def render_name(self) -> str:\n        \"\"\"\n        Get rendered import name.\n        \"\"\"\n        if not self.name:\n            raise StructureError(f'ImportRecord {self} has no name')\n        if self.alias:\n            return f'{self.name} as {self.alias}'\n        return self.name\n\n    def __str__(self) -> str:\n        \"\"\"\n        Render as a valid Python import statement.\n        \"\"\"\n        return self.render()\n\n    def __hash__(self) -> int:\n        \"\"\"\n        Calculate hash value based on source, name and alias.\n        \"\"\"\n        return hash((self.source, self.name, self.alias, self.min_version, self.fallback))\n\n    def get_local_name(self) -> str:\n        \"\"\"\n        Get local import name.\n        \"\"\"\n        return self.alias or self.name or self.source.render()\n\n    def needs_sys_fallback(self) -> bool:\n        \"\"\"\n        Whether ImportString requires `sys` module.\n        \"\"\"\n        return bool(self.fallback and self.min_version)"
+  }
+}

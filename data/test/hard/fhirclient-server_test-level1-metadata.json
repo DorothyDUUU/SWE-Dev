@@ -1,0 +1,303 @@
+{
+  "dir_path": "/app/fhirclient",
+  "package_name": "fhirclient",
+  "sample_name": "fhirclient-server_test",
+  "src_dir": "fhirclient/",
+  "test_dir": "tests/",
+  "test_file": "tests/server_test.py",
+  "test_code": "import io\nimport json\nimport os\nimport shutil\nimport tempfile\nimport unittest\n\nfrom fhirclient import server\n\n\nclass TestServer(unittest.TestCase):\n\n    @staticmethod\n    def copy_metadata(filename: str, tmpdir: str) -> None:\n        shutil.copyfile(\n            os.path.join(os.path.dirname(__file__), 'data', filename),\n            os.path.join(tmpdir, 'metadata')\n        )\n\n    def testValidCapabilityStatement(self):\n        with tempfile.TemporaryDirectory() as tmpdir:\n            self.copy_metadata('test_metadata_valid.json', tmpdir)\n            mock = MockServer(tmpdir)\n            mock.get_capability()\n        \n        self.assertIsNotNone(mock.auth._registration_uri)\n        self.assertIsNotNone(mock.auth._authorize_uri)\n        self.assertIsNotNone(mock.auth._token_uri)\n    \n    def testStateConservation(self):\n        with tempfile.TemporaryDirectory() as tmpdir:\n            self.copy_metadata('test_metadata_valid.json', tmpdir)\n            mock = MockServer(tmpdir)\n            self.assertIsNotNone(mock.capabilityStatement)\n        \n        fhir = server.FHIRServer(None, state=mock.state)\n        self.assertIsNotNone(fhir.auth._registration_uri)\n        self.assertIsNotNone(fhir.auth._authorize_uri)\n        self.assertIsNotNone(fhir.auth._token_uri)\n    \n    def testInvalidCapabilityStatement(self):\n        with tempfile.TemporaryDirectory() as tmpdir:\n            self.copy_metadata('test_metadata_invalid.json', tmpdir)\n            mock = MockServer(tmpdir)\n            try:\n                mock.get_capability()\n                self.assertTrue(False, \"Must have thrown exception\")\n            except Exception as e:\n                self.assertEqual(4, len(e.errors))\n                self.assertEqual(\"date:\", str(e.errors[0])[:5])\n                self.assertEqual(\"format:\", str(e.errors[1])[:7])\n                self.assertEqual(\"rest.0:\", str(e.errors[2])[:7])\n                self.assertEqual(\"operation.1:\", str(e.errors[2].errors[0])[:12])\n                self.assertEqual(\"definition:\", str(e.errors[2].errors[0].errors[0])[:11])\n                self.assertEqual(\"Wrong type <class 'dict'>\", str(e.errors[2].errors[0].errors[0].errors[0])[:25])\n                self.assertEqual(\"security:\", str(e.errors[2].errors[1])[:9])\n                self.assertEqual(\"service.0:\", str(e.errors[2].errors[1].errors[0])[:10])\n                self.assertEqual(\"coding.0:\", str(e.errors[2].errors[1].errors[0].errors[0])[:9])\n                self.assertEqual(\"Superfluous entry \\\"systems\\\"\", str(e.errors[2].errors[1].errors[0].errors[0].errors[0])[:27])\n                self.assertEqual(\"Superfluous entry \\\"formats\\\"\", str(e.errors[3])[:27])\n\n\nclass MockServer(server.FHIRServer):\n    \"\"\" Reads local files.\n    \"\"\"\n    \n    def __init__(self, tmpdir: str):\n        super().__init__(None, base_uri='https://fhir.smarthealthit.org')\n        self.directory = tmpdir\n    \n    def request_json(self, path, nosign=False):\n        assert path\n        with io.open(os.path.join(self.directory, path), encoding='utf-8') as handle:\n            return json.load(handle)\n",
+  "GT_file_code": {
+    "fhirclient/server.py": "import json\nimport requests\nimport logging\nimport urllib.parse as urlparse\n\nfrom .auth import FHIRAuth\n\nFHIRJSONMimeType = 'application/fhir+json'\n\nlogger = logging.getLogger(__name__)\n\n\nclass FHIRUnauthorizedException(Exception):\n    \"\"\" Indicating a 401 response.\n    \"\"\"\n    def __init__(self, response):\n        self.response = response\n\n\nclass FHIRPermissionDeniedException(Exception):\n    \"\"\" Indicating a 403 response.\n    \"\"\"\n    def __init__(self, response):\n        self.response = response\n\n\nclass FHIRNotFoundException(Exception):\n    \"\"\" Indicating a 404 response.\n    \"\"\"\n    def __init__(self, response):\n        self.response = response\n\n\nclass FHIRServer(object):\n    \"\"\" Handles talking to a FHIR server.\n    \"\"\"\n    \n    def __init__(self, client, base_uri=None, state=None):\n        self.client = client\n        self.auth = None\n        self.base_uri = None\n        self.aud = None\n\n        # Use a single requests Session for all \"requests\"\n        self.session = requests.Session()\n        \n        # A URI can't possibly be less than 11 chars\n        # make sure we end with \"/\", otherwise the last path component will be\n        # lost when creating URLs with urllib\n        if base_uri is not None and len(base_uri) > 10:\n            self.base_uri = base_uri if '/' == base_uri[-1] else base_uri + '/'\n            self.aud = base_uri\n        self._capability = None\n        if state is not None:\n            self.from_state(state)\n        if not self.base_uri or len(self.base_uri) <= 10:\n            raise Exception(\"FHIRServer must be initialized with `base_uri` or `state` containing the base-URI, but neither happened\")\n    \n    def should_save_state(self):\n        if self.client is not None:\n            self.client.save_state()\n    \n    \n    # MARK: Server CapabilityStatement\n    \n    @property\n    def capabilityStatement(self):\n        self.get_capability()\n        return self._capability\n    \n    def get_capability(self, force=False):\n        \"\"\" Returns the server's CapabilityStatement, retrieving it if needed\n        or forced.\n        \"\"\"\n        if self._capability is None or force:\n            logger.info('Fetching CapabilityStatement from {0}'.format(self.base_uri))\n            from .models import capabilitystatement\n            conf = capabilitystatement.CapabilityStatement.read_from('metadata', self)\n            self._capability = conf\n            \n            security = None\n            try:\n                security = conf.rest[0].security\n            except Exception as e:\n                logger.info(\"No REST security statement found in server capability statement\")\n            \n            settings = {\n                'aud': self.aud,\n                'app_id': self.client.app_id if self.client is not None else None,\n                'app_secret': self.client.app_secret if self.client is not None else None,\n                'redirect_uri': self.client.redirect if self.client is not None else None,\n                'jwt_token': self.client.jwt_token if self.client is not None else None,\n            }\n            self.auth = FHIRAuth.from_capability_security(security, settings)\n            self.should_save_state()\n    \n    \n    # MARK: Authorization\n    \n    @property\n    def desired_scope(self):\n        return self.client.desired_scope if self.client is not None else None\n    \n    @property\n    def launch_token(self):\n        return self.client.launch_token if self.client is not None else None\n    \n    @property\n    def authorize_uri(self):\n        if self.auth is None:\n            self.get_capability()\n        return self.auth.authorize_uri(self)\n    \n    def handle_callback(self, url):\n        if self.auth is None:\n            raise Exception(\"Not ready to handle callback, I do not have an auth instance\")\n        return self.auth.handle_callback(url, self)\n\n    def authorize(self):\n        if self.auth is None:\n            raise Exception(\"Not ready to authorize, I do not have an auth instance\")\n        return self.auth.authorize(self) if self.auth is not None else None\n\n    def reauthorize(self):\n        if self.auth is None:\n            raise Exception(\"Not ready to reauthorize, I do not have an auth instance\")\n        return self.auth.reauthorize(self) if self.auth is not None else None\n    \n    \n    # MARK: Requests\n    \n    @property\n    def ready(self):\n        \"\"\" Check whether the server is ready to make calls, i.e. is has\n        fetched its capability statement and its `auth` instance is ready.\n        \n        :returns: True if the server can make authenticated calls\n        \"\"\"\n        return self.auth.ready if self.auth is not None else False\n    \n    def prepare(self):\n        \"\"\" Check whether the server is ready to make calls, i.e. is has\n        fetched its capability statement and its `auth` instance is ready.\n        This method will fetch the capability statement if it hasn't already\n        been fetched.\n        \n        :returns: True if the server can make authenticated calls\n        \"\"\"\n        if self.auth is None:\n            self.get_capability()\n        return self.auth.ready if self.auth is not None else False\n    \n    def request_json(self, path, nosign=False):\n        \"\"\" Perform a request for JSON data against the server's base with the\n        given relative path.\n        \n        :param str path: The path to append to `base_uri`\n        :param bool nosign: If set to True, the request will not be signed\n        :throws: Exception on HTTP status >= 400\n        :returns: Decoded JSON response\n        \"\"\"\n        headers = {'Accept': 'application/json'}\n        res = self._get(path, headers, nosign)\n        \n        return res.json()\n    \n    def request_data(self, path, headers={}, nosign=False):\n        \"\"\" Perform a data request data against the server's base with the\n        given relative path.\n        \"\"\"\n        res = self._get(path, headers, nosign)\n        return res.content\n    \n    def _get(self, path, headers={}, nosign=False):\n        \"\"\" Issues a GET request.\n        \n        :returns: The response object\n        \"\"\"\n        assert self.base_uri and path\n        url = urlparse.urljoin(self.base_uri, path)\n        \n        header_defaults = {\n            'Accept': FHIRJSONMimeType,\n            'Accept-Charset': 'UTF-8',\n        }\n        # merge in user headers with defaults\n        header_defaults.update(headers)\n        # use the merged headers in the request\n        headers = header_defaults\n        if not nosign and self.auth is not None and self.auth.can_sign_headers():\n            headers = self.auth.signed_headers(headers)\n        \n        # perform the request but intercept 401 responses, raising our own Exception\n        res = self.session.get(url, headers=headers)\n        self.raise_for_status(res)\n        return res\n    \n    def put_json(self, path, resource_json, nosign=False):\n        \"\"\" Performs a PUT request of the given JSON, which should represent a\n        resource, to the given relative path.\n        \n        :param str path: The path to append to `base_uri`\n        :param dict resource_json: The JSON representing the resource\n        :param bool nosign: If set to True, the request will not be signed\n        :throws: Exception on HTTP status >= 400\n        :returns: The response object\n        \"\"\"\n        url = urlparse.urljoin(self.base_uri, path)\n        headers = {\n            'Content-type': FHIRJSONMimeType,\n            'Accept': FHIRJSONMimeType,\n            'Accept-Charset': 'UTF-8',\n        }\n        if not nosign and self.auth is not None and self.auth.can_sign_headers():\n            headers = self.auth.signed_headers(headers)\n        \n        # perform the request but intercept 401 responses, raising our own Exception\n        res = self.session.put(url, headers=headers, data=json.dumps(resource_json))\n        self.raise_for_status(res)\n        return res\n    \n    def post_json(self, path, resource_json, nosign=False):\n        \"\"\" Performs a POST of the given JSON, which should represent a\n        resource, to the given relative path.\n        \n        :param str path: The path to append to `base_uri`\n        :param dict resource_json: The JSON representing the resource\n        :param bool nosign: If set to True, the request will not be signed\n        :throws: Exception on HTTP status >= 400\n        :returns: The response object\n        \"\"\"\n        url = urlparse.urljoin(self.base_uri, path)\n        headers = {\n            'Content-type': FHIRJSONMimeType,\n            'Accept': FHIRJSONMimeType,\n            'Accept-Charset': 'UTF-8',\n        }\n        if not nosign and self.auth is not None and self.auth.can_sign_headers():\n            headers = self.auth.signed_headers(headers)\n        \n        # perform the request but intercept 401 responses, raising our own Exception\n        res = self.session.post(url, headers=headers, data=json.dumps(resource_json))\n        self.raise_for_status(res)\n        return res\n    \n    def post_as_form(self, url, formdata, auth=None):\n        \"\"\" Performs a POST request with form-data, expecting to receive JSON.\n        This method is used in the OAuth2 token exchange and thus doesn't\n        request fhir+json.\n        \n        :throws: Exception on HTTP status >= 400\n        :returns: The response object\n        \"\"\"\n        headers = {\n            'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',\n            'Accept': 'application/json',\n        }\n        res = self.session.post(url, data=formdata, auth=auth)\n        self.raise_for_status(res)\n        return res\n    \n    def delete_json(self, path, nosign=False):\n        \"\"\" Issues a DELETE command against the given relative path, accepting\n        a JSON response.\n        \n        :param str path: The relative URL path to issue a DELETE against\n        :param bool nosign: If set to True, the request will not be signed\n        :returns: The response object\n        \"\"\"\n        url = urlparse.urljoin(self.base_uri, path)\n        headers = {\n            'Accept': FHIRJSONMimeType,\n            'Accept-Charset': 'UTF-8',\n        }\n        if not nosign and self.auth is not None and self.auth.can_sign_headers():\n            headers = self.auth.signed_headers(headers)\n        \n        # perform the request but intercept 401 responses, raising our own Exception\n        res = self.session.delete(url)\n        self.raise_for_status(res)\n        return res\n    \n    def raise_for_status(self, response):\n        if response.status_code < 400:\n            return\n        \n        if 401 == response.status_code:\n            raise FHIRUnauthorizedException(response)\n        elif 403 == response.status_code:\n            raise FHIRPermissionDeniedException(response)\n        elif 404 == response.status_code:\n            raise FHIRNotFoundException(response)\n        else:\n            response.raise_for_status()\n    \n    \n    # MARK: State Handling\n    \n    @property\n    def state(self):\n        \"\"\" Return current state.\n        \"\"\"\n        return {\n            'base_uri': self.base_uri,\n            'auth_type': self.auth.auth_type if self.auth is not None else 'none',\n            'auth': self.auth.state if self.auth is not None else None,\n        }\n    \n    def from_state(self, state):\n        \"\"\" Update ivars from given state information.\n        \"\"\"\n        assert state\n        self.base_uri = state.get('base_uri') or self.base_uri\n        self.auth = FHIRAuth.create(state.get('auth_type'), state=state.get('auth'))\n    \n"
+  },
+  "GT_src_dict": {
+    "fhirclient/server.py": {
+      "FHIRServer.__init__": {
+        "code": "    def __init__(self, client, base_uri=None, state=None):\n        \"\"\"Initializes a FHIRServer instance, setting up the connection to a FHIR server.\n\n    Parameters:\n        client (ClientType): An instance of a client class that manages the application's OAuth2 state and configuration.\n        base_uri (str, optional): The base URI for the FHIR server. Must be longer than 10 characters and end with a '/'.\n        state (dict, optional): A state dictionary that can be used to restore the server's state, including `base_uri` and authentication information.\n\n    Raises:\n        Exception: If neither `base_uri` nor `state` is provided, or if `base_uri` is not valid.\n\n    Attributes:\n        client: Stores the client instance.\n        auth: Holds the authentication instance, initialized later based on server capability.\n        base_uri: The base URI for the FHIR server, formatted to ensure it ends with a '/'.\n        aud: The audience for the FHIR server, derived from `base_uri`.\n        session: A requests.Session object for making HTTP requests efficiently.\n        _capability: A cached server CapabilityStatement, initially None until fetched from the server.\n\n    This constructor also interacts with the FHIRAuth class in the context of authentication, as well as uses constants like 'FHIRJSONMimeType' defined outside of the class for setting request headers.\"\"\"\n        self.client = client\n        self.auth = None\n        self.base_uri = None\n        self.aud = None\n        self.session = requests.Session()\n        if base_uri is not None and len(base_uri) > 10:\n            self.base_uri = base_uri if '/' == base_uri[-1] else base_uri + '/'\n            self.aud = base_uri\n        self._capability = None\n        if state is not None:\n            self.from_state(state)\n        if not self.base_uri or len(self.base_uri) <= 10:\n            raise Exception('FHIRServer must be initialized with `base_uri` or `state` containing the base-URI, but neither happened')",
+        "docstring": "Initializes a FHIRServer instance, setting up the connection to a FHIR server.\n\nParameters:\n    client (ClientType): An instance of a client class that manages the application's OAuth2 state and configuration.\n    base_uri (str, optional): The base URI for the FHIR server. Must be longer than 10 characters and end with a '/'.\n    state (dict, optional): A state dictionary that can be used to restore the server's state, including `base_uri` and authentication information.\n\nRaises:\n    Exception: If neither `base_uri` nor `state` is provided, or if `base_uri` is not valid.\n\nAttributes:\n    client: Stores the client instance.\n    auth: Holds the authentication instance, initialized later based on server capability.\n    base_uri: The base URI for the FHIR server, formatted to ensure it ends with a '/'.\n    aud: The audience for the FHIR server, derived from `base_uri`.\n    session: A requests.Session object for making HTTP requests efficiently.\n    _capability: A cached server CapabilityStatement, initially None until fetched from the server.\n\nThis constructor also interacts with the FHIRAuth class in the context of authentication, as well as uses constants like 'FHIRJSONMimeType' defined outside of the class for setting request headers.",
+        "signature": "def __init__(self, client, base_uri=None, state=None):",
+        "type": "Method",
+        "class_signature": "class FHIRServer(object):"
+      },
+      "FHIRServer.capabilityStatement": {
+        "code": "    def capabilityStatement(self):\n        \"\"\"@property\ndef capabilityStatement(self):\"\"\"\n        self.get_capability()\n        return self._capability",
+        "docstring": "@property\ndef capabilityStatement(self):",
+        "signature": "def capabilityStatement(self):",
+        "type": "Method",
+        "class_signature": "class FHIRServer(object):"
+      },
+      "FHIRServer.get_capability": {
+        "code": "    def get_capability(self, force=False):\n        \"\"\"Fetches the server's CapabilityStatement from the FHIR server. If the statement has not been previously retrieved or if forced to do so, it initiates a network request to fetch the data from the specified `base_uri`. On successful retrieval, it extracts security settings from the capability statement to configure the authentication instance (`self.auth`) using the `FHIRAuth.from_capability_security` method. The method also ensures that the application state is saved if applicable.\n\nParameters:\n- force (bool): If set to True, forces re-fetching of the CapabilityStatement regardless of whether it has been previously cached.\n\nReturns:\nNone\n\nSide Effects:\n- Updates internal state with the fetched CapabilityStatement and security information.\n- Logs an informational message about fetching the CapabilityStatement.\n- Calls `self.should_save_state()` to potentially save the application's state.\n\nDependencies:\n- Requires `self.base_uri` to be set for making the request, which is specified during `FHIRServer` instantiation.\n- Utilizes `capabilitystatement.CapabilityStatement` to read and parse the fetched metadata.\n- Uses `self.auth` to handle the server's authentication based on retrieved security settings.\n- The `FHIRJSONMimeType` constant is used in the context of FHIR JSON data handling across the class.\"\"\"\n        \" Returns the server's CapabilityStatement, retrieving it if needed\\n        or forced.\\n        \"\n        if self._capability is None or force:\n            logger.info('Fetching CapabilityStatement from {0}'.format(self.base_uri))\n            from .models import capabilitystatement\n            conf = capabilitystatement.CapabilityStatement.read_from('metadata', self)\n            self._capability = conf\n            security = None\n            try:\n                security = conf.rest[0].security\n            except Exception as e:\n                logger.info('No REST security statement found in server capability statement')\n            settings = {'aud': self.aud, 'app_id': self.client.app_id if self.client is not None else None, 'app_secret': self.client.app_secret if self.client is not None else None, 'redirect_uri': self.client.redirect if self.client is not None else None, 'jwt_token': self.client.jwt_token if self.client is not None else None}\n            self.auth = FHIRAuth.from_capability_security(security, settings)\n            self.should_save_state()",
+        "docstring": "Fetches the server's CapabilityStatement from the FHIR server. If the statement has not been previously retrieved or if forced to do so, it initiates a network request to fetch the data from the specified `base_uri`. On successful retrieval, it extracts security settings from the capability statement to configure the authentication instance (`self.auth`) using the `FHIRAuth.from_capability_security` method. The method also ensures that the application state is saved if applicable.\n\nParameters:\n- force (bool): If set to True, forces re-fetching of the CapabilityStatement regardless of whether it has been previously cached.\n\nReturns:\nNone\n\nSide Effects:\n- Updates internal state with the fetched CapabilityStatement and security information.\n- Logs an informational message about fetching the CapabilityStatement.\n- Calls `self.should_save_state()` to potentially save the application's state.\n\nDependencies:\n- Requires `self.base_uri` to be set for making the request, which is specified during `FHIRServer` instantiation.\n- Utilizes `capabilitystatement.CapabilityStatement` to read and parse the fetched metadata.\n- Uses `self.auth` to handle the server's authentication based on retrieved security settings.\n- The `FHIRJSONMimeType` constant is used in the context of FHIR JSON data handling across the class.",
+        "signature": "def get_capability(self, force=False):",
+        "type": "Method",
+        "class_signature": "class FHIRServer(object):"
+      },
+      "FHIRServer.state": {
+        "code": "    def state(self):\n        \"\"\"Returns the current state of the FHIRServer instance, encapsulating essential information necessary for maintaining the client-server connection. The output includes the `base_uri`, which denotes the root URL of the FHIR server, the `auth_type` to indicate the type of authorization in use (or 'none' if no authorization is applied), and the `auth` object state, providing details about the current authentication context if available. \n\nThe `base_uri` is crucial for constructing request URLs, while the `auth` information is leveraged for secure communication with the server and is derived from the `FHIRAuth` class. The method has no parameters and will return a dictionary with this state information, ensuring that the server can effectively manage its authentication and resource addressing.\"\"\"\n        ' Return current state.\\n        '\n        return {'base_uri': self.base_uri, 'auth_type': self.auth.auth_type if self.auth is not None else 'none', 'auth': self.auth.state if self.auth is not None else None}",
+        "docstring": "Returns the current state of the FHIRServer instance, encapsulating essential information necessary for maintaining the client-server connection. The output includes the `base_uri`, which denotes the root URL of the FHIR server, the `auth_type` to indicate the type of authorization in use (or 'none' if no authorization is applied), and the `auth` object state, providing details about the current authentication context if available. \n\nThe `base_uri` is crucial for constructing request URLs, while the `auth` information is leveraged for secure communication with the server and is derived from the `FHIRAuth` class. The method has no parameters and will return a dictionary with this state information, ensuring that the server can effectively manage its authentication and resource addressing.",
+        "signature": "def state(self):",
+        "type": "Method",
+        "class_signature": "class FHIRServer(object):"
+      }
+    }
+  },
+  "dependency_dict": {
+    "fhirclient/server.py:FHIRServer:get_capability": {
+      "fhirclient/models/fhirsearch.py": {
+        "FHIRSearchParamHandler.announce_handler": {
+          "code": "    def announce_handler(cls, handler):\n        cls.handlers.append(handler)",
+          "docstring": "",
+          "signature": "def announce_handler(cls, handler):",
+          "type": "Method",
+          "class_signature": "class FHIRSearchParamHandler(object):"
+        }
+      },
+      "fhirclient/server.py": {
+        "FHIRServer.should_save_state": {
+          "code": "    def should_save_state(self):\n        if self.client is not None:\n            self.client.save_state()",
+          "docstring": "",
+          "signature": "def should_save_state(self):",
+          "type": "Method",
+          "class_signature": "class FHIRServer(object):"
+        }
+      },
+      "fhirclient/models/fhirabstractresource.py": {
+        "FHIRAbstractResource.read_from": {
+          "code": "    def read_from(cls, path, server):\n        \"\"\" Requests data from the given REST path on the server and creates\n        an instance of the receiving class.\n        \n        :param str path: The REST path to read from\n        :param FHIRServer server: An instance of a FHIR server or compatible class\n        :returns: An instance of the receiving class\n        \"\"\"\n        if not path:\n            raise Exception(\"Cannot read resource without REST path\")\n        if server is None:\n            raise Exception(\"Cannot read resource without server instance\")\n        \n        ret = server.request_json(path)\n        instance = cls(jsondict=ret)\n        instance.origin_server = server\n        return instance",
+          "docstring": "Requests data from the given REST path on the server and creates\nan instance of the receiving class.\n\n:param str path: The REST path to read from\n:param FHIRServer server: An instance of a FHIR server or compatible class\n:returns: An instance of the receiving class",
+          "signature": "def read_from(cls, path, server):",
+          "type": "Method",
+          "class_signature": "class FHIRAbstractResource(fhirabstractbase.FHIRAbstractBase):"
+        }
+      },
+      "fhirclient/auth.py": {
+        "FHIRAuth.from_capability_security": {
+          "code": "    def from_capability_security(cls, security, state=None):\n        \"\"\" Supply a capabilitystatement.rest.security statement and this\n        method will figure out which type of security should be instantiated.\n        \n        :param security: A CapabilityStatementRestSecurity instance\n        :param state: A settings/state dictionary\n        :returns: A FHIRAuth instance or subclass thereof\n        \"\"\"\n        auth_type = None\n        \n        # look for OAuth2 URLs in SMART security extensions\n        if security is not None and security.extension is not None:\n            for e in security.extension:\n                if \"http://fhir-registry.smarthealthit.org/StructureDefinition/oauth-uris\" == e.url:\n                    if e.extension is not None:\n                        for ee in e.extension:\n                            if 'token' == ee.url:\n                                state['token_uri'] = ee.valueUri\n                            elif 'authorize' == ee.url:\n                                state['authorize_uri'] = ee.valueUri\n                            elif 'register' == ee.url:\n                                state['registration_uri'] = ee.valueUri\n                        break\n                    else:\n                        logger.warning(\"SMART AUTH: invalid `http://fhir-registry.smarthealthit.org/StructureDefinition/oauth-uris` extension: needs to include sub-extensions to define OAuth2 endpoints but there are none\")\n                \n                # fallback to old extension URLs  \n                elif \"http://fhir-registry.smarthealthit.org/StructureDefinition/oauth-uris#register\" == e.url:\n                    state['registration_uri'] = e.valueUri\n                elif \"http://fhir-registry.smarthealthit.org/StructureDefinition/oauth-uris#authorize\" == e.url:\n                    state['authorize_uri'] = e.valueUri\n                elif \"http://fhir-registry.smarthealthit.org/StructureDefinition/oauth-uris#token\" == e.url:\n                    state['token_uri'] = e.valueUri\n\n            if 'authorize_uri' in state or ('token_uri' in state and 'jwt_token' in state):\n                auth_type = 'oauth2'\n        \n        return cls.create(auth_type, state=state)",
+          "docstring": "Supply a capabilitystatement.rest.security statement and this\nmethod will figure out which type of security should be instantiated.\n\n:param security: A CapabilityStatementRestSecurity instance\n:param state: A settings/state dictionary\n:returns: A FHIRAuth instance or subclass thereof",
+          "signature": "def from_capability_security(cls, security, state=None):",
+          "type": "Method",
+          "class_signature": "class FHIRAuth(object):"
+        }
+      }
+    },
+    "fhirclient/server.py:FHIRServer:capabilityStatement": {},
+    "fhirclient/server.py:FHIRServer:state": {
+      "fhirclient/auth.py": {
+        "FHIROAuth2Auth.state": {
+          "code": "    def state(self):\n        s = super(FHIROAuth2Auth, self).state\n        s['aud'] = self.aud\n        s['registration_uri'] = self._registration_uri\n        s['authorize_uri'] = self._authorize_uri\n        s['redirect_uri'] = self._redirect_uri\n        s['token_uri'] = self._token_uri\n        if self.auth_state is not None:\n            s['auth_state'] = self.auth_state\n        if self.app_secret is not None:\n            s['app_secret'] = self.app_secret\n        if self.access_token is not None:\n            s['access_token'] = self.access_token\n        if self.refresh_token is not None:\n            s['refresh_token'] = self.refresh_token\n        \n        return s",
+          "docstring": "",
+          "signature": "def state(self):",
+          "type": "Method",
+          "class_signature": "class FHIROAuth2Auth(FHIRAuth):"
+        }
+      }
+    },
+    "fhirclient/server.py:FHIRServer:__init__": {
+      "fhirclient/server.py": {
+        "FHIRServer.from_state": {
+          "code": "    def from_state(self, state):\n        \"\"\" Update ivars from given state information.\n        \"\"\"\n        assert state\n        self.base_uri = state.get('base_uri') or self.base_uri\n        self.auth = FHIRAuth.create(state.get('auth_type'), state=state.get('auth'))",
+          "docstring": "Update ivars from given state information.\n        ",
+          "signature": "def from_state(self, state):",
+          "type": "Method",
+          "class_signature": "class FHIRServer(object):"
+        }
+      }
+    }
+  },
+  "call_tree": {
+    "tests/server_test.py:TestServer:testInvalidCapabilityStatement": {
+      "tests/server_test.py:TestServer:copy_metadata": {},
+      "tests/server_test.py:MockServer:__init__": {
+        "fhirclient/server.py:FHIRServer:__init__": {}
+      },
+      "fhirclient/server.py:FHIRServer:get_capability": {
+        "fhirclient/models/fhirabstractbase.py:FHIRValidationError:FHIRValidationError": {},
+        "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:FHIRAbstractBase": {},
+        "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:FHIRAbstractResource": {},
+        "fhirclient/models/reference.py:Reference:Reference": {},
+        "fhirclient/models/fhirreference.py:FHIRReference:FHIRReference": {},
+        "fhirclient/models/fhirsearch.py:FHIRSearch:FHIRSearch": {},
+        "fhirclient/models/fhirsearch.py:FHIRSearchParam:FHIRSearchParam": {},
+        "fhirclient/models/fhirsearch.py:FHIRSearchParamHandler:FHIRSearchParamHandler": {},
+        "fhirclient/models/fhirsearch.py:FHIRSearchParamModifierHandler:FHIRSearchParamModifierHandler": {},
+        "fhirclient/models/fhirsearch.py:FHIRSearchParamOperatorHandler:FHIRSearchParamOperatorHandler": {},
+        "fhirclient/models/fhirsearch.py:FHIRSearchParamMultiHandler:FHIRSearchParamMultiHandler": {},
+        "fhirclient/models/fhirsearch.py:FHIRSearchParamTypeHandler:FHIRSearchParamTypeHandler": {},
+        "fhirclient/models/fhirsearch.py:FHIRSearchParamHandler:announce_handler": {},
+        "fhirclient/models/fhirelementfactory.py:FHIRElementFactory:FHIRElementFactory": {},
+        "fhirclient/models/resource.py:Resource:Resource": {},
+        "fhirclient/models/meta.py:Meta:Meta": {},
+        "fhirclient/models/fhirinstant.py:FHIRInstant:FHIRInstant": {},
+        "fhirclient/models/domainresource.py:DomainResource:DomainResource": {},
+        "fhirclient/models/extension.py:Extension:Extension": {},
+        "fhirclient/models/address.py:Address:Address": {},
+        "fhirclient/models/quantity.py:Quantity:Quantity": {},
+        "fhirclient/models/age.py:Age:Age": {},
+        "fhirclient/models/annotation.py:Annotation:Annotation": {},
+        "fhirclient/models/attachment.py:Attachment:Attachment": {},
+        "fhirclient/models/contactdetail.py:ContactDetail:ContactDetail": {},
+        "fhirclient/models/contactpoint.py:ContactPoint:ContactPoint": {},
+        "fhirclient/models/contributor.py:Contributor:Contributor": {},
+        "fhirclient/models/count.py:Count:Count": {},
+        "fhirclient/models/datarequirement.py:DataRequirement:DataRequirement": {},
+        "fhirclient/models/datarequirement.py:DataRequirementCodeFilter:DataRequirementCodeFilter": {},
+        "fhirclient/models/datarequirement.py:DataRequirementDateFilter:DataRequirementDateFilter": {},
+        "fhirclient/models/datarequirement.py:DataRequirementSort:DataRequirementSort": {},
+        "fhirclient/models/duration.py:Duration:Duration": {},
+        "fhirclient/models/distance.py:Distance:Distance": {},
+        "fhirclient/models/backboneelement.py:BackboneElement:BackboneElement": {},
+        "fhirclient/models/dosage.py:Dosage:Dosage": {},
+        "fhirclient/models/dosage.py:DosageDoseAndRate:DosageDoseAndRate": {},
+        "fhirclient/models/range.py:Range:Range": {},
+        "fhirclient/models/ratio.py:Ratio:Ratio": {},
+        "fhirclient/models/timing.py:Timing:Timing": {},
+        "fhirclient/models/timing.py:TimingRepeat:TimingRepeat": {},
+        "fhirclient/models/fhirtime.py:FHIRTime:FHIRTime": {},
+        "fhirclient/models/expression.py:Expression:Expression": {},
+        "fhirclient/models/humanname.py:HumanName:HumanName": {},
+        "fhirclient/models/money.py:Money:Money": {},
+        "fhirclient/models/parameterdefinition.py:ParameterDefinition:ParameterDefinition": {},
+        "fhirclient/models/relatedartifact.py:RelatedArtifact:RelatedArtifact": {},
+        "fhirclient/models/sampleddata.py:SampledData:SampledData": {},
+        "fhirclient/models/signature.py:Signature:Signature": {},
+        "fhirclient/models/triggerdefinition.py:TriggerDefinition:TriggerDefinition": {},
+        "fhirclient/models/usagecontext.py:UsageContext:UsageContext": {},
+        "fhirclient/models/narrative.py:Narrative:Narrative": {},
+        "fhirclient/models/capabilitystatement.py:CapabilityStatement:CapabilityStatement": {},
+        "fhirclient/models/capabilitystatement.py:CapabilityStatementDocument:CapabilityStatementDocument": {},
+        "fhirclient/models/capabilitystatement.py:CapabilityStatementImplementation:CapabilityStatementImplementation": {},
+        "fhirclient/models/capabilitystatement.py:CapabilityStatementMessaging:CapabilityStatementMessaging": {},
+        "fhirclient/models/capabilitystatement.py:CapabilityStatementMessagingEndpoint:CapabilityStatementMessagingEndpoint": {},
+        "fhirclient/models/capabilitystatement.py:CapabilityStatementMessagingSupportedMessage:CapabilityStatementMessagingSupportedMessage": {},
+        "fhirclient/models/capabilitystatement.py:CapabilityStatementRest:CapabilityStatementRest": {},
+        "fhirclient/models/capabilitystatement.py:CapabilityStatementRestInteraction:CapabilityStatementRestInteraction": {},
+        "fhirclient/models/capabilitystatement.py:CapabilityStatementRestResource:CapabilityStatementRestResource": {},
+        "fhirclient/models/capabilitystatement.py:CapabilityStatementRestResourceInteraction:CapabilityStatementRestResourceInteraction": {},
+        "fhirclient/models/capabilitystatement.py:CapabilityStatementRestResourceOperation:CapabilityStatementRestResourceOperation": {},
+        "fhirclient/models/capabilitystatement.py:CapabilityStatementRestResourceSearchParam:CapabilityStatementRestResourceSearchParam": {},
+        "fhirclient/models/capabilitystatement.py:CapabilityStatementRestSecurity:CapabilityStatementRestSecurity": {},
+        "fhirclient/models/capabilitystatement.py:CapabilityStatementSoftware:CapabilityStatementSoftware": {},
+        "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:read_from": {
+          "tests/server_test.py:MockServer:request_json": {},
+          "fhirclient/models/capabilitystatement.py:CapabilityStatement:__init__": {
+            "fhirclient/models/domainresource.py:DomainResource:__init__": {
+              "fhirclient/models/resource.py:Resource:__init__": {
+                "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                      "fhirclient/models/capabilitystatement.py:CapabilityStatement:elementProperties": {},
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {},
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                      "fhirclient/models/fhirdate.py:FHIRDate:with_json_and_owner": {},
+                      "fhirclient/models/fhirabstractbase.py:FHIRValidationError:__init__": {},
+                      "fhirclient/models/fhirabstractbase.py:FHIRValidationError:prefixed": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tests/server_test.py:TestServer:testStateConservation": {
+      "tests/server_test.py:TestServer:copy_metadata": {},
+      "tests/server_test.py:MockServer:__init__": {
+        "fhirclient/server.py:FHIRServer:__init__": {}
+      },
+      "fhirclient/server.py:FHIRServer:capabilityStatement": {
+        "fhirclient/server.py:FHIRServer:get_capability": {
+          "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:read_from": {
+            "tests/server_test.py:MockServer:request_json": {},
+            "fhirclient/models/capabilitystatement.py:CapabilityStatement:__init__": {
+              "fhirclient/models/domainresource.py:DomainResource:__init__": {
+                "fhirclient/models/resource.py:Resource:__init__": {
+                  "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {}
+                    }
+                  }
+                }
+              }
+            },
+            "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:origin_server": {}
+          },
+          "fhirclient/auth.py:FHIRAuth:from_capability_security": {
+            "fhirclient/auth.py:FHIRAuth:create": {
+              "fhirclient/auth.py:FHIROAuth2Auth:__init__": {
+                "fhirclient/auth.py:FHIRAuth:__init__": {
+                  "fhirclient/auth.py:FHIROAuth2Auth:from_state": {
+                    "fhirclient/auth.py:FHIRAuth:from_state": {}
+                  }
+                }
+              }
+            }
+          },
+          "fhirclient/server.py:FHIRServer:should_save_state": {}
+        }
+      },
+      "fhirclient/server.py:FHIRServer:state": {
+        "fhirclient/auth.py:FHIROAuth2Auth:state": {
+          "fhirclient/auth.py:FHIRAuth:state": {}
+        }
+      },
+      "fhirclient/server.py:FHIRServer:__init__": {
+        "fhirclient/server.py:FHIRServer:from_state": {
+          "fhirclient/auth.py:FHIRAuth:create": {
+            "fhirclient/auth.py:FHIROAuth2Auth:__init__": {
+              "fhirclient/auth.py:FHIRAuth:__init__": {
+                "fhirclient/auth.py:FHIROAuth2Auth:from_state": {
+                  "fhirclient/auth.py:FHIRAuth:from_state": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tests/server_test.py:TestServer:testValidCapabilityStatement": {
+      "tests/server_test.py:TestServer:copy_metadata": {},
+      "tests/server_test.py:MockServer:__init__": {
+        "fhirclient/server.py:FHIRServer:__init__": {}
+      },
+      "fhirclient/server.py:FHIRServer:get_capability": {
+        "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:read_from": {
+          "tests/server_test.py:MockServer:request_json": {},
+          "fhirclient/models/capabilitystatement.py:CapabilityStatement:__init__": {
+            "fhirclient/models/domainresource.py:DomainResource:__init__": {
+              "fhirclient/models/resource.py:Resource:__init__": {
+                "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                      "fhirclient/models/capabilitystatement.py:CapabilityStatement:elementProperties": {},
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {},
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                      "fhirclient/models/fhirdate.py:FHIRDate:with_json_and_owner": {}
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:origin_server": {}
+        },
+        "fhirclient/auth.py:FHIRAuth:from_capability_security": {
+          "fhirclient/auth.py:FHIRAuth:create": {
+            "fhirclient/auth.py:FHIROAuth2Auth:__init__": {
+              "fhirclient/auth.py:FHIRAuth:__init__": {
+                "fhirclient/auth.py:FHIROAuth2Auth:from_state": {
+                  "fhirclient/auth.py:FHIRAuth:from_state": {}
+                }
+              }
+            }
+          }
+        },
+        "fhirclient/server.py:FHIRServer:should_save_state": {}
+      }
+    }
+  },
+  "PRD": "# PROJECT NAME: fhirclient-server_test\n\n# FOLDER STRUCTURE:\n```\n..\n\u2514\u2500\u2500 fhirclient/\n    \u2514\u2500\u2500 server.py\n        \u251c\u2500\u2500 FHIRServer.__init__\n        \u251c\u2500\u2500 FHIRServer.capabilityStatement\n        \u251c\u2500\u2500 FHIRServer.get_capability\n        \u2514\u2500\u2500 FHIRServer.state\n```\n\n# IMPLEMENTATION REQUIREMENTS:\n## MODULE DESCRIPTION:\nThe module facilitates validation, interaction, and state management for FHIR (Fast Healthcare Interoperability Resources) servers by leveraging capability statements and configuration metadata. It provides functionality for verifying the validity of FHIR server capability statements, ensuring accurate authentication endpoints, and preserving server state for seamless integration in developer workflows. By enabling robust validation and easily configurable mock FHIR server functionality, the module addresses common challenges developers face when testing and ensuring compliance with FHIR standards, streamlining application development and interoperability with healthcare data systems.\n\n## FILE 1: fhirclient/server.py\n\n- CLASS METHOD: FHIRServer.capabilityStatement\n  - CLASS SIGNATURE: class FHIRServer(object):\n  - SIGNATURE: def capabilityStatement(self):\n  - DOCSTRING: \n```python\n\"\"\"\n@property\ndef capabilityStatement(self):\n\"\"\"\n```\n\n- CLASS METHOD: FHIRServer.state\n  - CLASS SIGNATURE: class FHIRServer(object):\n  - SIGNATURE: def state(self):\n  - DOCSTRING: \n```python\n\"\"\"\nReturns the current state of the FHIRServer instance, encapsulating essential information necessary for maintaining the client-server connection. The output includes the `base_uri`, which denotes the root URL of the FHIR server, the `auth_type` to indicate the type of authorization in use (or 'none' if no authorization is applied), and the `auth` object state, providing details about the current authentication context if available. \n\nThe `base_uri` is crucial for constructing request URLs, while the `auth` information is leveraged for secure communication with the server and is derived from the `FHIRAuth` class. The method has no parameters and will return a dictionary with this state information, ensuring that the server can effectively manage its authentication and resource addressing.\n\"\"\"\n```\n\n- CLASS METHOD: FHIRServer.__init__\n  - CLASS SIGNATURE: class FHIRServer(object):\n  - SIGNATURE: def __init__(self, client, base_uri=None, state=None):\n  - DOCSTRING: \n```python\n\"\"\"\nInitializes a FHIRServer instance, setting up the connection to a FHIR server.\n\nParameters:\n    client (ClientType): An instance of a client class that manages the application's OAuth2 state and configuration.\n    base_uri (str, optional): The base URI for the FHIR server. Must be longer than 10 characters and end with a '/'.\n    state (dict, optional): A state dictionary that can be used to restore the server's state, including `base_uri` and authentication information.\n\nRaises:\n    Exception: If neither `base_uri` nor `state` is provided, or if `base_uri` is not valid.\n\nAttributes:\n    client: Stores the client instance.\n    auth: Holds the authentication instance, initialized later based on server capability.\n    base_uri: The base URI for the FHIR server, formatted to ensure it ends with a '/'.\n    aud: The audience for the FHIR server, derived from `base_uri`.\n    session: A requests.Session object for making HTTP requests efficiently.\n    _capability: A cached server CapabilityStatement, initially None until fetched from the server.\n\nThis constructor also interacts with the FHIRAuth class in the context of authentication, as well as uses constants like 'FHIRJSONMimeType' defined outside of the class for setting request headers.\n\"\"\"\n```\n\n- CLASS METHOD: FHIRServer.get_capability\n  - CLASS SIGNATURE: class FHIRServer(object):\n  - SIGNATURE: def get_capability(self, force=False):\n  - DOCSTRING: \n```python\n\"\"\"\nFetches the server's CapabilityStatement from the FHIR server. If the statement has not been previously retrieved or if forced to do so, it initiates a network request to fetch the data from the specified `base_uri`. On successful retrieval, it extracts security settings from the capability statement to configure the authentication instance (`self.auth`) using the `FHIRAuth.from_capability_security` method. The method also ensures that the application state is saved if applicable.\n\nParameters:\n- force (bool): If set to True, forces re-fetching of the CapabilityStatement regardless of whether it has been previously cached.\n\nReturns:\nNone\n\nSide Effects:\n- Updates internal state with the fetched CapabilityStatement and security information.\n- Logs an informational message about fetching the CapabilityStatement.\n- Calls `self.should_save_state()` to potentially save the application's state.\n\nDependencies:\n- Requires `self.base_uri` to be set for making the request, which is specified during `FHIRServer` instantiation.\n- Utilizes `capabilitystatement.CapabilityStatement` to read and parse the fetched metadata.\n- Uses `self.auth` to handle the server's authentication based on retrieved security settings.\n- The `FHIRJSONMimeType` constant is used in the context of FHIR JSON data handling across the class.\n\"\"\"\n```\n\n# TASK DESCRIPTION:\nIn this project, you need to implement the functions and methods listed above. The functions have been removed from the code but their docstrings remain.\nYour task is to:\n1. Read and understand the docstrings of each function/method\n2. Understand the dependencies and how they interact with the target functions\n3. Implement the functions/methods according to their docstrings and signatures\n4. Ensure your implementations work correctly with the rest of the codebase\n",
+  "file_code": {
+    "fhirclient/server.py": "import json\nimport requests\nimport logging\nimport urllib.parse as urlparse\nfrom .auth import FHIRAuth\nFHIRJSONMimeType = 'application/fhir+json'\nlogger = logging.getLogger(__name__)\n\nclass FHIRUnauthorizedException(Exception):\n    \"\"\" Indicating a 401 response.\n    \"\"\"\n\n    def __init__(self, response):\n        self.response = response\n\nclass FHIRPermissionDeniedException(Exception):\n    \"\"\" Indicating a 403 response.\n    \"\"\"\n\n    def __init__(self, response):\n        self.response = response\n\nclass FHIRNotFoundException(Exception):\n    \"\"\" Indicating a 404 response.\n    \"\"\"\n\n    def __init__(self, response):\n        self.response = response\n\nclass FHIRServer(object):\n    \"\"\" Handles talking to a FHIR server.\n    \"\"\"\n\n    def should_save_state(self):\n        if self.client is not None:\n            self.client.save_state()\n\n    @property\n    def desired_scope(self):\n        return self.client.desired_scope if self.client is not None else None\n\n    @property\n    def launch_token(self):\n        return self.client.launch_token if self.client is not None else None\n\n    @property\n    def authorize_uri(self):\n        if self.auth is None:\n            self.get_capability()\n        return self.auth.authorize_uri(self)\n\n    def handle_callback(self, url):\n        if self.auth is None:\n            raise Exception('Not ready to handle callback, I do not have an auth instance')\n        return self.auth.handle_callback(url, self)\n\n    def authorize(self):\n        if self.auth is None:\n            raise Exception('Not ready to authorize, I do not have an auth instance')\n        return self.auth.authorize(self) if self.auth is not None else None\n\n    def reauthorize(self):\n        if self.auth is None:\n            raise Exception('Not ready to reauthorize, I do not have an auth instance')\n        return self.auth.reauthorize(self) if self.auth is not None else None\n\n    @property\n    def ready(self):\n        \"\"\" Check whether the server is ready to make calls, i.e. is has\n        fetched its capability statement and its `auth` instance is ready.\n        \n        :returns: True if the server can make authenticated calls\n        \"\"\"\n        return self.auth.ready if self.auth is not None else False\n\n    def prepare(self):\n        \"\"\" Check whether the server is ready to make calls, i.e. is has\n        fetched its capability statement and its `auth` instance is ready.\n        This method will fetch the capability statement if it hasn't already\n        been fetched.\n        \n        :returns: True if the server can make authenticated calls\n        \"\"\"\n        if self.auth is None:\n            self.get_capability()\n        return self.auth.ready if self.auth is not None else False\n\n    def request_json(self, path, nosign=False):\n        \"\"\" Perform a request for JSON data against the server's base with the\n        given relative path.\n        \n        :param str path: The path to append to `base_uri`\n        :param bool nosign: If set to True, the request will not be signed\n        :throws: Exception on HTTP status >= 400\n        :returns: Decoded JSON response\n        \"\"\"\n        headers = {'Accept': 'application/json'}\n        res = self._get(path, headers, nosign)\n        return res.json()\n\n    def request_data(self, path, headers={}, nosign=False):\n        \"\"\" Perform a data request data against the server's base with the\n        given relative path.\n        \"\"\"\n        res = self._get(path, headers, nosign)\n        return res.content\n\n    def _get(self, path, headers={}, nosign=False):\n        \"\"\" Issues a GET request.\n        \n        :returns: The response object\n        \"\"\"\n        assert self.base_uri and path\n        url = urlparse.urljoin(self.base_uri, path)\n        header_defaults = {'Accept': FHIRJSONMimeType, 'Accept-Charset': 'UTF-8'}\n        header_defaults.update(headers)\n        headers = header_defaults\n        if not nosign and self.auth is not None and self.auth.can_sign_headers():\n            headers = self.auth.signed_headers(headers)\n        res = self.session.get(url, headers=headers)\n        self.raise_for_status(res)\n        return res\n\n    def put_json(self, path, resource_json, nosign=False):\n        \"\"\" Performs a PUT request of the given JSON, which should represent a\n        resource, to the given relative path.\n        \n        :param str path: The path to append to `base_uri`\n        :param dict resource_json: The JSON representing the resource\n        :param bool nosign: If set to True, the request will not be signed\n        :throws: Exception on HTTP status >= 400\n        :returns: The response object\n        \"\"\"\n        url = urlparse.urljoin(self.base_uri, path)\n        headers = {'Content-type': FHIRJSONMimeType, 'Accept': FHIRJSONMimeType, 'Accept-Charset': 'UTF-8'}\n        if not nosign and self.auth is not None and self.auth.can_sign_headers():\n            headers = self.auth.signed_headers(headers)\n        res = self.session.put(url, headers=headers, data=json.dumps(resource_json))\n        self.raise_for_status(res)\n        return res\n\n    def post_json(self, path, resource_json, nosign=False):\n        \"\"\" Performs a POST of the given JSON, which should represent a\n        resource, to the given relative path.\n        \n        :param str path: The path to append to `base_uri`\n        :param dict resource_json: The JSON representing the resource\n        :param bool nosign: If set to True, the request will not be signed\n        :throws: Exception on HTTP status >= 400\n        :returns: The response object\n        \"\"\"\n        url = urlparse.urljoin(self.base_uri, path)\n        headers = {'Content-type': FHIRJSONMimeType, 'Accept': FHIRJSONMimeType, 'Accept-Charset': 'UTF-8'}\n        if not nosign and self.auth is not None and self.auth.can_sign_headers():\n            headers = self.auth.signed_headers(headers)\n        res = self.session.post(url, headers=headers, data=json.dumps(resource_json))\n        self.raise_for_status(res)\n        return res\n\n    def post_as_form(self, url, formdata, auth=None):\n        \"\"\" Performs a POST request with form-data, expecting to receive JSON.\n        This method is used in the OAuth2 token exchange and thus doesn't\n        request fhir+json.\n        \n        :throws: Exception on HTTP status >= 400\n        :returns: The response object\n        \"\"\"\n        headers = {'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8', 'Accept': 'application/json'}\n        res = self.session.post(url, data=formdata, auth=auth)\n        self.raise_for_status(res)\n        return res\n\n    def delete_json(self, path, nosign=False):\n        \"\"\" Issues a DELETE command against the given relative path, accepting\n        a JSON response.\n        \n        :param str path: The relative URL path to issue a DELETE against\n        :param bool nosign: If set to True, the request will not be signed\n        :returns: The response object\n        \"\"\"\n        url = urlparse.urljoin(self.base_uri, path)\n        headers = {'Accept': FHIRJSONMimeType, 'Accept-Charset': 'UTF-8'}\n        if not nosign and self.auth is not None and self.auth.can_sign_headers():\n            headers = self.auth.signed_headers(headers)\n        res = self.session.delete(url)\n        self.raise_for_status(res)\n        return res\n\n    def raise_for_status(self, response):\n        if response.status_code < 400:\n            return\n        if 401 == response.status_code:\n            raise FHIRUnauthorizedException(response)\n        elif 403 == response.status_code:\n            raise FHIRPermissionDeniedException(response)\n        elif 404 == response.status_code:\n            raise FHIRNotFoundException(response)\n        else:\n            response.raise_for_status()\n\n    def from_state(self, state):\n        \"\"\" Update ivars from given state information.\n        \"\"\"\n        assert state\n        self.base_uri = state.get('base_uri') or self.base_uri\n        self.auth = FHIRAuth.create(state.get('auth_type'), state=state.get('auth'))"
+  }
+}

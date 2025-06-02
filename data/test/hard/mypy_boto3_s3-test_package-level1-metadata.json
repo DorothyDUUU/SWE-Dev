@@ -1,0 +1,311 @@
+{
+  "dir_path": "/app/mypy_boto3_s3",
+  "package_name": "mypy_boto3_s3",
+  "sample_name": "mypy_boto3_s3-test_package",
+  "src_dir": "examples/",
+  "test_dir": "tests/",
+  "test_file": "tests/structures/test_package.py",
+  "test_code": "import pytest\n\nfrom mypy_boto3_builder.exceptions import StructureError\nfrom mypy_boto3_builder.package_data import Boto3StubsPackageData\nfrom mypy_boto3_builder.service_name import ServiceNameCatalog\nfrom mypy_boto3_builder.structures.package import Package\n\n\nclass TestPackage:\n    def test_init(self) -> None:\n        package = Package(Boto3StubsPackageData, [ServiceNameCatalog.s3], version=\"2.3.4\")\n        assert package.directory_name == \"boto3_stubs_package\"\n        assert package.min_library_version\n        assert package.max_library_version\n        assert package.get_local_doc_link() == \"https://youtype.github.io/boto3_stubs_docs/\"\n        assert (\n            package.get_local_doc_link(ServiceNameCatalog.s3)\n            == \"https://youtype.github.io/boto3_stubs_docs/mypy_boto3_s3/\"\n        )\n        assert package.get_module_name(ServiceNameCatalog.s3) == \"mypy_boto3_s3\"\n        assert package.get_service_pypi_name(ServiceNameCatalog.s3) == \"mypy-boto3-s3\"\n        assert package.min_python_version\n        package.library_version = \"1.2.3\"\n        assert str(package) == \"boto3-stubs 2.3.4 (boto3 1.2.3)\"\n\n    def test_service_name(self) -> None:\n        package = Package(Boto3StubsPackageData, [ServiceNameCatalog.s3])\n        assert package.service_name == ServiceNameCatalog.s3\n\n        package.service_names = (*package.service_names, ServiceNameCatalog.ec2)\n        with pytest.raises(StructureError):\n            _ = package.service_name\n\n    def test_get_classifiers(self) -> None:\n        package = Package(Boto3StubsPackageData, [ServiceNameCatalog.s3])\n        classifiers = package.get_classifiers()\n        assert \"Programming Language :: Python :: 3\" in classifiers\n        assert \"Programming Language :: Python :: 3.13\" in classifiers\n        assert \"Programming Language :: Python :: 3 :: Only\" in classifiers\n",
+  "GT_file_code": {
+    "mypy_boto3_builder/structures/package.py": "\"\"\"\nParent class for all package structures.\n\nCopyright 2024 Vlad Emelianov\n\"\"\"\n\nfrom collections.abc import Iterable\n\nfrom packaging.version import InvalidVersion, Version\n\nfrom mypy_boto3_builder.constants import SUPPORTED_PY_VERSIONS\nfrom mypy_boto3_builder.exceptions import StructureError\nfrom mypy_boto3_builder.logger import get_logger\nfrom mypy_boto3_builder.package_data import BasePackageData\nfrom mypy_boto3_builder.service_name import ServiceName\nfrom mypy_boto3_builder.structures.package_url import PackageURL\nfrom mypy_boto3_builder.utils.version import (\n    get_max_build_version,\n    get_min_build_version,\n)\n\n\nclass Package:\n    \"\"\"\n    Parent class for all package structures.\n    \"\"\"\n\n    def __init__(\n        self,\n        data: type[BasePackageData],\n        service_names: Iterable[ServiceName] = (),\n        version: str = \"\",\n    ) -> None:\n        self.data = data\n        self._pypi_name = self.data.PYPI_NAME\n        self.library_version = data.get_library_version()\n        self.botocore_version = data.get_botocore_version()\n        self._version: str = \"\"\n        if version:\n            self.version = version\n        self.service_names = tuple(service_names)\n        self.logger = get_logger()\n        self.url = PackageURL(self.pypi_name, self.data)\n\n    @property\n    def pypi_name(self) -> str:\n        \"\"\"\n        PyPI package name.\n        \"\"\"\n        return self._pypi_name\n\n    @pypi_name.setter\n    def pypi_name(self, value: str) -> None:\n        self._pypi_name = value\n        self.url.pypi_name = value\n\n    @property\n    def version(self) -> str:\n        \"\"\"\n        Package version.\n        \"\"\"\n        if not self._version:\n            raise StructureError(f\"Version is not set for {self.pypi_name}\")\n        return self._version\n\n    @version.setter\n    def version(self, value: str) -> None:\n        try:\n            Version(value)\n        except InvalidVersion:\n            raise StructureError(f\"Invalid version: {value}\") from None\n        self._version = value\n\n    @property\n    def name(self) -> str:\n        \"\"\"\n        Package name.\n        \"\"\"\n        if not self.data.NAME:\n            raise StructureError(f\"Package name is not set for {self.pypi_name}\")\n\n        return self.data.NAME\n\n    @property\n    def library_name(self) -> str:\n        \"\"\"\n        PyPI library package name.\n        \"\"\"\n        return self.data.LIBRARY_NAME\n\n    def has_main_package(self) -> bool:\n        \"\"\"\n        Check if package has main package.\n        \"\"\"\n        return bool(self.data.NAME)\n\n    @property\n    def service_name(self) -> ServiceName:\n        \"\"\"\n        Service name for the package.\n        \"\"\"\n        if len(self.service_names) != 1:\n            raise StructureError(f\"Package {self.name} has more than one service name\")\n        return self.service_names[0]\n\n    @property\n    def directory_name(self) -> str:\n        \"\"\"\n        Directory name to store generated package.\n        \"\"\"\n        underscore_package_name = self.pypi_name.replace(\"-\", \"_\")\n        return f\"{underscore_package_name}_package\"\n\n    def __str__(self) -> str:\n        \"\"\"\n        Get string representation for debugging.\n        \"\"\"\n        return f\"{self.name} {self._version} ({self.library_name} {self.library_version})\"\n\n    def get_local_doc_link(self, service_name: ServiceName | None = None) -> str:\n        \"\"\"\n        Get link to local docs.\n        \"\"\"\n        url = self.data.LOCAL_DOC_LINK\n        if service_name:\n            url = f\"{url}{self.get_module_name(service_name)}/\"\n        return url\n\n    def get_module_name(self, service_name: ServiceName) -> str:\n        \"\"\"\n        Get service module name.\n        \"\"\"\n        return self.data.get_service_package_name(service_name)\n\n    def get_service_pypi_name(self, service_name: ServiceName) -> str:\n        \"\"\"\n        Get PyPI package name for a service package.\n        \"\"\"\n        return self.data.get_service_pypi_name(service_name)\n\n    @property\n    def min_library_version(self) -> str:\n        \"\"\"\n        Minimum required library version.\n        \"\"\"\n        return get_min_build_version(self.library_version)\n\n    @property\n    def max_library_version(self) -> str:\n        \"\"\"\n        Minimum required library version.\n        \"\"\"\n        return get_max_build_version(self.library_version)\n\n    @property\n    def min_python_version(self) -> str:\n        \"\"\"\n        Minimum required python version.\n        \"\"\"\n        min_version = min(SUPPORTED_PY_VERSIONS)\n        return \".\".join(str(i) for i in min_version)\n\n    def get_classifiers(self) -> list[str]:\n        \"\"\"\n        Get classifiers for package.\n        \"\"\"\n        result = [\n            \"Development Status :: 5 - Production/Stable\",\n            \"Intended Audience :: Developers\",\n            \"Environment :: Console\",\n            \"License :: OSI Approved :: MIT License\",\n            \"Natural Language :: English\",\n            \"Operating System :: OS Independent\",\n        ]\n        major_versions = {version[0] for version in SUPPORTED_PY_VERSIONS}\n        for major in sorted(major_versions):\n            result.append(f\"Programming Language :: Python :: {major}\")\n            minor_versions = {\n                version[1]\n                for version in SUPPORTED_PY_VERSIONS\n                if version[0] == major and len(version) > 1\n            }\n            result.extend(\n                f\"Programming Language :: Python :: {major}.{minor}\"\n                for minor in sorted(minor_versions)\n            )\n        if len(major_versions) == 1:\n            major = next(iter(major_versions))\n            result.append(f\"Programming Language :: Python :: {major} :: Only\")\n        result.extend(\n            (\n                \"Programming Language :: Python :: Implementation :: CPython\",\n                \"Typing :: Stubs Only\",\n            ),\n        )\n        return result\n"
+  },
+  "GT_src_dict": {
+    "mypy_boto3_builder/structures/package.py": {
+      "Package.__init__": {
+        "code": "    def __init__(self, data: type[BasePackageData], service_names: Iterable[ServiceName]=(), version: str='') -> None:\n        \"\"\"Initialize a Package instance that represents a structured package in the project.\n\nParameters:\n- data (type[BasePackageData]): A class type inherited from BasePackageData that provides package metadata and version information.\n- service_names (Iterable[ServiceName], optional): An iterable of service names associated with the package. Defaults to an empty tuple.\n- version (str, optional): A string representing the package version. If provided, it will be validated and set.\n\nAttributes:\n- self.data: Holds metadata regarding the package from the provided data parameter.\n- self._pypi_name: Stores the PyPI package name, retrieved from the data attribute.\n- self.library_version: The library version extracted from the data.\n- self.botocore_version: The botocore version extracted from the data.\n- self._version (str): Initially empty, this attribute will hold the validated package version.\n- self.service_names: A tuple of service names associated with this package.\n- self.logger: A logging instance initialized via the get_logger function for logging purposes.\n- self.url: An instance of PackageURL, constructed using the PyPI name and data for this package.\n\nDependencies:\n- Utilizes constants from the 'mypy_boto3_builder.constants' module for managing package data.\n- Interacts with the `get_logger` function from 'mypy_boto3_builder.logger' to set up logging capabilities.\n- Utilizes the `PackageURL` class from 'mypy_boto3_builder.structures.package_url' for URL management.\"\"\"\n        self.data = data\n        self._pypi_name = self.data.PYPI_NAME\n        self.library_version = data.get_library_version()\n        self.botocore_version = data.get_botocore_version()\n        self._version: str = ''\n        if version:\n            self.version = version\n        self.service_names = tuple(service_names)\n        self.logger = get_logger()\n        self.url = PackageURL(self.pypi_name, self.data)",
+        "docstring": "Initialize a Package instance that represents a structured package in the project.\n\nParameters:\n- data (type[BasePackageData]): A class type inherited from BasePackageData that provides package metadata and version information.\n- service_names (Iterable[ServiceName], optional): An iterable of service names associated with the package. Defaults to an empty tuple.\n- version (str, optional): A string representing the package version. If provided, it will be validated and set.\n\nAttributes:\n- self.data: Holds metadata regarding the package from the provided data parameter.\n- self._pypi_name: Stores the PyPI package name, retrieved from the data attribute.\n- self.library_version: The library version extracted from the data.\n- self.botocore_version: The botocore version extracted from the data.\n- self._version (str): Initially empty, this attribute will hold the validated package version.\n- self.service_names: A tuple of service names associated with this package.\n- self.logger: A logging instance initialized via the get_logger function for logging purposes.\n- self.url: An instance of PackageURL, constructed using the PyPI name and data for this package.\n\nDependencies:\n- Utilizes constants from the 'mypy_boto3_builder.constants' module for managing package data.\n- Interacts with the `get_logger` function from 'mypy_boto3_builder.logger' to set up logging capabilities.\n- Utilizes the `PackageURL` class from 'mypy_boto3_builder.structures.package_url' for URL management.",
+        "signature": "def __init__(self, data: type[BasePackageData], service_names: Iterable[ServiceName]=(), version: str='') -> None:",
+        "type": "Method",
+        "class_signature": "class Package:"
+      },
+      "Package.service_name": {
+        "code": "    def service_name(self) -> ServiceName:\n        \"\"\"Retrieve the service name for the package.\n\nThis property checks the number of service names associated with the package. If there is not exactly one service name, it raises a StructureError. The service name is tied to the `service_names` attribute, which is initialized in the constructor of the Package class. This attribute is an iterable of ServiceName, passed as a parameter during the instantiation of the Package object.\n\nReturns:\n    ServiceName: The single service name associated with the package.\n\nRaises:\n    StructureError: If there is more than one service name in the package.\"\"\"\n        '\\n        Service name for the package.\\n        '\n        if len(self.service_names) != 1:\n            raise StructureError(f'Package {self.name} has more than one service name')\n        return self.service_names[0]",
+        "docstring": "Retrieve the service name for the package.\n\nThis property checks the number of service names associated with the package. If there is not exactly one service name, it raises a StructureError. The service name is tied to the `service_names` attribute, which is initialized in the constructor of the Package class. This attribute is an iterable of ServiceName, passed as a parameter during the instantiation of the Package object.\n\nReturns:\n    ServiceName: The single service name associated with the package.\n\nRaises:\n    StructureError: If there is more than one service name in the package.",
+        "signature": "def service_name(self) -> ServiceName:",
+        "type": "Method",
+        "class_signature": "class Package:"
+      },
+      "Package.directory_name": {
+        "code": "    def directory_name(self) -> str:\n        \"\"\"Generate the directory name to store the generated package by transforming the PyPI package name. The method replaces hyphens in the package name with underscores, and appends '_package' to create the final directory name.\n\nReturns:\n    str: The formatted directory name for the generated package.\n\nDependencies:\n    - self.pypi_name: A property that retrieves the PyPI package name, which is assumed to be defined in the Package class and is set during instantiation.\"\"\"\n        '\\n        Directory name to store generated package.\\n        '\n        underscore_package_name = self.pypi_name.replace('-', '_')\n        return f'{underscore_package_name}_package'",
+        "docstring": "Generate the directory name to store the generated package by transforming the PyPI package name. The method replaces hyphens in the package name with underscores, and appends '_package' to create the final directory name.\n\nReturns:\n    str: The formatted directory name for the generated package.\n\nDependencies:\n    - self.pypi_name: A property that retrieves the PyPI package name, which is assumed to be defined in the Package class and is set during instantiation.",
+        "signature": "def directory_name(self) -> str:",
+        "type": "Method",
+        "class_signature": "class Package:"
+      },
+      "Package.__str__": {
+        "code": "    def __str__(self) -> str:\n        \"\"\"Get string representation of the Package instance for debugging purposes. \n\nThis method formats the output to include the package's name, version, library name, and library version, drawing from the instance's attributes `name`, `_version`, `library_name`, and `library_version`. It does not take any parameters and returns a formatted string summarizing the Package instance's key information.\n\nAttributes:\n- `name`: Obtained from the `data` attribute of the Package instance; represents the package's unique name.\n- `_version`: The version of the package as set in the `version` property.\n- `library_name`: Retrieved from the `data` attribute; indicates the associated library's name.\n- `library_version`: Obtained via the `get_library_version()` method of the data attribute; signifies the version of the library.\n\nThis method does not have any side effects and is primarily used for providing a quick overview of the package instance's state during debugging.\"\"\"\n        '\\n        Get string representation for debugging.\\n        '\n        return f'{self.name} {self._version} ({self.library_name} {self.library_version})'",
+        "docstring": "Get string representation of the Package instance for debugging purposes. \n\nThis method formats the output to include the package's name, version, library name, and library version, drawing from the instance's attributes `name`, `_version`, `library_name`, and `library_version`. It does not take any parameters and returns a formatted string summarizing the Package instance's key information.\n\nAttributes:\n- `name`: Obtained from the `data` attribute of the Package instance; represents the package's unique name.\n- `_version`: The version of the package as set in the `version` property.\n- `library_name`: Retrieved from the `data` attribute; indicates the associated library's name.\n- `library_version`: Obtained via the `get_library_version()` method of the data attribute; signifies the version of the library.\n\nThis method does not have any side effects and is primarily used for providing a quick overview of the package instance's state during debugging.",
+        "signature": "def __str__(self) -> str:",
+        "type": "Method",
+        "class_signature": "class Package:"
+      },
+      "Package.get_local_doc_link": {
+        "code": "    def get_local_doc_link(self, service_name: ServiceName | None=None) -> str:\n        \"\"\"Get a link to the local documentation for the package, optionally including the module name for a specific service.\n\nParameters:\n- service_name (ServiceName | None): An optional service name to specify which module's documentation link to retrieve. If provided, the module name will be appended to the local documentation URL.\n\nReturns:\n- str: The full URL to the local documentation, either the base link from `self.data.LOCAL_DOC_LINK` or the extended link if a service name is specified.\n\nDependencies:\n- `self.data.LOCAL_DOC_LINK`: A constant that holds the base URL for the local documentation. It is defined in the `data` attribute, which is expected to be a subclass of `BasePackageData`.\n- `self.get_module_name(service_name)`: A method that retrieves the appropriate module name for the given service name.\"\"\"\n        '\\n        Get link to local docs.\\n        '\n        url = self.data.LOCAL_DOC_LINK\n        if service_name:\n            url = f'{url}{self.get_module_name(service_name)}/'\n        return url",
+        "docstring": "Get a link to the local documentation for the package, optionally including the module name for a specific service.\n\nParameters:\n- service_name (ServiceName | None): An optional service name to specify which module's documentation link to retrieve. If provided, the module name will be appended to the local documentation URL.\n\nReturns:\n- str: The full URL to the local documentation, either the base link from `self.data.LOCAL_DOC_LINK` or the extended link if a service name is specified.\n\nDependencies:\n- `self.data.LOCAL_DOC_LINK`: A constant that holds the base URL for the local documentation. It is defined in the `data` attribute, which is expected to be a subclass of `BasePackageData`.\n- `self.get_module_name(service_name)`: A method that retrieves the appropriate module name for the given service name.",
+        "signature": "def get_local_doc_link(self, service_name: ServiceName | None=None) -> str:",
+        "type": "Method",
+        "class_signature": "class Package:"
+      },
+      "Package.get_module_name": {
+        "code": "    def get_module_name(self, service_name: ServiceName) -> str:\n        \"\"\"Retrieve the module name associated with the specified service.\n\nParameters:\n- service_name (ServiceName): The service for which the module name is being fetched. This should be an instance of the ServiceName class, which is likely defined in the 'mypy_boto3_builder.service_name' module and represents a service used in the package structure.\n\nReturns:\n- str: The module name corresponding to the given service. This is derived from calling the get_service_package_name method on the data attribute, which is an instance of BasePackageData.\n\nThis method facilitates the organization of package structures by providing the appropriate module name for given services, ensuring proper referencing within the package.\"\"\"\n        '\\n        Get service module name.\\n        '\n        return self.data.get_service_package_name(service_name)",
+        "docstring": "Retrieve the module name associated with the specified service.\n\nParameters:\n- service_name (ServiceName): The service for which the module name is being fetched. This should be an instance of the ServiceName class, which is likely defined in the 'mypy_boto3_builder.service_name' module and represents a service used in the package structure.\n\nReturns:\n- str: The module name corresponding to the given service. This is derived from calling the get_service_package_name method on the data attribute, which is an instance of BasePackageData.\n\nThis method facilitates the organization of package structures by providing the appropriate module name for given services, ensuring proper referencing within the package.",
+        "signature": "def get_module_name(self, service_name: ServiceName) -> str:",
+        "type": "Method",
+        "class_signature": "class Package:"
+      },
+      "Package.get_service_pypi_name": {
+        "code": "    def get_service_pypi_name(self, service_name: ServiceName) -> str:\n        \"\"\"Get the PyPI package name for a given service package.\n\nParameters:\n- service_name (ServiceName): An instance of the ServiceName class representing the specific service for which the PyPI package name is requested.\n\nReturns:\n- str: The PyPI package name associated with the provided service name, retrieved from the `data` attribute of the Package instance.\n\nThis method relies on the `data` attribute, which is expected to be an instance of a subclass of BasePackageData. The BasePackageData should implement the `get_service_pypi_name` method that defines how to obtain the PyPI package name for different services.\"\"\"\n        '\\n        Get PyPI package name for a service package.\\n        '\n        return self.data.get_service_pypi_name(service_name)",
+        "docstring": "Get the PyPI package name for a given service package.\n\nParameters:\n- service_name (ServiceName): An instance of the ServiceName class representing the specific service for which the PyPI package name is requested.\n\nReturns:\n- str: The PyPI package name associated with the provided service name, retrieved from the `data` attribute of the Package instance.\n\nThis method relies on the `data` attribute, which is expected to be an instance of a subclass of BasePackageData. The BasePackageData should implement the `get_service_pypi_name` method that defines how to obtain the PyPI package name for different services.",
+        "signature": "def get_service_pypi_name(self, service_name: ServiceName) -> str:",
+        "type": "Method",
+        "class_signature": "class Package:"
+      },
+      "Package.min_library_version": {
+        "code": "    def min_library_version(self) -> str:\n        \"\"\"Property that retrieves the minimum required library version for the package.\n\nThis method calculates the minimum version based on the current library version using the `get_min_build_version` utility function. \n\nReturns:\n    str: The minimum library version as a string.\n\nDependencies:\n    - `self.library_version`: Represents the library version of the package, obtained from the `data` attribute of the `Package` class which is an instance of `BasePackageData`.\n    - `get_min_build_version`: A utility function imported from `mypy_boto3_builder.utils.version`, used to compute the minimum building version from the library version.\"\"\"\n        '\\n        Minimum required library version.\\n        '\n        return get_min_build_version(self.library_version)",
+        "docstring": "Property that retrieves the minimum required library version for the package.\n\nThis method calculates the minimum version based on the current library version using the `get_min_build_version` utility function. \n\nReturns:\n    str: The minimum library version as a string.\n\nDependencies:\n    - `self.library_version`: Represents the library version of the package, obtained from the `data` attribute of the `Package` class which is an instance of `BasePackageData`.\n    - `get_min_build_version`: A utility function imported from `mypy_boto3_builder.utils.version`, used to compute the minimum building version from the library version.",
+        "signature": "def min_library_version(self) -> str:",
+        "type": "Method",
+        "class_signature": "class Package:"
+      },
+      "Package.max_library_version": {
+        "code": "    def max_library_version(self) -> str:\n        \"\"\"Retrieve the maximum required library version based on the current library version.\n\nThis property calculates the maximum library version allowed for the package by utilizing the\n`get_max_build_version` function. It is dependent on the `library_version` attribute,\nwhich is derived from the `data.get_library_version()` method. The returned string indicates\nthe upper boundary of compatible library versions, ensuring proper compatibility with package dependencies.\"\"\"\n        '\\n        Minimum required library version.\\n        '\n        return get_max_build_version(self.library_version)",
+        "docstring": "Retrieve the maximum required library version based on the current library version.\n\nThis property calculates the maximum library version allowed for the package by utilizing the\n`get_max_build_version` function. It is dependent on the `library_version` attribute,\nwhich is derived from the `data.get_library_version()` method. The returned string indicates\nthe upper boundary of compatible library versions, ensuring proper compatibility with package dependencies.",
+        "signature": "def max_library_version(self) -> str:",
+        "type": "Method",
+        "class_signature": "class Package:"
+      },
+      "Package.min_python_version": {
+        "code": "    def min_python_version(self) -> str:\n        \"\"\"Get the minimum required Python version for the package.\n\nThis property retrieves the earliest Python version supported by the package, defined as the smallest version in the global constant `SUPPORTED_PY_VERSIONS`. The version is returned as a string formatted in the conventional \"major.minor.patch\" format. \n\nDependencies: \n- `SUPPORTED_PY_VERSIONS`: A constant defined in `mypy_boto3_builder.constants` that contains a list of supported Python versions as tuples of integers.\n\nReturns:\n- A string representing the minimum required Python version.\"\"\"\n        '\\n        Minimum required python version.\\n        '\n        min_version = min(SUPPORTED_PY_VERSIONS)\n        return '.'.join((str(i) for i in min_version))",
+        "docstring": "Get the minimum required Python version for the package.\n\nThis property retrieves the earliest Python version supported by the package, defined as the smallest version in the global constant `SUPPORTED_PY_VERSIONS`. The version is returned as a string formatted in the conventional \"major.minor.patch\" format. \n\nDependencies: \n- `SUPPORTED_PY_VERSIONS`: A constant defined in `mypy_boto3_builder.constants` that contains a list of supported Python versions as tuples of integers.\n\nReturns:\n- A string representing the minimum required Python version.",
+        "signature": "def min_python_version(self) -> str:",
+        "type": "Method",
+        "class_signature": "class Package:"
+      },
+      "Package.get_classifiers": {
+        "code": "    def get_classifiers(self) -> list[str]:\n        \"\"\"Get a list of classifiers for the package used in PyPI metadata.\n\nThis method compiles a list of classifiers that describe the package, including its development status, intended audience, and supported operating systems. It checks the supported Python versions defined in the constant `SUPPORTED_PY_VERSIONS`, which should contain tuples representing Python version numbers (major, minor). The method generates classifiers for each major version of Python, including individual minor versions. It also indicates if only a specific major version is supported. Additional classifiers indicating the Python implementation and that the package only provides type stubs are included.\n\nReturns:\n    list[str]: A list of strings representing the classifiers for the package.\n\nDependencies:\n- `SUPPORTED_PY_VERSIONS`: A constant list defined in the `mypy_boto3_builder.constants` module, which is used to determine the major and minor versions of Python that the package supports.\"\"\"\n        '\\n        Get classifiers for package.\\n        '\n        result = ['Development Status :: 5 - Production/Stable', 'Intended Audience :: Developers', 'Environment :: Console', 'License :: OSI Approved :: MIT License', 'Natural Language :: English', 'Operating System :: OS Independent']\n        major_versions = {version[0] for version in SUPPORTED_PY_VERSIONS}\n        for major in sorted(major_versions):\n            result.append(f'Programming Language :: Python :: {major}')\n            minor_versions = {version[1] for version in SUPPORTED_PY_VERSIONS if version[0] == major and len(version) > 1}\n            result.extend((f'Programming Language :: Python :: {major}.{minor}' for minor in sorted(minor_versions)))\n        if len(major_versions) == 1:\n            major = next(iter(major_versions))\n            result.append(f'Programming Language :: Python :: {major} :: Only')\n        result.extend(('Programming Language :: Python :: Implementation :: CPython', 'Typing :: Stubs Only'))\n        return result",
+        "docstring": "Get a list of classifiers for the package used in PyPI metadata.\n\nThis method compiles a list of classifiers that describe the package, including its development status, intended audience, and supported operating systems. It checks the supported Python versions defined in the constant `SUPPORTED_PY_VERSIONS`, which should contain tuples representing Python version numbers (major, minor). The method generates classifiers for each major version of Python, including individual minor versions. It also indicates if only a specific major version is supported. Additional classifiers indicating the Python implementation and that the package only provides type stubs are included.\n\nReturns:\n    list[str]: A list of strings representing the classifiers for the package.\n\nDependencies:\n- `SUPPORTED_PY_VERSIONS`: A constant list defined in the `mypy_boto3_builder.constants` module, which is used to determine the major and minor versions of Python that the package supports.",
+        "signature": "def get_classifiers(self) -> list[str]:",
+        "type": "Method",
+        "class_signature": "class Package:"
+      }
+    }
+  },
+  "dependency_dict": {
+    "mypy_boto3_builder/structures/package.py:Package:__init__": {
+      "mypy_boto3_builder/package_data.py": {
+        "BasePackageData.get_library_version": {
+          "code": "    def get_library_version() -> str:\n        \"\"\"\n        Get underlying library version.\n        \"\"\"\n        return get_boto3_version()",
+          "docstring": "Get underlying library version.",
+          "signature": "def get_library_version() -> str:",
+          "type": "Method",
+          "class_signature": "class BasePackageData:"
+        },
+        "BasePackageData.get_botocore_version": {
+          "code": "    def get_botocore_version() -> str:\n        \"\"\"\n        Get underlying botocore version.\n        \"\"\"\n        return get_botocore_version()",
+          "docstring": "Get underlying botocore version.",
+          "signature": "def get_botocore_version() -> str:",
+          "type": "Method",
+          "class_signature": "class BasePackageData:"
+        }
+      },
+      "mypy_boto3_builder/logger.py": {
+        "get_logger": {
+          "code": "def get_logger(level: int | None = None, name: str = LOGGER_NAME) -> logging.Logger:\n    \"\"\"\n    Get Logger instance.\n\n    Arguments:\n        level -- Log level.\n\n    Returns:\n        Overriden Logger.\n    \"\"\"\n    logger = logging.getLogger(name)\n    if not logger.handlers:\n        stream_handler = logging.StreamHandler()\n        formatter = logging.Formatter(\n            \"%(asctime)s %(name)s: %(levelname)-7s %(message)s\",\n            datefmt=\"%H:%M:%S\",\n        )\n        stream_handler.setFormatter(formatter)\n        stream_handler.setLevel(level or logging.NOTSET)\n        logger.addHandler(stream_handler)\n\n    if level is not None:\n        logger.setLevel(level)\n        for handler in logger.handlers:\n            handler.setLevel(level)\n\n    return logger",
+          "docstring": "Get Logger instance.\n\nArguments:\n    level -- Log level.\n\nReturns:\n    Overriden Logger.",
+          "signature": "def get_logger(level: int | None=None, name: str=LOGGER_NAME) -> logging.Logger:",
+          "type": "Function",
+          "class_signature": null
+        }
+      },
+      "mypy_boto3_builder/structures/package.py": {
+        "Package.pypi_name": {
+          "code": "    def pypi_name(self, value: str) -> None:\n        self._pypi_name = value\n        self.url.pypi_name = value",
+          "docstring": "",
+          "signature": "def pypi_name(self, value: str) -> None:",
+          "type": "Method",
+          "class_signature": "class Package:"
+        },
+        "Package.version": {
+          "code": "    def version(self, value: str) -> None:\n        try:\n            Version(value)\n        except InvalidVersion:\n            raise StructureError(f'Invalid version: {value}') from None\n        self._version = value",
+          "docstring": "",
+          "signature": "def version(self, value: str) -> None:",
+          "type": "Method",
+          "class_signature": "class Package:"
+        }
+      },
+      "mypy_boto3_builder/structures/package_url.py": {
+        "PackageURL.__init__": {
+          "code": "    def __init__(self, pypi_name: str, data: type[BasePackageData]) -> None:\n        self.pypi_name = pypi_name\n        self.data = data",
+          "docstring": "",
+          "signature": "def __init__(self, pypi_name: str, data: type[BasePackageData]) -> None:",
+          "type": "Method",
+          "class_signature": "class PackageURL:"
+        }
+      }
+    },
+    "mypy_boto3_builder/structures/package.py:Package:directory_name": {
+      "mypy_boto3_builder/structures/package.py": {
+        "Package.pypi_name": {
+          "code": "    def pypi_name(self, value: str) -> None:\n        self._pypi_name = value\n        self.url.pypi_name = value",
+          "docstring": "",
+          "signature": "def pypi_name(self, value: str) -> None:",
+          "type": "Method",
+          "class_signature": "class Package:"
+        }
+      }
+    },
+    "mypy_boto3_builder/structures/package.py:Package:min_library_version": {
+      "mypy_boto3_builder/utils/version.py": {
+        "get_min_build_version": {
+          "code": "def get_min_build_version(version: str) -> str:\n    \"\"\"\n    Get min version build version by setting micro to 0.\n    \"\"\"\n    major, minor, _ = Version(version).release\n    return f\"{major}.{minor}.0\"",
+          "docstring": "Get min version build version by setting micro to 0.",
+          "signature": "def get_min_build_version(version: str) -> str:",
+          "type": "Function",
+          "class_signature": null
+        }
+      }
+    },
+    "mypy_boto3_builder/structures/package.py:Package:max_library_version": {
+      "mypy_boto3_builder/utils/version.py": {
+        "get_max_build_version": {
+          "code": "def get_max_build_version(version: str) -> str:\n    \"\"\"\n    Get min version build version by bumping minor.\n    \"\"\"\n    major, minor, _ = Version(version).release\n    return f\"{major}.{minor + 1}.0\"",
+          "docstring": "Get min version build version by bumping minor.",
+          "signature": "def get_max_build_version(version: str) -> str:",
+          "type": "Function",
+          "class_signature": null
+        }
+      }
+    },
+    "mypy_boto3_builder/structures/package.py:Package:get_local_doc_link": {},
+    "mypy_boto3_builder/structures/package.py:Package:get_module_name": {
+      "mypy_boto3_builder/package_data.py": {
+        "BasePackageData.get_service_package_name": {
+          "code": "    def get_service_package_name(cls, service_name: ServiceName) -> str:\n        \"\"\"\n        Get service package name.\n        \"\"\"\n        return f\"{cls.SERVICE_PREFIX}_{service_name.underscore_name}\"",
+          "docstring": "Get service package name.",
+          "signature": "def get_service_package_name(cls, service_name: ServiceName) -> str:",
+          "type": "Method",
+          "class_signature": "class BasePackageData:"
+        }
+      }
+    },
+    "mypy_boto3_builder/structures/package.py:Package:get_service_pypi_name": {
+      "mypy_boto3_builder/package_data.py": {
+        "BasePackageData.get_service_pypi_name": {
+          "code": "    def get_service_pypi_name(cls, service_name: ServiceName) -> str:\n        \"\"\"\n        Get service package PyPI name.\n        \"\"\"\n        return f\"{cls.SERVICE_PYPI_PREFIX}-{service_name.name}\"",
+          "docstring": "Get service package PyPI name.",
+          "signature": "def get_service_pypi_name(cls, service_name: ServiceName) -> str:",
+          "type": "Method",
+          "class_signature": "class BasePackageData:"
+        }
+      }
+    },
+    "mypy_boto3_builder/structures/package.py:Package:__str__": {
+      "mypy_boto3_builder/structures/package.py": {
+        "Package.name": {
+          "code": "    def name(self) -> str:\n        \"\"\"\n        Package name.\n        \"\"\"\n        if not self.data.NAME:\n            raise StructureError(f'Package name is not set for {self.pypi_name}')\n        return self.data.NAME",
+          "docstring": "Package name.",
+          "signature": "def name(self) -> str:",
+          "type": "Method",
+          "class_signature": "class Package:"
+        },
+        "Package.library_name": {
+          "code": "    def library_name(self) -> str:\n        \"\"\"\n        PyPI library package name.\n        \"\"\"\n        return self.data.LIBRARY_NAME",
+          "docstring": "PyPI library package name.",
+          "signature": "def library_name(self) -> str:",
+          "type": "Method",
+          "class_signature": "class Package:"
+        }
+      }
+    },
+    "mypy_boto3_builder/structures/package.py:Package:service_name": {
+      "mypy_boto3_builder/structures/package.py": {
+        "Package.name": {
+          "code": "    def name(self) -> str:\n        \"\"\"\n        Package name.\n        \"\"\"\n        if not self.data.NAME:\n            raise StructureError(f'Package name is not set for {self.pypi_name}')\n        return self.data.NAME",
+          "docstring": "Package name.",
+          "signature": "def name(self) -> str:",
+          "type": "Method",
+          "class_signature": "class Package:"
+        }
+      }
+    }
+  },
+  "call_tree": {
+    "tests/structures/test_package.py:TestPackage:test_init": {
+      "mypy_boto3_builder/structures/package.py:Package:__init__": {
+        "mypy_boto3_builder/package_data.py:BasePackageData:get_library_version": {
+          "mypy_boto3_builder/utils/version_getters.py:get_boto3_version": {}
+        },
+        "mypy_boto3_builder/package_data.py:BasePackageData:get_botocore_version": {
+          "mypy_boto3_builder/utils/version_getters.py:get_botocore_version": {}
+        },
+        "mypy_boto3_builder/structures/package.py:Package:version": {},
+        "mypy_boto3_builder/logger.py:get_logger": {},
+        "mypy_boto3_builder/structures/package.py:Package:pypi_name": {},
+        "mypy_boto3_builder/structures/package_url.py:PackageURL:__init__": {}
+      },
+      "mypy_boto3_builder/structures/package.py:Package:directory_name": {
+        "mypy_boto3_builder/structures/package.py:Package:pypi_name": {}
+      },
+      "mypy_boto3_builder/structures/package.py:Package:min_library_version": {
+        "mypy_boto3_builder/utils/version.py:get_min_build_version": {}
+      },
+      "mypy_boto3_builder/structures/package.py:Package:max_library_version": {
+        "mypy_boto3_builder/utils/version.py:get_max_build_version": {}
+      },
+      "mypy_boto3_builder/structures/package.py:Package:get_local_doc_link": {
+        "mypy_boto3_builder/structures/package.py:Package:get_module_name": {
+          "mypy_boto3_builder/package_data.py:BasePackageData:get_service_package_name": {
+            "mypy_boto3_builder/service_name.py:ServiceName:underscore_name": {}
+          }
+        }
+      },
+      "mypy_boto3_builder/structures/package.py:Package:get_module_name": {
+        "mypy_boto3_builder/package_data.py:BasePackageData:get_service_package_name": {
+          "mypy_boto3_builder/service_name.py:ServiceName:underscore_name": {}
+        }
+      },
+      "mypy_boto3_builder/structures/package.py:Package:get_service_pypi_name": {
+        "mypy_boto3_builder/package_data.py:BasePackageData:get_service_pypi_name": {}
+      },
+      "mypy_boto3_builder/structures/package.py:Package:min_python_version": {},
+      "mypy_boto3_builder/structures/package.py:Package:__str__": {
+        "mypy_boto3_builder/structures/package.py:Package:name": {},
+        "mypy_boto3_builder/structures/package.py:Package:library_name": {}
+      }
+    },
+    "tests/structures/test_package.py:TestPackage:test_service_name": {
+      "mypy_boto3_builder/structures/package.py:Package:__init__": {
+        "mypy_boto3_builder/package_data.py:BasePackageData:get_library_version": {
+          "mypy_boto3_builder/utils/version_getters.py:get_boto3_version": {}
+        },
+        "mypy_boto3_builder/package_data.py:BasePackageData:get_botocore_version": {
+          "mypy_boto3_builder/utils/version_getters.py:get_botocore_version": {}
+        },
+        "mypy_boto3_builder/logger.py:get_logger": {},
+        "mypy_boto3_builder/structures/package.py:Package:pypi_name": {},
+        "mypy_boto3_builder/structures/package_url.py:PackageURL:__init__": {}
+      },
+      "mypy_boto3_builder/structures/package.py:Package:service_name": {
+        "mypy_boto3_builder/structures/package.py:Package:name": {}
+      }
+    },
+    "tests/structures/test_package.py:TestPackage:test_get_classifiers": {
+      "mypy_boto3_builder/structures/package.py:Package:__init__": {
+        "mypy_boto3_builder/package_data.py:BasePackageData:get_library_version": {
+          "mypy_boto3_builder/utils/version_getters.py:get_boto3_version": {}
+        },
+        "mypy_boto3_builder/package_data.py:BasePackageData:get_botocore_version": {
+          "mypy_boto3_builder/utils/version_getters.py:get_botocore_version": {}
+        },
+        "mypy_boto3_builder/logger.py:get_logger": {},
+        "mypy_boto3_builder/structures/package.py:Package:pypi_name": {},
+        "mypy_boto3_builder/structures/package_url.py:PackageURL:__init__": {}
+      },
+      "mypy_boto3_builder/structures/package.py:Package:get_classifiers": {}
+    }
+  },
+  "PRD": "# PROJECT NAME: mypy_boto3_s3-test_package\n\n# FOLDER STRUCTURE:\n```\n..\n\u2514\u2500\u2500 mypy_boto3_builder/\n    \u2514\u2500\u2500 structures/\n        \u2514\u2500\u2500 package.py\n            \u251c\u2500\u2500 Package.__init__\n            \u251c\u2500\u2500 Package.__str__\n            \u251c\u2500\u2500 Package.directory_name\n            \u251c\u2500\u2500 Package.get_classifiers\n            \u251c\u2500\u2500 Package.get_local_doc_link\n            \u251c\u2500\u2500 Package.get_module_name\n            \u251c\u2500\u2500 Package.get_service_pypi_name\n            \u251c\u2500\u2500 Package.max_library_version\n            \u251c\u2500\u2500 Package.min_library_version\n            \u251c\u2500\u2500 Package.min_python_version\n            \u2514\u2500\u2500 Package.service_name\n```\n\n# IMPLEMENTATION REQUIREMENTS:\n## MODULE DESCRIPTION:\nThe module is designed to validate, manage, and generate metadata for Python type stubs used to facilitate type-checking and development with AWS Boto3 services. It provides functionality for creating and organizing stub packages for specific AWS services, handling package metadata such as versioning, service-specific documentation links, and classifiers for Python's packaging ecosystem. By centralizing the generation and configuration of Boto3 stub packages, this module streamlines development workflows for developers, ensuring accurate type hints and compatibility across various Boto3 service integrations. This solves the problem of maintaining robust type safety and documentation for Python developers utilizing AWS services, reducing errors and enhancing productivity.\n\n## FILE 1: mypy_boto3_builder/structures/package.py\n\n- CLASS METHOD: Package.get_module_name\n  - CLASS SIGNATURE: class Package:\n  - SIGNATURE: def get_module_name(self, service_name: ServiceName) -> str:\n  - DOCSTRING: \n```python\n\"\"\"\nRetrieve the module name associated with the specified service.\n\nParameters:\n- service_name (ServiceName): The service for which the module name is being fetched. This should be an instance of the ServiceName class, which is likely defined in the 'mypy_boto3_builder.service_name' module and represents a service used in the package structure.\n\nReturns:\n- str: The module name corresponding to the given service. This is derived from calling the get_service_package_name method on the data attribute, which is an instance of BasePackageData.\n\nThis method facilitates the organization of package structures by providing the appropriate module name for given services, ensuring proper referencing within the package.\n\"\"\"\n```\n\n- CLASS METHOD: Package.get_classifiers\n  - CLASS SIGNATURE: class Package:\n  - SIGNATURE: def get_classifiers(self) -> list[str]:\n  - DOCSTRING: \n```python\n\"\"\"\nGet a list of classifiers for the package used in PyPI metadata.\n\nThis method compiles a list of classifiers that describe the package, including its development status, intended audience, and supported operating systems. It checks the supported Python versions defined in the constant `SUPPORTED_PY_VERSIONS`, which should contain tuples representing Python version numbers (major, minor). The method generates classifiers for each major version of Python, including individual minor versions. It also indicates if only a specific major version is supported. Additional classifiers indicating the Python implementation and that the package only provides type stubs are included.\n\nReturns:\n    list[str]: A list of strings representing the classifiers for the package.\n\nDependencies:\n- `SUPPORTED_PY_VERSIONS`: A constant list defined in the `mypy_boto3_builder.constants` module, which is used to determine the major and minor versions of Python that the package supports.\n\"\"\"\n```\n\n- CLASS METHOD: Package.min_python_version\n  - CLASS SIGNATURE: class Package:\n  - SIGNATURE: def min_python_version(self) -> str:\n  - DOCSTRING: \n```python\n\"\"\"\nGet the minimum required Python version for the package.\n\nThis property retrieves the earliest Python version supported by the package, defined as the smallest version in the global constant `SUPPORTED_PY_VERSIONS`. The version is returned as a string formatted in the conventional \"major.minor.patch\" format. \n\nDependencies: \n- `SUPPORTED_PY_VERSIONS`: A constant defined in `mypy_boto3_builder.constants` that contains a list of supported Python versions as tuples of integers.\n\nReturns:\n- A string representing the minimum required Python version.\n\"\"\"\n```\n\n- CLASS METHOD: Package.get_service_pypi_name\n  - CLASS SIGNATURE: class Package:\n  - SIGNATURE: def get_service_pypi_name(self, service_name: ServiceName) -> str:\n  - DOCSTRING: \n```python\n\"\"\"\nGet the PyPI package name for a given service package.\n\nParameters:\n- service_name (ServiceName): An instance of the ServiceName class representing the specific service for which the PyPI package name is requested.\n\nReturns:\n- str: The PyPI package name associated with the provided service name, retrieved from the `data` attribute of the Package instance.\n\nThis method relies on the `data` attribute, which is expected to be an instance of a subclass of BasePackageData. The BasePackageData should implement the `get_service_pypi_name` method that defines how to obtain the PyPI package name for different services.\n\"\"\"\n```\n\n- CLASS METHOD: Package.max_library_version\n  - CLASS SIGNATURE: class Package:\n  - SIGNATURE: def max_library_version(self) -> str:\n  - DOCSTRING: \n```python\n\"\"\"\nRetrieve the maximum required library version based on the current library version.\n\nThis property calculates the maximum library version allowed for the package by utilizing the\n`get_max_build_version` function. It is dependent on the `library_version` attribute,\nwhich is derived from the `data.get_library_version()` method. The returned string indicates\nthe upper boundary of compatible library versions, ensuring proper compatibility with package dependencies.\n\"\"\"\n```\n\n- CLASS METHOD: Package.__init__\n  - CLASS SIGNATURE: class Package:\n  - SIGNATURE: def __init__(self, data: type[BasePackageData], service_names: Iterable[ServiceName]=(), version: str='') -> None:\n  - DOCSTRING: \n```python\n\"\"\"\nInitialize a Package instance that represents a structured package in the project.\n\nParameters:\n- data (type[BasePackageData]): A class type inherited from BasePackageData that provides package metadata and version information.\n- service_names (Iterable[ServiceName], optional): An iterable of service names associated with the package. Defaults to an empty tuple.\n- version (str, optional): A string representing the package version. If provided, it will be validated and set.\n\nAttributes:\n- self.data: Holds metadata regarding the package from the provided data parameter.\n- self._pypi_name: Stores the PyPI package name, retrieved from the data attribute.\n- self.library_version: The library version extracted from the data.\n- self.botocore_version: The botocore version extracted from the data.\n- self._version (str): Initially empty, this attribute will hold the validated package version.\n- self.service_names: A tuple of service names associated with this package.\n- self.logger: A logging instance initialized via the get_logger function for logging purposes.\n- self.url: An instance of PackageURL, constructed using the PyPI name and data for this package.\n\nDependencies:\n- Utilizes constants from the 'mypy_boto3_builder.constants' module for managing package data.\n- Interacts with the `get_logger` function from 'mypy_boto3_builder.logger' to set up logging capabilities.\n- Utilizes the `PackageURL` class from 'mypy_boto3_builder.structures.package_url' for URL management.\n\"\"\"\n```\n\n- CLASS METHOD: Package.__str__\n  - CLASS SIGNATURE: class Package:\n  - SIGNATURE: def __str__(self) -> str:\n  - DOCSTRING: \n```python\n\"\"\"\nGet string representation of the Package instance for debugging purposes. \n\nThis method formats the output to include the package's name, version, library name, and library version, drawing from the instance's attributes `name`, `_version`, `library_name`, and `library_version`. It does not take any parameters and returns a formatted string summarizing the Package instance's key information.\n\nAttributes:\n- `name`: Obtained from the `data` attribute of the Package instance; represents the package's unique name.\n- `_version`: The version of the package as set in the `version` property.\n- `library_name`: Retrieved from the `data` attribute; indicates the associated library's name.\n- `library_version`: Obtained via the `get_library_version()` method of the data attribute; signifies the version of the library.\n\nThis method does not have any side effects and is primarily used for providing a quick overview of the package instance's state during debugging.\n\"\"\"\n```\n\n- CLASS METHOD: Package.min_library_version\n  - CLASS SIGNATURE: class Package:\n  - SIGNATURE: def min_library_version(self) -> str:\n  - DOCSTRING: \n```python\n\"\"\"\nProperty that retrieves the minimum required library version for the package.\n\nThis method calculates the minimum version based on the current library version using the `get_min_build_version` utility function. \n\nReturns:\n    str: The minimum library version as a string.\n\nDependencies:\n    - `self.library_version`: Represents the library version of the package, obtained from the `data` attribute of the `Package` class which is an instance of `BasePackageData`.\n    - `get_min_build_version`: A utility function imported from `mypy_boto3_builder.utils.version`, used to compute the minimum building version from the library version.\n\"\"\"\n```\n\n- CLASS METHOD: Package.service_name\n  - CLASS SIGNATURE: class Package:\n  - SIGNATURE: def service_name(self) -> ServiceName:\n  - DOCSTRING: \n```python\n\"\"\"\nRetrieve the service name for the package.\n\nThis property checks the number of service names associated with the package. If there is not exactly one service name, it raises a StructureError. The service name is tied to the `service_names` attribute, which is initialized in the constructor of the Package class. This attribute is an iterable of ServiceName, passed as a parameter during the instantiation of the Package object.\n\nReturns:\n    ServiceName: The single service name associated with the package.\n\nRaises:\n    StructureError: If there is more than one service name in the package.\n\"\"\"\n```\n\n- CLASS METHOD: Package.directory_name\n  - CLASS SIGNATURE: class Package:\n  - SIGNATURE: def directory_name(self) -> str:\n  - DOCSTRING: \n```python\n\"\"\"\nGenerate the directory name to store the generated package by transforming the PyPI package name. The method replaces hyphens in the package name with underscores, and appends '_package' to create the final directory name.\n\nReturns:\n    str: The formatted directory name for the generated package.\n\nDependencies:\n    - self.pypi_name: A property that retrieves the PyPI package name, which is assumed to be defined in the Package class and is set during instantiation.\n\"\"\"\n```\n\n- CLASS METHOD: Package.get_local_doc_link\n  - CLASS SIGNATURE: class Package:\n  - SIGNATURE: def get_local_doc_link(self, service_name: ServiceName | None=None) -> str:\n  - DOCSTRING: \n```python\n\"\"\"\nGet a link to the local documentation for the package, optionally including the module name for a specific service.\n\nParameters:\n- service_name (ServiceName | None): An optional service name to specify which module's documentation link to retrieve. If provided, the module name will be appended to the local documentation URL.\n\nReturns:\n- str: The full URL to the local documentation, either the base link from `self.data.LOCAL_DOC_LINK` or the extended link if a service name is specified.\n\nDependencies:\n- `self.data.LOCAL_DOC_LINK`: A constant that holds the base URL for the local documentation. It is defined in the `data` attribute, which is expected to be a subclass of `BasePackageData`.\n- `self.get_module_name(service_name)`: A method that retrieves the appropriate module name for the given service name.\n\"\"\"\n```\n\n# TASK DESCRIPTION:\nIn this project, you need to implement the functions and methods listed above. The functions have been removed from the code but their docstrings remain.\nYour task is to:\n1. Read and understand the docstrings of each function/method\n2. Understand the dependencies and how they interact with the target functions\n3. Implement the functions/methods according to their docstrings and signatures\n4. Ensure your implementations work correctly with the rest of the codebase\n",
+  "file_code": {
+    "mypy_boto3_builder/structures/package.py": "\"\"\"\nParent class for all package structures.\n\nCopyright 2024 Vlad Emelianov\n\"\"\"\nfrom collections.abc import Iterable\nfrom packaging.version import InvalidVersion, Version\nfrom mypy_boto3_builder.constants import SUPPORTED_PY_VERSIONS\nfrom mypy_boto3_builder.exceptions import StructureError\nfrom mypy_boto3_builder.logger import get_logger\nfrom mypy_boto3_builder.package_data import BasePackageData\nfrom mypy_boto3_builder.service_name import ServiceName\nfrom mypy_boto3_builder.structures.package_url import PackageURL\nfrom mypy_boto3_builder.utils.version import get_max_build_version, get_min_build_version\n\nclass Package:\n    \"\"\"\n    Parent class for all package structures.\n    \"\"\"\n\n    @property\n    def pypi_name(self) -> str:\n        \"\"\"\n        PyPI package name.\n        \"\"\"\n        return self._pypi_name\n\n    @pypi_name.setter\n    def pypi_name(self, value: str) -> None:\n        self._pypi_name = value\n        self.url.pypi_name = value\n\n    @property\n    def version(self) -> str:\n        \"\"\"\n        Package version.\n        \"\"\"\n        if not self._version:\n            raise StructureError(f'Version is not set for {self.pypi_name}')\n        return self._version\n\n    @version.setter\n    def version(self, value: str) -> None:\n        try:\n            Version(value)\n        except InvalidVersion:\n            raise StructureError(f'Invalid version: {value}') from None\n        self._version = value\n\n    @property\n    def name(self) -> str:\n        \"\"\"\n        Package name.\n        \"\"\"\n        if not self.data.NAME:\n            raise StructureError(f'Package name is not set for {self.pypi_name}')\n        return self.data.NAME\n\n    @property\n    def library_name(self) -> str:\n        \"\"\"\n        PyPI library package name.\n        \"\"\"\n        return self.data.LIBRARY_NAME\n\n    def has_main_package(self) -> bool:\n        \"\"\"\n        Check if package has main package.\n        \"\"\"\n        return bool(self.data.NAME)"
+  }
+}

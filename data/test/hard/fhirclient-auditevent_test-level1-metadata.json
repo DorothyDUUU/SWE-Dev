@@ -1,0 +1,977 @@
+{
+  "dir_path": "/app/fhirclient",
+  "package_name": "fhirclient",
+  "sample_name": "fhirclient-auditevent_test",
+  "src_dir": "fhirclient/",
+  "test_dir": "tests/",
+  "test_file": "modified_testcases/models/auditevent_test.py",
+  "test_code": "#  Generated from FHIR 4.0.1-9346c8cc45, SMART Health IT.\n\nimport os\nimport io\nimport unittest\nimport json\nfrom fhirclient.models import auditevent\nfrom fhirclient.models.fhirdate import FHIRDate\nfrom fhirclient.models.fhirdatetime import FHIRDateTime\nfrom fhirclient.models.fhirinstant import FHIRInstant\nfrom fhirclient.models.fhirtime import FHIRTime\n\n\nclass AuditEventTests(unittest.TestCase):\n    def instantiate_from(self, filename):\n        datadir = os.path.join(os.path.dirname(__file__), '..', 'data', 'examples')\n        with io.open(os.path.join(datadir, filename), 'r', encoding='utf-8') as handle:\n            js = json.load(handle)\n            self.assertEqual(\"AuditEvent\", js[\"resourceType\"])\n        return auditevent.AuditEvent(js)\n    \n    def testAuditEvent1(self):\n        inst = self.instantiate_from(\"audit-event-example-vread.json\")\n        self.assertIsNotNone(inst, \"Must have instantiated a AuditEvent instance\")\n        self.implAuditEvent1(inst)\n        \n        js = inst.as_json()\n        self.assertEqual(\"AuditEvent\", js[\"resourceType\"])\n        inst2 = auditevent.AuditEvent(js)\n        self.implAuditEvent1(inst2)\n    \n    def implAuditEvent1(self, inst):\n        self.assertEqual(inst.action, \"R\")\n        self.assertEqual(inst.agent[0].altId, \"601847123\")\n        self.assertEqual(inst.agent[0].name, \"Grahame Grieve\")\n        self.assertTrue(inst.agent[0].requestor)\n        self.assertEqual(inst.agent[0].type.coding[0].code, \"humanuser\")\n        self.assertEqual(inst.agent[0].type.coding[0].display, \"human user\")\n        self.assertEqual(inst.agent[0].type.coding[0].system, \"http://terminology.hl7.org/CodeSystem/extra-security-role-type\")\n        self.assertEqual(inst.agent[1].altId, \"6580\")\n        self.assertEqual(inst.agent[1].network.address, \"Workstation1.ehr.familyclinic.com\")\n        self.assertEqual(inst.agent[1].network.type, \"1\")\n        self.assertFalse(inst.agent[1].requestor)\n        self.assertEqual(inst.agent[1].type.coding[0].code, \"110153\")\n        self.assertEqual(inst.agent[1].type.coding[0].display, \"Source Role ID\")\n        self.assertEqual(inst.agent[1].type.coding[0].system, \"http://dicom.nema.org/resources/ontology/DCM\")\n        self.assertEqual(inst.entity[0].lifecycle.code, \"6\")\n        self.assertEqual(inst.entity[0].lifecycle.display, \"Access / Use\")\n        self.assertEqual(inst.entity[0].lifecycle.system, \"http://terminology.hl7.org/CodeSystem/dicom-audit-lifecycle\")\n        self.assertEqual(inst.entity[0].type.code, \"2\")\n        self.assertEqual(inst.entity[0].type.display, \"System Object\")\n        self.assertEqual(inst.entity[0].type.system, \"http://terminology.hl7.org/CodeSystem/audit-entity-type\")\n        self.assertEqual(inst.id, \"example-rest\")\n        self.assertEqual(inst.meta.tag[0].code, \"HTEST\")\n        self.assertEqual(inst.meta.tag[0].display, \"test health data\")\n        self.assertEqual(inst.meta.tag[0].system, \"http://terminology.hl7.org/CodeSystem/v3-ActReason\")\n        self.assertEqual(inst.outcome, \"0\")\n        self.assertEqual(inst.recorded.datetime, FHIRInstant(\"2013-06-20T23:42:24Z\").datetime)\n        self.assertEqual(inst.recorded.as_json(), \"2013-06-20T23:42:24Z\")\n        self.assertEqual(inst.source.site, \"Cloud\")\n        self.assertEqual(inst.source.type[0].code, \"3\")\n        self.assertEqual(inst.source.type[0].display, \"Web Server\")\n        self.assertEqual(inst.source.type[0].system, \"http://terminology.hl7.org/CodeSystem/security-source-type\")\n        self.assertEqual(inst.subtype[0].code, \"vread\")\n        self.assertEqual(inst.subtype[0].display, \"vread\")\n        self.assertEqual(inst.subtype[0].system, \"http://hl7.org/fhir/restful-interaction\")\n        self.assertEqual(inst.text.status, \"generated\")\n        self.assertEqual(inst.type.code, \"rest\")\n        self.assertEqual(inst.type.display, \"Restful Operation\")\n        self.assertEqual(inst.type.system, \"http://terminology.hl7.org/CodeSystem/audit-event-type\")\n    \n    def testAuditEvent2(self):\n        inst = self.instantiate_from(\"auditevent-example-disclosure.json\")\n        self.assertIsNotNone(inst, \"Must have instantiated a AuditEvent instance\")\n        self.implAuditEvent2(inst)\n        \n        js = inst.as_json()\n        self.assertEqual(\"AuditEvent\", js[\"resourceType\"])\n        inst2 = auditevent.AuditEvent(js)\n        self.implAuditEvent2(inst2)\n    \n    def implAuditEvent2(self, inst):\n        self.assertEqual(inst.action, \"R\")\n        self.assertEqual(inst.agent[0].altId, \"notMe\")\n        self.assertEqual(inst.agent[0].name, \"That guy everyone wishes would be caught\")\n        self.assertEqual(inst.agent[0].network.address, \"custodian.net\")\n        self.assertEqual(inst.agent[0].network.type, \"1\")\n        self.assertEqual(inst.agent[0].policy[0], \"http://consent.com/yes\")\n        self.assertTrue(inst.agent[0].requestor)\n        self.assertEqual(inst.agent[0].type.coding[0].code, \"110153\")\n        self.assertEqual(inst.agent[0].type.coding[0].display, \"Source Role ID\")\n        self.assertEqual(inst.agent[0].type.coding[0].system, \"http://dicom.nema.org/resources/ontology/DCM\")\n        self.assertEqual(inst.agent[1].network.address, \"marketing.land\")\n        self.assertEqual(inst.agent[1].network.type, \"1\")\n        self.assertEqual(inst.agent[1].purposeOfUse[0].coding[0].code, \"HMARKT\")\n        self.assertEqual(inst.agent[1].purposeOfUse[0].coding[0].display, \"healthcare marketing\")\n        self.assertEqual(inst.agent[1].purposeOfUse[0].coding[0].system, \"http://terminology.hl7.org/CodeSystem/v3-ActReason\")\n        self.assertFalse(inst.agent[1].requestor)\n        self.assertEqual(inst.agent[1].type.coding[0].code, \"110152\")\n        self.assertEqual(inst.agent[1].type.coding[0].display, \"Destination Role ID\")\n        self.assertEqual(inst.agent[1].type.coding[0].system, \"http://dicom.nema.org/resources/ontology/DCM\")\n        self.assertEqual(inst.entity[0].role.code, \"1\")\n        self.assertEqual(inst.entity[0].role.display, \"Patient\")\n        self.assertEqual(inst.entity[0].role.system, \"http://terminology.hl7.org/CodeSystem/object-role\")\n        self.assertEqual(inst.entity[0].type.code, \"1\")\n        self.assertEqual(inst.entity[0].type.display, \"Person\")\n        self.assertEqual(inst.entity[0].type.system, \"http://terminology.hl7.org/CodeSystem/audit-entity-type\")\n        self.assertEqual(inst.entity[1].description, \"data about Everthing important\")\n        self.assertEqual(inst.entity[1].lifecycle.code, \"11\")\n        self.assertEqual(inst.entity[1].lifecycle.display, \"Disclosure\")\n        self.assertEqual(inst.entity[1].lifecycle.system, \"http://terminology.hl7.org/CodeSystem/dicom-audit-lifecycle\")\n        self.assertEqual(inst.entity[1].name, \"Namne of What\")\n        self.assertEqual(inst.entity[1].role.code, \"4\")\n        self.assertEqual(inst.entity[1].role.display, \"Domain Resource\")\n        self.assertEqual(inst.entity[1].role.system, \"http://terminology.hl7.org/CodeSystem/object-role\")\n        self.assertEqual(inst.entity[1].securityLabel[0].code, \"V\")\n        self.assertEqual(inst.entity[1].securityLabel[0].display, \"very restricted\")\n        self.assertEqual(inst.entity[1].securityLabel[0].system, \"http://terminology.hl7.org/CodeSystem/v3-Confidentiality\")\n        self.assertEqual(inst.entity[1].securityLabel[1].code, \"STD\")\n        self.assertEqual(inst.entity[1].securityLabel[1].display, \"sexually transmitted disease information sensitivity\")\n        self.assertEqual(inst.entity[1].securityLabel[1].system, \"http://terminology.hl7.org/CodeSystem/v3-ActCode\")\n        self.assertEqual(inst.entity[1].securityLabel[2].code, \"DELAU\")\n        self.assertEqual(inst.entity[1].securityLabel[2].display, \"delete after use\")\n        self.assertEqual(inst.entity[1].securityLabel[2].system, \"http://terminology.hl7.org/CodeSystem/v3-ActCode\")\n        self.assertEqual(inst.entity[1].type.code, \"2\")\n        self.assertEqual(inst.entity[1].type.display, \"System Object\")\n        self.assertEqual(inst.entity[1].type.system, \"http://terminology.hl7.org/CodeSystem/audit-entity-type\")\n        self.assertEqual(inst.id, \"example-disclosure\")\n        self.assertEqual(inst.meta.tag[0].code, \"HTEST\")\n        self.assertEqual(inst.meta.tag[0].display, \"test health data\")\n        self.assertEqual(inst.meta.tag[0].system, \"http://terminology.hl7.org/CodeSystem/v3-ActReason\")\n        self.assertEqual(inst.outcome, \"0\")\n        self.assertEqual(inst.outcomeDesc, \"Successful  Disclosure\")\n        self.assertEqual(inst.purposeOfEvent[0].coding[0].code, \"HMARKT\")\n        self.assertEqual(inst.purposeOfEvent[0].coding[0].display, \"healthcare marketing\")\n        self.assertEqual(inst.purposeOfEvent[0].coding[0].system, \"http://terminology.hl7.org/CodeSystem/v3-ActReason\")\n        self.assertEqual(inst.recorded.datetime, FHIRInstant(\"2013-09-22T00:08:00Z\").datetime)\n        self.assertEqual(inst.recorded.as_json(), \"2013-09-22T00:08:00Z\")\n        self.assertEqual(inst.source.site, \"Watcher\")\n        self.assertEqual(inst.source.type[0].code, \"4\")\n        self.assertEqual(inst.source.type[0].display, \"Application Server\")\n        self.assertEqual(inst.source.type[0].system, \"http://terminology.hl7.org/CodeSystem/security-source-type\")\n        self.assertEqual(inst.subtype[0].code, \"Disclosure\")\n        self.assertEqual(inst.subtype[0].display, \"HIPAA disclosure\")\n        self.assertEqual(inst.text.div, \"<div xmlns=\\\"http://www.w3.org/1999/xhtml\\\">Disclosure by some idiot, for marketing reasons, to places unknown, of a Poor Sap, data about Everthing important.</div>\")\n        self.assertEqual(inst.text.status, \"generated\")\n        self.assertEqual(inst.type.code, \"110106\")\n        self.assertEqual(inst.type.display, \"Export\")\n        self.assertEqual(inst.type.system, \"http://dicom.nema.org/resources/ontology/DCM\")\n    \n    def testAuditEvent3(self):\n        inst = self.instantiate_from(\"auditevent-example-error.json\")\n        self.assertIsNotNone(inst, \"Must have instantiated a AuditEvent instance\")\n        self.implAuditEvent3(inst)\n        \n        js = inst.as_json()\n        self.assertEqual(\"AuditEvent\", js[\"resourceType\"])\n        inst2 = auditevent.AuditEvent(js)\n        self.implAuditEvent3(inst2)\n    \n    def implAuditEvent3(self, inst):\n        self.assertEqual(inst.action, \"C\")\n        self.assertEqual(inst.agent[0].altId, \"601847123\")\n        self.assertEqual(inst.agent[0].name, \"Grahame Grieve\")\n        self.assertTrue(inst.agent[0].requestor)\n        self.assertEqual(inst.agent[0].type.coding[0].code, \"humanuser\")\n        self.assertEqual(inst.agent[0].type.coding[0].display, \"human user\")\n        self.assertEqual(inst.agent[0].type.coding[0].system, \"http://terminology.hl7.org/CodeSystem/extra-security-role-type\")\n        self.assertEqual(inst.agent[1].altId, \"6580\")\n        self.assertEqual(inst.agent[1].network.address, \"Workstation1.ehr.familyclinic.com\")\n        self.assertEqual(inst.agent[1].network.type, \"1\")\n        self.assertFalse(inst.agent[1].requestor)\n        self.assertEqual(inst.agent[1].type.coding[0].code, \"110153\")\n        self.assertEqual(inst.agent[1].type.coding[0].display, \"Source Role ID\")\n        self.assertEqual(inst.agent[1].type.coding[0].system, \"http://dicom.nema.org/resources/ontology/DCM\")\n        self.assertEqual(inst.contained[0].id, \"o1\")\n        self.assertEqual(inst.entity[0].detail[0].type, \"requested transaction\")\n        self.assertEqual(inst.entity[0].detail[0].valueString, \"http POST ..... \")\n        self.assertEqual(inst.entity[0].type.code, \"2\")\n        self.assertEqual(inst.entity[0].type.display, \"System Object\")\n        self.assertEqual(inst.entity[0].type.system, \"http://terminology.hl7.org/CodeSystem/audit-entity-type\")\n        self.assertEqual(inst.entity[1].description, \"transaction failed\")\n        self.assertEqual(inst.entity[1].type.code, \"OperationOutcome\")\n        self.assertEqual(inst.entity[1].type.display, \"OperationOutcome\")\n        self.assertEqual(inst.entity[1].type.system, \"http://hl7.org/fhir/resource-types\")\n        self.assertEqual(inst.id, \"example-error\")\n        self.assertEqual(inst.meta.tag[0].code, \"HTEST\")\n        self.assertEqual(inst.meta.tag[0].display, \"test health data\")\n        self.assertEqual(inst.meta.tag[0].system, \"http://terminology.hl7.org/CodeSystem/v3-ActReason\")\n        self.assertEqual(inst.outcome, \"8\")\n        self.assertEqual(inst.outcomeDesc, \"Invalid request to create an Operation resource on the Patient endpoint.\")\n        self.assertEqual(inst.recorded.datetime, FHIRInstant(\"2017-09-07T23:42:24Z\").datetime)\n        self.assertEqual(inst.recorded.as_json(), \"2017-09-07T23:42:24Z\")\n        self.assertEqual(inst.source.site, \"Cloud\")\n        self.assertEqual(inst.source.type[0].code, \"3\")\n        self.assertEqual(inst.source.type[0].display, \"Web Server\")\n        self.assertEqual(inst.source.type[0].system, \"http://terminology.hl7.org/CodeSystem/security-source-type\")\n        self.assertEqual(inst.subtype[0].code, \"create\")\n        self.assertEqual(inst.subtype[0].display, \"create\")\n        self.assertEqual(inst.subtype[0].system, \"http://hl7.org/fhir/restful-interaction\")\n        self.assertEqual(inst.text.status, \"generated\")\n        self.assertEqual(inst.type.code, \"rest\")\n        self.assertEqual(inst.type.display, \"Restful Operation\")\n        self.assertEqual(inst.type.system, \"http://terminology.hl7.org/CodeSystem/audit-event-type\")\n    \n    def testAuditEvent4(self):\n        inst = self.instantiate_from(\"audit-event-example-media.json\")\n        self.assertIsNotNone(inst, \"Must have instantiated a AuditEvent instance\")\n        self.implAuditEvent4(inst)\n        \n        js = inst.as_json()\n        self.assertEqual(\"AuditEvent\", js[\"resourceType\"])\n        inst2 = auditevent.AuditEvent(js)\n        self.implAuditEvent4(inst2)\n    \n    def implAuditEvent4(self, inst):\n        self.assertEqual(inst.action, \"R\")\n        self.assertFalse(inst.agent[0].requestor)\n        self.assertEqual(inst.agent[0].type.coding[0].code, \"110153\")\n        self.assertEqual(inst.agent[0].type.coding[0].display, \"Source Role ID\")\n        self.assertEqual(inst.agent[0].type.coding[0].system, \"http://dicom.nema.org/resources/ontology/DCM\")\n        self.assertEqual(inst.agent[1].altId, \"601847123\")\n        self.assertEqual(inst.agent[1].name, \"Grahame Grieve\")\n        self.assertTrue(inst.agent[1].requestor)\n        self.assertEqual(inst.agent[1].type.coding[0].code, \"humanuser\")\n        self.assertEqual(inst.agent[1].type.coding[0].display, \"human user\")\n        self.assertEqual(inst.agent[1].type.coding[0].system, \"http://terminology.hl7.org/CodeSystem/extra-security-role-type\")\n        self.assertEqual(inst.agent[2].media.code, \"110033\")\n        self.assertEqual(inst.agent[2].media.display, \"DVD\")\n        self.assertEqual(inst.agent[2].media.system, \"http://dicom.nema.org/resources/ontology/DCM\")\n        self.assertEqual(inst.agent[2].name, \"Media title: Hello World\")\n        self.assertFalse(inst.agent[2].requestor)\n        self.assertEqual(inst.agent[2].type.coding[0].code, \"110154\")\n        self.assertEqual(inst.agent[2].type.coding[0].display, \"Destination Media\")\n        self.assertEqual(inst.agent[2].type.coding[0].system, \"http://dicom.nema.org/resources/ontology/DCM\")\n        self.assertEqual(inst.entity[0].role.code, \"1\")\n        self.assertEqual(inst.entity[0].role.display, \"Patient\")\n        self.assertEqual(inst.entity[0].role.system, \"http://terminology.hl7.org/CodeSystem/object-role\")\n        self.assertEqual(inst.entity[0].type.code, \"1\")\n        self.assertEqual(inst.entity[0].type.display, \"Person\")\n        self.assertEqual(inst.entity[0].type.system, \"http://terminology.hl7.org/CodeSystem/audit-entity-type\")\n        self.assertEqual(inst.entity[1].role.code, \"20\")\n        self.assertEqual(inst.entity[1].role.display, \"Job\")\n        self.assertEqual(inst.entity[1].role.system, \"http://terminology.hl7.org/CodeSystem/object-role\")\n        self.assertEqual(inst.entity[1].type.code, \"2\")\n        self.assertEqual(inst.entity[1].type.display, \"System Object\")\n        self.assertEqual(inst.entity[1].type.system, \"http://terminology.hl7.org/CodeSystem/audit-entity-type\")\n        self.assertEqual(inst.entity[2].type.code, \"2\")\n        self.assertEqual(inst.entity[2].type.display, \"System Object\")\n        self.assertEqual(inst.entity[2].type.system, \"http://terminology.hl7.org/CodeSystem/audit-entity-type\")\n        self.assertEqual(inst.id, \"example-media\")\n        self.assertEqual(inst.meta.tag[0].code, \"HTEST\")\n        self.assertEqual(inst.meta.tag[0].display, \"test health data\")\n        self.assertEqual(inst.meta.tag[0].system, \"http://terminology.hl7.org/CodeSystem/v3-ActReason\")\n        self.assertEqual(inst.outcome, \"0\")\n        self.assertEqual(inst.recorded.datetime, FHIRInstant(\"2015-08-27T23:42:24Z\").datetime)\n        self.assertEqual(inst.recorded.as_json(), \"2015-08-27T23:42:24Z\")\n        self.assertEqual(inst.subtype[0].code, \"ITI-32\")\n        self.assertEqual(inst.subtype[0].display, \"Distribute Document Set on Media\")\n        self.assertEqual(inst.subtype[0].system, \"urn:oid:1.3.6.1.4.1.19376.1.2\")\n        self.assertEqual(inst.text.status, \"generated\")\n        self.assertEqual(inst.type.code, \"110106\")\n        self.assertEqual(inst.type.display, \"Export\")\n        self.assertEqual(inst.type.system, \"http://dicom.nema.org/resources/ontology/DCM\")\n    \n    def testAuditEvent5(self):\n        inst = self.instantiate_from(\"audit-event-example-logout.json\")\n        self.assertIsNotNone(inst, \"Must have instantiated a AuditEvent instance\")\n        self.implAuditEvent5(inst)\n        \n        js = inst.as_json()\n        self.assertEqual(\"AuditEvent\", js[\"resourceType\"])\n        inst2 = auditevent.AuditEvent(js)\n        self.implAuditEvent5(inst2)\n    \n    def implAuditEvent5(self, inst):\n        self.assertEqual(inst.action, \"E\")\n        self.assertEqual(inst.agent[0].altId, \"601847123\")\n        self.assertEqual(inst.agent[0].name, \"Grahame Grieve\")\n        self.assertEqual(inst.agent[0].network.address, \"127.0.0.1\")\n        self.assertEqual(inst.agent[0].network.type, \"2\")\n        self.assertTrue(inst.agent[0].requestor)\n        self.assertEqual(inst.agent[0].type.coding[0].code, \"humanuser\")\n        self.assertEqual(inst.agent[0].type.coding[0].display, \"human user\")\n        self.assertEqual(inst.agent[0].type.coding[0].system, \"http://terminology.hl7.org/CodeSystem/extra-security-role-type\")\n        self.assertEqual(inst.agent[1].altId, \"6580\")\n        self.assertEqual(inst.agent[1].network.address, \"Workstation1.ehr.familyclinic.com\")\n        self.assertEqual(inst.agent[1].network.type, \"1\")\n        self.assertFalse(inst.agent[1].requestor)\n        self.assertEqual(inst.agent[1].type.coding[0].code, \"110153\")\n        self.assertEqual(inst.agent[1].type.coding[0].display, \"Source Role ID\")\n        self.assertEqual(inst.agent[1].type.coding[0].system, \"http://dicom.nema.org/resources/ontology/DCM\")\n        self.assertEqual(inst.id, \"example-logout\")\n        self.assertEqual(inst.meta.tag[0].code, \"HTEST\")\n        self.assertEqual(inst.meta.tag[0].display, \"test health data\")\n        self.assertEqual(inst.meta.tag[0].system, \"http://terminology.hl7.org/CodeSystem/v3-ActReason\")\n        self.assertEqual(inst.outcome, \"0\")\n        self.assertEqual(inst.recorded.datetime, FHIRInstant(\"2013-06-20T23:46:41Z\").datetime)\n        self.assertEqual(inst.recorded.as_json(), \"2013-06-20T23:46:41Z\")\n        self.assertEqual(inst.source.site, \"Cloud\")\n        self.assertEqual(inst.source.type[0].code, \"3\")\n        self.assertEqual(inst.source.type[0].display, \"Web Server\")\n        self.assertEqual(inst.source.type[0].system, \"http://terminology.hl7.org/CodeSystem/security-source-type\")\n        self.assertEqual(inst.subtype[0].code, \"110123\")\n        self.assertEqual(inst.subtype[0].display, \"Logout\")\n        self.assertEqual(inst.subtype[0].system, \"http://dicom.nema.org/resources/ontology/DCM\")\n        self.assertEqual(inst.text.status, \"generated\")\n        self.assertEqual(inst.type.code, \"110114\")\n        self.assertEqual(inst.type.display, \"User Authentication\")\n        self.assertEqual(inst.type.system, \"http://dicom.nema.org/resources/ontology/DCM\")\n    \n    def testAuditEvent6(self):\n        inst = self.instantiate_from(\"audit-event-example-login.json\")\n        self.assertIsNotNone(inst, \"Must have instantiated a AuditEvent instance\")\n        self.implAuditEvent6(inst)\n        \n        js = inst.as_json()\n        self.assertEqual(\"AuditEvent\", js[\"resourceType\"])\n        inst2 = auditevent.AuditEvent(js)\n        self.implAuditEvent6(inst2)\n    \n    def implAuditEvent6(self, inst):\n        self.assertEqual(inst.action, \"E\")\n        self.assertEqual(inst.agent[0].altId, \"601847123\")\n        self.assertEqual(inst.agent[0].name, \"Grahame Grieve\")\n        self.assertEqual(inst.agent[0].network.address, \"127.0.0.1\")\n        self.assertEqual(inst.agent[0].network.type, \"2\")\n        self.assertTrue(inst.agent[0].requestor)\n        self.assertEqual(inst.agent[0].type.coding[0].code, \"humanuser\")\n        self.assertEqual(inst.agent[0].type.coding[0].display, \"human user\")\n        self.assertEqual(inst.agent[0].type.coding[0].system, \"http://terminology.hl7.org/CodeSystem/extra-security-role-type\")\n        self.assertEqual(inst.agent[1].altId, \"6580\")\n        self.assertEqual(inst.agent[1].network.address, \"Workstation1.ehr.familyclinic.com\")\n        self.assertEqual(inst.agent[1].network.type, \"1\")\n        self.assertFalse(inst.agent[1].requestor)\n        self.assertEqual(inst.agent[1].type.coding[0].code, \"110153\")\n        self.assertEqual(inst.agent[1].type.coding[0].display, \"Source Role ID\")\n        self.assertEqual(inst.agent[1].type.coding[0].system, \"http://dicom.nema.org/resources/ontology/DCM\")\n        self.assertEqual(inst.id, \"example-login\")\n        self.assertEqual(inst.meta.tag[0].code, \"HTEST\")\n        self.assertEqual(inst.meta.tag[0].display, \"test health data\")\n        self.assertEqual(inst.meta.tag[0].system, \"http://terminology.hl7.org/CodeSystem/v3-ActReason\")\n        self.assertEqual(inst.outcome, \"0\")\n        self.assertEqual(inst.recorded.datetime, FHIRInstant(\"2013-06-20T23:41:23Z\").datetime)\n        self.assertEqual(inst.recorded.as_json(), \"2013-06-20T23:41:23Z\")\n        self.assertEqual(inst.source.site, \"Cloud\")\n        self.assertEqual(inst.source.type[0].code, \"3\")\n        self.assertEqual(inst.source.type[0].display, \"Web Server\")\n        self.assertEqual(inst.source.type[0].system, \"http://terminology.hl7.org/CodeSystem/security-source-type\")\n        self.assertEqual(inst.subtype[0].code, \"110122\")\n        self.assertEqual(inst.subtype[0].display, \"Login\")\n        self.assertEqual(inst.subtype[0].system, \"http://dicom.nema.org/resources/ontology/DCM\")\n        self.assertEqual(inst.text.status, \"generated\")\n        self.assertEqual(inst.type.code, \"110114\")\n        self.assertEqual(inst.type.display, \"User Authentication\")\n        self.assertEqual(inst.type.system, \"http://dicom.nema.org/resources/ontology/DCM\")\n    \n    def testAuditEvent7(self):\n        inst = self.instantiate_from(\"auditevent-example.json\")\n        self.assertIsNotNone(inst, \"Must have instantiated a AuditEvent instance\")\n        self.implAuditEvent7(inst)\n        \n        js = inst.as_json()\n        self.assertEqual(\"AuditEvent\", js[\"resourceType\"])\n        inst2 = auditevent.AuditEvent(js)\n        self.implAuditEvent7(inst2)\n    \n    def implAuditEvent7(self, inst):\n        self.assertEqual(inst.action, \"E\")\n        self.assertEqual(inst.agent[0].network.address, \"127.0.0.1\")\n        self.assertEqual(inst.agent[0].network.type, \"2\")\n        self.assertFalse(inst.agent[0].requestor)\n        self.assertEqual(inst.agent[0].role[0].text, \"Service User (Logon)\")\n        self.assertEqual(inst.agent[0].type.coding[0].code, \"humanuser\")\n        self.assertEqual(inst.agent[0].type.coding[0].display, \"human user\")\n        self.assertEqual(inst.agent[0].type.coding[0].system, \"http://terminology.hl7.org/CodeSystem/extra-security-role-type\")\n        self.assertEqual(inst.agent[1].altId, \"6580\")\n        self.assertEqual(inst.agent[1].network.address, \"Workstation1.ehr.familyclinic.com\")\n        self.assertEqual(inst.agent[1].network.type, \"1\")\n        self.assertFalse(inst.agent[1].requestor)\n        self.assertEqual(inst.agent[1].type.coding[0].code, \"110153\")\n        self.assertEqual(inst.agent[1].type.coding[0].display, \"Source Role ID\")\n        self.assertEqual(inst.agent[1].type.coding[0].system, \"http://dicom.nema.org/resources/ontology/DCM\")\n        self.assertEqual(inst.entity[0].lifecycle.code, \"6\")\n        self.assertEqual(inst.entity[0].lifecycle.display, \"Access / Use\")\n        self.assertEqual(inst.entity[0].lifecycle.system, \"http://terminology.hl7.org/CodeSystem/dicom-audit-lifecycle\")\n        self.assertEqual(inst.entity[0].name, \"Grahame's Laptop\")\n        self.assertEqual(inst.entity[0].role.code, \"4\")\n        self.assertEqual(inst.entity[0].role.display, \"Domain Resource\")\n        self.assertEqual(inst.entity[0].role.system, \"http://terminology.hl7.org/CodeSystem/object-role\")\n        self.assertEqual(inst.entity[0].type.code, \"4\")\n        self.assertEqual(inst.entity[0].type.display, \"Other\")\n        self.assertEqual(inst.entity[0].type.system, \"http://terminology.hl7.org/CodeSystem/audit-entity-type\")\n        self.assertEqual(inst.id, \"example\")\n        self.assertEqual(inst.meta.tag[0].code, \"HTEST\")\n        self.assertEqual(inst.meta.tag[0].display, \"test health data\")\n        self.assertEqual(inst.meta.tag[0].system, \"http://terminology.hl7.org/CodeSystem/v3-ActReason\")\n        self.assertEqual(inst.outcome, \"0\")\n        self.assertEqual(inst.recorded.datetime, FHIRInstant(\"2012-10-25T22:04:27+11:00\").datetime)\n        self.assertEqual(inst.recorded.as_json(), \"2012-10-25T22:04:27+11:00\")\n        self.assertEqual(inst.source.site, \"Development\")\n        self.assertEqual(inst.source.type[0].code, \"110122\")\n        self.assertEqual(inst.source.type[0].display, \"Login\")\n        self.assertEqual(inst.source.type[0].system, \"http://dicom.nema.org/resources/ontology/DCM\")\n        self.assertEqual(inst.subtype[0].code, \"110120\")\n        self.assertEqual(inst.subtype[0].display, \"Application Start\")\n        self.assertEqual(inst.subtype[0].system, \"http://dicom.nema.org/resources/ontology/DCM\")\n        self.assertEqual(inst.text.div, \"<div xmlns=\\\"http://www.w3.org/1999/xhtml\\\">Application Start for under service login &quot;Grahame&quot; (id: Grahame's Test HL7Connect)</div>\")\n        self.assertEqual(inst.text.status, \"generated\")\n        self.assertEqual(inst.type.code, \"110100\")\n        self.assertEqual(inst.type.display, \"Application Activity\")\n        self.assertEqual(inst.type.system, \"http://dicom.nema.org/resources/ontology/DCM\")\n    \n    def testAuditEvent8(self):\n        inst = self.instantiate_from(\"audit-event-example-pixQuery.json\")\n        self.assertIsNotNone(inst, \"Must have instantiated a AuditEvent instance\")\n        self.implAuditEvent8(inst)\n        \n        js = inst.as_json()\n        self.assertEqual(\"AuditEvent\", js[\"resourceType\"])\n        inst2 = auditevent.AuditEvent(js)\n        self.implAuditEvent8(inst2)\n    \n    def implAuditEvent8(self, inst):\n        self.assertEqual(inst.action, \"E\")\n        self.assertEqual(inst.agent[0].altId, \"6580\")\n        self.assertEqual(inst.agent[0].network.address, \"Workstation1.ehr.familyclinic.com\")\n        self.assertEqual(inst.agent[0].network.type, \"1\")\n        self.assertFalse(inst.agent[0].requestor)\n        self.assertEqual(inst.agent[0].type.coding[0].code, \"110153\")\n        self.assertEqual(inst.agent[0].type.coding[0].display, \"Source Role ID\")\n        self.assertEqual(inst.agent[0].type.coding[0].system, \"http://dicom.nema.org/resources/ontology/DCM\")\n        self.assertEqual(inst.agent[1].altId, \"601847123\")\n        self.assertEqual(inst.agent[1].name, \"Grahame Grieve\")\n        self.assertTrue(inst.agent[1].requestor)\n        self.assertEqual(inst.agent[1].type.coding[0].code, \"humanuser\")\n        self.assertEqual(inst.agent[1].type.coding[0].display, \"human user\")\n        self.assertEqual(inst.agent[1].type.coding[0].system, \"http://terminology.hl7.org/CodeSystem/extra-security-role-type\")\n        self.assertEqual(inst.entity[0].role.code, \"1\")\n        self.assertEqual(inst.entity[0].role.display, \"Patient\")\n        self.assertEqual(inst.entity[0].role.system, \"http://terminology.hl7.org/CodeSystem/object-role\")\n        self.assertEqual(inst.entity[0].type.code, \"1\")\n        self.assertEqual(inst.entity[0].type.display, \"Person\")\n        self.assertEqual(inst.entity[0].type.system, \"http://terminology.hl7.org/CodeSystem/audit-entity-type\")\n        self.assertEqual(inst.entity[1].detail[0].type, \"MSH-10\")\n        self.assertEqual(inst.entity[1].detail[0].valueBase64Binary, \"MS4yLjg0MC4xMTQzNTAuMS4xMy4wLjEuNy4xLjE=\")\n        self.assertEqual(inst.entity[1].role.code, \"24\")\n        self.assertEqual(inst.entity[1].role.display, \"Query\")\n        self.assertEqual(inst.entity[1].role.system, \"http://terminology.hl7.org/CodeSystem/object-role\")\n        self.assertEqual(inst.entity[1].type.code, \"2\")\n        self.assertEqual(inst.entity[1].type.display, \"System Object\")\n        self.assertEqual(inst.entity[1].type.system, \"http://terminology.hl7.org/CodeSystem/audit-entity-type\")\n        self.assertEqual(inst.id, \"example-pixQuery\")\n        self.assertEqual(inst.meta.tag[0].code, \"HTEST\")\n        self.assertEqual(inst.meta.tag[0].display, \"test health data\")\n        self.assertEqual(inst.meta.tag[0].system, \"http://terminology.hl7.org/CodeSystem/v3-ActReason\")\n        self.assertEqual(inst.outcome, \"0\")\n        self.assertEqual(inst.recorded.datetime, FHIRInstant(\"2015-08-26T23:42:24Z\").datetime)\n        self.assertEqual(inst.recorded.as_json(), \"2015-08-26T23:42:24Z\")\n        self.assertEqual(inst.subtype[0].code, \"ITI-9\")\n        self.assertEqual(inst.subtype[0].display, \"PIX Query\")\n        self.assertEqual(inst.subtype[0].system, \"urn:oid:1.3.6.1.4.1.19376.1.2\")\n        self.assertEqual(inst.text.status, \"generated\")\n        self.assertEqual(inst.type.code, \"110112\")\n        self.assertEqual(inst.type.display, \"Query\")\n        self.assertEqual(inst.type.system, \"http://dicom.nema.org/resources/ontology/DCM\")\n    \n    def testAuditEvent9(self):\n        inst = self.instantiate_from(\"audit-event-example-search.json\")\n        self.assertIsNotNone(inst, \"Must have instantiated a AuditEvent instance\")\n        self.implAuditEvent9(inst)\n        \n        js = inst.as_json()\n        self.assertEqual(\"AuditEvent\", js[\"resourceType\"])\n        inst2 = auditevent.AuditEvent(js)\n        self.implAuditEvent9(inst2)\n    \n    def implAuditEvent9(self, inst):\n        self.assertEqual(inst.action, \"E\")\n        self.assertEqual(inst.agent[0].altId, \"601847123\")\n        self.assertEqual(inst.agent[0].name, \"Grahame Grieve\")\n        self.assertTrue(inst.agent[0].requestor)\n        self.assertEqual(inst.agent[0].type.coding[0].code, \"humanuser\")\n        self.assertEqual(inst.agent[0].type.coding[0].display, \"human user\")\n        self.assertEqual(inst.agent[0].type.coding[0].system, \"http://terminology.hl7.org/CodeSystem/extra-security-role-type\")\n        self.assertEqual(inst.agent[1].altId, \"6580\")\n        self.assertEqual(inst.agent[1].network.address, \"Workstation1.ehr.familyclinic.com\")\n        self.assertEqual(inst.agent[1].network.type, \"1\")\n        self.assertFalse(inst.agent[1].requestor)\n        self.assertEqual(inst.agent[1].type.coding[0].code, \"110153\")\n        self.assertEqual(inst.agent[1].type.coding[0].display, \"Source Role ID\")\n        self.assertEqual(inst.agent[1].type.coding[0].system, \"http://dicom.nema.org/resources/ontology/DCM\")\n        self.assertEqual(inst.entity[0].query, \"aHR0cDovL2ZoaXItZGV2LmhlYWx0aGludGVyc2VjdGlvbnMuY29tLmF1L29wZW4vRW5jb3VudGVyP3BhcnRpY2lwYW50PTEz\")\n        self.assertEqual(inst.entity[0].role.code, \"24\")\n        self.assertEqual(inst.entity[0].role.display, \"Query\")\n        self.assertEqual(inst.entity[0].role.system, \"http://terminology.hl7.org/CodeSystem/object-role\")\n        self.assertEqual(inst.entity[0].type.code, \"2\")\n        self.assertEqual(inst.entity[0].type.display, \"System Object\")\n        self.assertEqual(inst.entity[0].type.system, \"http://terminology.hl7.org/CodeSystem/audit-entity-type\")\n        self.assertEqual(inst.id, \"example-search\")\n        self.assertEqual(inst.meta.tag[0].code, \"HTEST\")\n        self.assertEqual(inst.meta.tag[0].display, \"test health data\")\n        self.assertEqual(inst.meta.tag[0].system, \"http://terminology.hl7.org/CodeSystem/v3-ActReason\")\n        self.assertEqual(inst.outcome, \"0\")\n        self.assertEqual(inst.recorded.datetime, FHIRInstant(\"2015-08-22T23:42:24Z\").datetime)\n        self.assertEqual(inst.recorded.as_json(), \"2015-08-22T23:42:24Z\")\n        self.assertEqual(inst.source.site, \"Cloud\")\n        self.assertEqual(inst.source.type[0].code, \"3\")\n        self.assertEqual(inst.source.type[0].display, \"Web Server\")\n        self.assertEqual(inst.source.type[0].system, \"http://terminology.hl7.org/CodeSystem/security-source-type\")\n        self.assertEqual(inst.subtype[0].code, \"search\")\n        self.assertEqual(inst.subtype[0].display, \"search\")\n        self.assertEqual(inst.subtype[0].system, \"http://hl7.org/fhir/restful-interaction\")\n        self.assertEqual(inst.text.status, \"generated\")\n        self.assertEqual(inst.type.code, \"rest\")\n        self.assertEqual(inst.type.display, \"Restful Operation\")\n        self.assertEqual(inst.type.system, \"http://terminology.hl7.org/CodeSystem/audit-event-type\")\n\n",
+  "GT_file_code": {
+    "fhirclient/models/fhirdate.py": "\"\"\"Facilitate working with FHIR dates and times.\"\"\"\n# 2014-2024, SMART Health IT.\n\nimport datetime\nimport re\nfrom typing import Any, Union\n\n\nclass FHIRDate:\n    \"\"\"\n    A convenience class for working with FHIR dates in Python.\n\n    http://hl7.org/fhir/R4/datatypes.html#date\n\n    Converting to a Python representation does require some compromises:\n    - This class will convert partial dates (\"reduced precision dates\") like \"2024\" into full\n      dates using the earliest possible time (in this example, \"2024-01-01\") because Python's\n      date class does not support partial dates.\n\n    If such compromise is not useful for you, avoid using the `date` or `isostring`\n    properties and just use the `as_json()` method in order to work with the original,\n    exact string.\n\n    For backwards-compatibility reasons, this class is the parent class of FHIRDateTime,\n    FHIRInstant, and FHIRTime. But they are all separate concepts and in a future major release,\n    they should be split into entirely separate classes.\n\n    Public properties:\n    - `date`: datetime.date representing the JSON value\n    - `isostring`: an ISO 8601 string version of the above Python object\n\n    Public methods:\n    - `as_json`: returns the original JSON used to construct the instance\n    \"\"\"\n\n    def __init__(self, jsonval: Union[str, None] = None):\n        self.date: Union[datetime.date, datetime.datetime, datetime.time, None] = None\n\n        if jsonval is not None:\n            if not isinstance(jsonval, str):\n                raise TypeError(\"Expecting string when initializing {}, but got {}\"\n                    .format(type(self), type(jsonval)))\n            if not self._REGEX.fullmatch(jsonval):\n                raise ValueError(\"does not match expected format\")\n            self.date = self._from_string(jsonval)\n\n        self.origval: Union[str, None] = jsonval\n\n    def __setattr__(self, prop, value):\n        if prop in {'date', self._FIELD}:\n            self.origval = None\n            # Keep these two fields in sync\n            object.__setattr__(self, self._FIELD, value)\n            object.__setattr__(self, \"date\", value)\n        else:\n            object.__setattr__(self, prop, value)\n\n    @property\n    def isostring(self) -> Union[str, None]:\n        \"\"\"\n        Returns a standardized ISO 8601 version of the Python representation of the FHIR JSON.\n\n        Note that this may not be a fully accurate version of the input JSON.\n        In particular, it will convert partial dates like \"2024\" to full dates like \"2024-01-01\".\n        It will also normalize the timezone, if present.\n        \"\"\"\n        if self.date is None:\n            return None\n        return self.date.isoformat()\n\n    @classmethod\n    def with_json(cls, jsonobj: Union[str, list]):\n        \"\"\" Initialize a date from an ISO date string.\n        \"\"\"\n        if isinstance(jsonobj, str):\n            return cls(jsonobj)\n\n        if isinstance(jsonobj, list):\n            return [cls(jsonval) for jsonval in jsonobj]\n\n        raise TypeError(\"`cls.with_json()` only takes string or list of strings, but you provided {}\"\n            .format(type(jsonobj)))\n\n    @classmethod\n    def with_json_and_owner(cls, jsonobj: Union[str, list], owner):\n        \"\"\" Added for compatibility reasons to FHIRElement; \"owner\" is\n        discarded.\n        \"\"\"\n        return cls.with_json(jsonobj)\n\n    def as_json(self) -> Union[str, None]:\n        \"\"\"Returns the original JSON string used to create this instance.\"\"\"\n        if self.origval is not None:\n            return self.origval\n        return self.isostring\n\n    ##################################\n    # Private properties and methods #\n    ##################################\n\n    # Pulled from spec for date\n    _REGEX = re.compile(r\"([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1]))?)?\")\n    _FIELD = \"date\"\n\n    @staticmethod\n    def _parse_partial(value: str, cls):\n        \"\"\"\n        Handle partial dates like 1970 or 1980-12.\n\n        FHIR allows them, but Python's datetime classes do not natively parse them.\n        \"\"\"\n        # Note that `value` has already been regex-certified by this point,\n        # so we don't have to handle really wild strings.\n        if len(value) < 10:\n            pieces = value.split(\"-\")\n            if len(pieces) == 1:\n                return cls(int(pieces[0]), 1, 1)\n            else:\n                return cls(int(pieces[0]), int(pieces[1]), 1)\n        return cls.fromisoformat(value)\n\n    @staticmethod\n    def _parse_date(value: str) -> datetime.date:\n        return FHIRDate._parse_partial(value, datetime.date)\n\n    @staticmethod\n    def _parse_datetime(value: str) -> datetime.datetime:\n        # Until we depend on Python 3.11+, manually handle Z\n        value = value.replace(\"Z\", \"+00:00\")\n        value = FHIRDate._strip_leap_seconds(value)\n        return FHIRDate._parse_partial(value, datetime.datetime)\n\n    @staticmethod\n    def _parse_time(value: str) -> datetime.time:\n        value = FHIRDate._strip_leap_seconds(value)\n        return datetime.time.fromisoformat(value)\n\n    @staticmethod\n    def _strip_leap_seconds(value: str) -> str:\n        \"\"\"\n        Manually ignore leap seconds by clamping the seconds value to 59.\n\n        Python native times don't support them (at the time of this writing, but also watch\n        https://bugs.python.org/issue23574). For example, the stdlib's datetime.fromtimestamp()\n        also clamps to 59 if the system gives it leap seconds.\n\n        But FHIR allows leap seconds and says receiving code SHOULD accept them,\n        so we should be graceful enough to at least not throw a ValueError,\n        even though we can't natively represent the most-correct time.\n        \"\"\"\n        # We can get away with such relaxed replacement because we are already regex-certified\n        # and \":60\" can't show up anywhere but seconds.\n        return value.replace(\":60\", \":59\")\n\n    @staticmethod\n    def _from_string(value: str) -> Any:\n        return FHIRDate._parse_date(value)\n",
+    "fhirclient/models/fhirinstant.py": "\"\"\"Facilitate working with FHIR time fields.\"\"\"\n# 2024, SMART Health IT.\n\nimport datetime\nimport re\nfrom typing import Any, Union\n\nfrom .fhirdate import FHIRDate\n\n\n# This inherits from FHIRDate as a matter of backwards compatibility.\n# (in case anyone was doing isinstance(obj, FHIRDate))\n# Next time we bump the major version, we can stop that and also drop the\n# backwards-compatible 'date' alias. R4-QUIRK\n\nclass FHIRInstant(FHIRDate):\n    \"\"\"\n    A convenience class for working with FHIR instants in Python.\n\n    http://hl7.org/fhir/R4/datatypes.html#instant\n\n    Converting to a Python representation does require some compromises:\n    - FHIR allows arbitrary sub-second precision, but Python only holds microseconds.\n    - Leap seconds (:60) will be changed to the 59th second (:59) because Python's time classes\n      do not support leap seconds.\n\n    If such compromise is not useful for you, avoid using the `date`, `datetime`, or `isostring`\n    properties and just use the `as_json()` method in order to work with the original,\n    exact string.\n\n    Public properties:\n    - `datetime`: datetime.datetime representing the JSON value (aware only)\n    - `date`: backwards-compatibility alias for `datetime`\n    - `isostring`: an ISO 8601 string version of the above Python object\n\n    Public methods:\n    - `as_json`: returns the original JSON used to construct the instance\n    \"\"\"\n\n    def __init__(self, jsonval: Union[str, None] = None):\n        self.datetime: Union[datetime.datetime, None] = None\n        super().__init__(jsonval)\n\n    ##################################\n    # Private properties and methods #\n    ##################################\n\n    # Pulled from spec for instant\n    _REGEX = re.compile(r\"([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\\.[0-9]+)?(Z|(\\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00))\")\n    _FIELD = \"datetime\"\n\n    @staticmethod\n    def _from_string(value: str) -> Any:\n        return FHIRDate._parse_datetime(value)\n",
+    "fhirclient/models/auditevent.py": "# Generated from FHIR 4.0.1-9346c8cc45 (http://hl7.org/fhir/StructureDefinition/AuditEvent).\n# 2024, SMART Health IT.\n\n\nfrom . import domainresource\n\nclass AuditEvent(domainresource.DomainResource):\n    \"\"\" Event record kept for security purposes.\n    \n    A record of an event made for purposes of maintaining a security log.\n    Typical uses include detection of intrusion attempts and monitoring for\n    inappropriate usage.\n    \"\"\"\n    \n    resource_type = \"AuditEvent\"\n    \n    def __init__(self, jsondict=None, strict=True):\n        \"\"\" Initialize all valid properties.\n        \n        :raises: FHIRValidationError on validation errors, unless strict is False\n        :param dict jsondict: A JSON dictionary to use for initialization\n        :param bool strict: If True (the default), invalid variables will raise a TypeError\n        \"\"\"\n        \n        self.action = None\n        \"\"\" Type of action performed during the event.\n        Type `str`. \"\"\"\n        \n        self.agent = None\n        \"\"\" Actor involved in the event.\n        List of `AuditEventAgent` items (represented as `dict` in JSON). \"\"\"\n        \n        self.entity = None\n        \"\"\" Data or objects used.\n        List of `AuditEventEntity` items (represented as `dict` in JSON). \"\"\"\n        \n        self.outcome = None\n        \"\"\" Whether the event succeeded or failed.\n        Type `str`. \"\"\"\n        \n        self.outcomeDesc = None\n        \"\"\" Description of the event outcome.\n        Type `str`. \"\"\"\n        \n        self.period = None\n        \"\"\" When the activity occurred.\n        Type `Period` (represented as `dict` in JSON). \"\"\"\n        \n        self.purposeOfEvent = None\n        \"\"\" The purposeOfUse of the event.\n        List of `CodeableConcept` items (represented as `dict` in JSON). \"\"\"\n        \n        self.recorded = None\n        \"\"\" Time when the event was recorded.\n        Type `FHIRInstant` (represented as `str` in JSON). \"\"\"\n        \n        self.source = None\n        \"\"\" Audit Event Reporter.\n        Type `AuditEventSource` (represented as `dict` in JSON). \"\"\"\n        \n        self.subtype = None\n        \"\"\" More specific type/id for the event.\n        List of `Coding` items (represented as `dict` in JSON). \"\"\"\n        \n        self.type = None\n        \"\"\" Type/identifier of event.\n        Type `Coding` (represented as `dict` in JSON). \"\"\"\n        \n        super(AuditEvent, self).__init__(jsondict=jsondict, strict=strict)\n    \n    def elementProperties(self):\n        js = super(AuditEvent, self).elementProperties()\n        js.extend([\n            (\"action\", \"action\", str, False, None, False),\n            (\"agent\", \"agent\", AuditEventAgent, True, None, True),\n            (\"entity\", \"entity\", AuditEventEntity, True, None, False),\n            (\"outcome\", \"outcome\", str, False, None, False),\n            (\"outcomeDesc\", \"outcomeDesc\", str, False, None, False),\n            (\"period\", \"period\", period.Period, False, None, False),\n            (\"purposeOfEvent\", \"purposeOfEvent\", codeableconcept.CodeableConcept, True, None, False),\n            (\"recorded\", \"recorded\", fhirinstant.FHIRInstant, False, None, True),\n            (\"source\", \"source\", AuditEventSource, False, None, True),\n            (\"subtype\", \"subtype\", coding.Coding, True, None, False),\n            (\"type\", \"type\", coding.Coding, False, None, True),\n        ])\n        return js\n\n\nfrom . import backboneelement\n\nclass AuditEventAgent(backboneelement.BackboneElement):\n    \"\"\" Actor involved in the event.\n    \n    An actor taking an active role in the event or activity that is logged.\n    \"\"\"\n    \n    resource_type = \"AuditEventAgent\"\n    \n    def __init__(self, jsondict=None, strict=True):\n        \"\"\" Initialize all valid properties.\n        \n        :raises: FHIRValidationError on validation errors, unless strict is False\n        :param dict jsondict: A JSON dictionary to use for initialization\n        :param bool strict: If True (the default), invalid variables will raise a TypeError\n        \"\"\"\n        \n        self.altId = None\n        \"\"\" Alternative User identity.\n        Type `str`. \"\"\"\n        \n        self.location = None\n        \"\"\" Where.\n        Type `FHIRReference` (represented as `dict` in JSON). \"\"\"\n        \n        self.media = None\n        \"\"\" Type of media.\n        Type `Coding` (represented as `dict` in JSON). \"\"\"\n        \n        self.name = None\n        \"\"\" Human friendly name for the agent.\n        Type `str`. \"\"\"\n        \n        self.network = None\n        \"\"\" Logical network location for application activity.\n        Type `AuditEventAgentNetwork` (represented as `dict` in JSON). \"\"\"\n        \n        self.policy = None\n        \"\"\" Policy that authorized event.\n        List of `str` items. \"\"\"\n        \n        self.purposeOfUse = None\n        \"\"\" Reason given for this user.\n        List of `CodeableConcept` items (represented as `dict` in JSON). \"\"\"\n        \n        self.requestor = None\n        \"\"\" Whether user is initiator.\n        Type `bool`. \"\"\"\n        \n        self.role = None\n        \"\"\" Agent role in the event.\n        List of `CodeableConcept` items (represented as `dict` in JSON). \"\"\"\n        \n        self.type = None\n        \"\"\" How agent participated.\n        Type `CodeableConcept` (represented as `dict` in JSON). \"\"\"\n        \n        self.who = None\n        \"\"\" Identifier of who.\n        Type `FHIRReference` (represented as `dict` in JSON). \"\"\"\n        \n        super(AuditEventAgent, self).__init__(jsondict=jsondict, strict=strict)\n    \n    def elementProperties(self):\n        js = super(AuditEventAgent, self).elementProperties()\n        js.extend([\n            (\"altId\", \"altId\", str, False, None, False),\n            (\"location\", \"location\", fhirreference.FHIRReference, False, None, False),\n            (\"media\", \"media\", coding.Coding, False, None, False),\n            (\"name\", \"name\", str, False, None, False),\n            (\"network\", \"network\", AuditEventAgentNetwork, False, None, False),\n            (\"policy\", \"policy\", str, True, None, False),\n            (\"purposeOfUse\", \"purposeOfUse\", codeableconcept.CodeableConcept, True, None, False),\n            (\"requestor\", \"requestor\", bool, False, None, True),\n            (\"role\", \"role\", codeableconcept.CodeableConcept, True, None, False),\n            (\"type\", \"type\", codeableconcept.CodeableConcept, False, None, False),\n            (\"who\", \"who\", fhirreference.FHIRReference, False, None, False),\n        ])\n        return js\n\n\nclass AuditEventAgentNetwork(backboneelement.BackboneElement):\n    \"\"\" Logical network location for application activity.\n    \n    Logical network location for application activity, if the activity has a\n    network location.\n    \"\"\"\n    \n    resource_type = \"AuditEventAgentNetwork\"\n    \n    def __init__(self, jsondict=None, strict=True):\n        \"\"\" Initialize all valid properties.\n        \n        :raises: FHIRValidationError on validation errors, unless strict is False\n        :param dict jsondict: A JSON dictionary to use for initialization\n        :param bool strict: If True (the default), invalid variables will raise a TypeError\n        \"\"\"\n        \n        self.address = None\n        \"\"\" Identifier for the network access point of the user device.\n        Type `str`. \"\"\"\n        \n        self.type = None\n        \"\"\" The type of network access point.\n        Type `str`. \"\"\"\n        \n        super(AuditEventAgentNetwork, self).__init__(jsondict=jsondict, strict=strict)\n    \n    def elementProperties(self):\n        js = super(AuditEventAgentNetwork, self).elementProperties()\n        js.extend([\n            (\"address\", \"address\", str, False, None, False),\n            (\"type\", \"type\", str, False, None, False),\n        ])\n        return js\n\n\nclass AuditEventEntity(backboneelement.BackboneElement):\n    \"\"\" Data or objects used.\n    \n    Specific instances of data or objects that have been accessed.\n    \"\"\"\n    \n    resource_type = \"AuditEventEntity\"\n    \n    def __init__(self, jsondict=None, strict=True):\n        \"\"\" Initialize all valid properties.\n        \n        :raises: FHIRValidationError on validation errors, unless strict is False\n        :param dict jsondict: A JSON dictionary to use for initialization\n        :param bool strict: If True (the default), invalid variables will raise a TypeError\n        \"\"\"\n        \n        self.description = None\n        \"\"\" Descriptive text.\n        Type `str`. \"\"\"\n        \n        self.detail = None\n        \"\"\" Additional Information about the entity.\n        List of `AuditEventEntityDetail` items (represented as `dict` in JSON). \"\"\"\n        \n        self.lifecycle = None\n        \"\"\" Life-cycle stage for the entity.\n        Type `Coding` (represented as `dict` in JSON). \"\"\"\n        \n        self.name = None\n        \"\"\" Descriptor for entity.\n        Type `str`. \"\"\"\n        \n        self.query = None\n        \"\"\" Query parameters.\n        Type `str`. \"\"\"\n        \n        self.role = None\n        \"\"\" What role the entity played.\n        Type `Coding` (represented as `dict` in JSON). \"\"\"\n        \n        self.securityLabel = None\n        \"\"\" Security labels on the entity.\n        List of `Coding` items (represented as `dict` in JSON). \"\"\"\n        \n        self.type = None\n        \"\"\" Type of entity involved.\n        Type `Coding` (represented as `dict` in JSON). \"\"\"\n        \n        self.what = None\n        \"\"\" Specific instance of resource.\n        Type `FHIRReference` (represented as `dict` in JSON). \"\"\"\n        \n        super(AuditEventEntity, self).__init__(jsondict=jsondict, strict=strict)\n    \n    def elementProperties(self):\n        js = super(AuditEventEntity, self).elementProperties()\n        js.extend([\n            (\"description\", \"description\", str, False, None, False),\n            (\"detail\", \"detail\", AuditEventEntityDetail, True, None, False),\n            (\"lifecycle\", \"lifecycle\", coding.Coding, False, None, False),\n            (\"name\", \"name\", str, False, None, False),\n            (\"query\", \"query\", str, False, None, False),\n            (\"role\", \"role\", coding.Coding, False, None, False),\n            (\"securityLabel\", \"securityLabel\", coding.Coding, True, None, False),\n            (\"type\", \"type\", coding.Coding, False, None, False),\n            (\"what\", \"what\", fhirreference.FHIRReference, False, None, False),\n        ])\n        return js\n\n\nclass AuditEventEntityDetail(backboneelement.BackboneElement):\n    \"\"\" Additional Information about the entity.\n    \n    Tagged value pairs for conveying additional information about the entity.\n    \"\"\"\n    \n    resource_type = \"AuditEventEntityDetail\"\n    \n    def __init__(self, jsondict=None, strict=True):\n        \"\"\" Initialize all valid properties.\n        \n        :raises: FHIRValidationError on validation errors, unless strict is False\n        :param dict jsondict: A JSON dictionary to use for initialization\n        :param bool strict: If True (the default), invalid variables will raise a TypeError\n        \"\"\"\n        \n        self.type = None\n        \"\"\" Name of the property.\n        Type `str`. \"\"\"\n        \n        self.valueBase64Binary = None\n        \"\"\" Property value.\n        Type `str`. \"\"\"\n        \n        self.valueString = None\n        \"\"\" Property value.\n        Type `str`. \"\"\"\n        \n        super(AuditEventEntityDetail, self).__init__(jsondict=jsondict, strict=strict)\n    \n    def elementProperties(self):\n        js = super(AuditEventEntityDetail, self).elementProperties()\n        js.extend([\n            (\"type\", \"type\", str, False, None, True),\n            (\"valueBase64Binary\", \"valueBase64Binary\", str, False, \"value\", True),\n            (\"valueString\", \"valueString\", str, False, \"value\", True),\n        ])\n        return js\n\n\nclass AuditEventSource(backboneelement.BackboneElement):\n    \"\"\" Audit Event Reporter.\n    \n    The system that is reporting the event.\n    \"\"\"\n    \n    resource_type = \"AuditEventSource\"\n    \n    def __init__(self, jsondict=None, strict=True):\n        \"\"\" Initialize all valid properties.\n        \n        :raises: FHIRValidationError on validation errors, unless strict is False\n        :param dict jsondict: A JSON dictionary to use for initialization\n        :param bool strict: If True (the default), invalid variables will raise a TypeError\n        \"\"\"\n        \n        self.observer = None\n        \"\"\" The identity of source detecting the event.\n        Type `FHIRReference` (represented as `dict` in JSON). \"\"\"\n        \n        self.site = None\n        \"\"\" Logical source location within the enterprise.\n        Type `str`. \"\"\"\n        \n        self.type = None\n        \"\"\" The type of source where event originated.\n        List of `Coding` items (represented as `dict` in JSON). \"\"\"\n        \n        super(AuditEventSource, self).__init__(jsondict=jsondict, strict=strict)\n    \n    def elementProperties(self):\n        js = super(AuditEventSource, self).elementProperties()\n        js.extend([\n            (\"observer\", \"observer\", fhirreference.FHIRReference, False, None, True),\n            (\"site\", \"site\", str, False, None, False),\n            (\"type\", \"type\", coding.Coding, True, None, False),\n        ])\n        return js\n\n\nfrom . import codeableconcept\nfrom . import coding\nfrom . import fhirinstant\nfrom . import fhirreference\nfrom . import period\n",
+    "fhirclient/models/fhirabstractresource.py": "#!/usr/bin/env python\n# -*- coding: utf-8 -*-\n#\n#  Base class for FHIR resources.\n#  2014, SMART Health IT.\n\nfrom . import fhirabstractbase\n\n\nclass FHIRAbstractResource(fhirabstractbase.FHIRAbstractBase):\n    \"\"\" Extends the FHIRAbstractBase with server talking capabilities.\n    \"\"\"\n    resource_type = 'FHIRAbstractResource'\n    \n    def __init__(self, jsondict=None, strict=True):\n        self._server = None\n        \"\"\" The server the instance was read from. \"\"\"\n        \n        # raise if \"resourceType\" does not match\n        if jsondict is not None and 'resourceType' in jsondict \\\n            and jsondict['resourceType'] != self.resource_type:\n            raise Exception(\"Attempting to instantiate {} with resource data that defines a resourceType of \\\"{}\\\"\"\n                .format(self.__class__, jsondict['resourceType']))\n        \n        super(FHIRAbstractResource, self).__init__(jsondict=jsondict, strict=strict)\n    \n    @classmethod\n    def _with_json_dict(cls, jsondict):\n        \"\"\" Overridden to use a factory if called when \"resourceType\" is\n        defined in the JSON but does not match the receiver's resource_type.\n        \"\"\"\n        if not isinstance(jsondict, dict):\n            raise Exception(\"Cannot use this method with anything but a JSON dictionary, got {}\"\n                .format(jsondict))\n        \n        res_type = jsondict.get('resourceType')\n        if res_type and res_type != cls.resource_type:\n            return fhirelementfactory.FHIRElementFactory.instantiate(res_type, jsondict)\n        return super(FHIRAbstractResource, cls)._with_json_dict(jsondict)\n    \n    def as_json(self):\n        js = super(FHIRAbstractResource, self).as_json()\n        js['resourceType'] = self.resource_type\n        return js\n    \n    \n    # MARK: Handling Paths\n    \n    def relativeBase(self):\n        return self.__class__.resource_type\n    \n    def relativePath(self):\n        if self.id is None:\n            return self.relativeBase()\n        return \"{}/{}\".format(self.relativeBase(), self.id)\n    \n    \n    # MARK: - Server Connection\n    \n    @property\n    def origin_server(self):\n        \"\"\" Walks the owner hierarchy until it finds an owner with a server.\n        \"\"\"\n        server = self._server\n        owner = self._owner\n        while server is None and owner is not None:\n            server = getattr(owner, '_server', None)\n            owner = owner._owner\n        return server\n\n    @origin_server.setter\n    def origin_server(self, server):\n        \"\"\" Sets the server on an element. \"\"\"\n        self._server = server\n    \n    @classmethod\n    def read(cls, rem_id, server):\n        \"\"\" Read the resource with the given id from the given server. The\n        passed-in server instance must support a `request_json()` method call,\n        taking a relative path as first (and only mandatory) argument.\n        \n        :param str rem_id: The id of the resource on the remote server\n        :param FHIRServer server: An instance of a FHIR server or compatible class\n        :returns: An instance of the receiving class\n        \"\"\"\n        if not rem_id:\n            raise Exception(\"Cannot read resource without remote id\")\n        \n        path = '{}/{}'.format(cls.resource_type, rem_id)\n        instance = cls.read_from(path, server)\n        instance._local_id = rem_id\n        \n        return instance\n    \n    @classmethod\n    def read_from(cls, path, server):\n        \"\"\" Requests data from the given REST path on the server and creates\n        an instance of the receiving class.\n        \n        :param str path: The REST path to read from\n        :param FHIRServer server: An instance of a FHIR server or compatible class\n        :returns: An instance of the receiving class\n        \"\"\"\n        if not path:\n            raise Exception(\"Cannot read resource without REST path\")\n        if server is None:\n            raise Exception(\"Cannot read resource without server instance\")\n        \n        ret = server.request_json(path)\n        instance = cls(jsondict=ret)\n        instance.origin_server = server\n        return instance\n\n    def createPath(self):\n        \"\"\" Get the endpoint on the server for creating the resource.\n\n        :returns: The resource endpoint or None for the root endpoint\n        \"\"\"\n        root_post_types = (\"batch\", \"transaction\")\n\n        if self.resource_type == \"Bundle\" and self.type in root_post_types:\n            return None\n\n        return self.relativeBase()\n\n    def create(self, server):\n        \"\"\" Attempt to create the receiver on the given server, using a POST\n        command.\n        \n        :param FHIRServer server: The server to create the receiver on\n        :returns: None or the response JSON on success\n        \"\"\"\n        srv = server or self.origin_server\n        if srv is None:\n            raise Exception(\"Cannot create a resource without a server\")\n        if self.id:\n            raise Exception(\"This resource already has an id, cannot create\")\n\n        ret = srv.post_json(self.createPath(), self.as_json())\n        if len(ret.text) > 0:\n            return ret.json()\n        return None\n    \n    def update(self, server=None):\n        \"\"\" Update the receiver's representation on the given server, issuing\n        a PUT command.\n        \n        :param FHIRServer server: The server to update the receiver on;\n            optional, will use the instance's `server` if needed.\n        :returns: None or the response JSON on success\n        \"\"\"\n        srv = server or self.origin_server\n        if srv is None:\n            raise Exception(\"Cannot update a resource that does not have a server\")\n        if not self.id:\n            raise Exception(\"Cannot update a resource that does not have an id\")\n        \n        ret = srv.put_json(self.relativePath(), self.as_json())\n        if len(ret.text) > 0:\n            return ret.json()\n        return None\n    \n    def delete(self, server=None):\n        \"\"\" Delete the receiver from the given server with a DELETE command.\n        \n        :param FHIRServer server: The server to update the receiver on;\n            optional, will use the instance's `server` if needed.\n        :returns: None or the response JSON on success\n        \"\"\"\n        srv = server or self.origin_server\n        if srv is None:\n            raise Exception(\"Cannot delete a resource that does not have a server\")\n        if not self.id:\n            raise Exception(\"Cannot delete a resource that does not have an id\")\n        \n        ret = srv.delete_json(self.relativePath())\n        if len(ret.text) > 0:\n            return ret.json()\n        return None\n    \n    \n    # MARK: - Search\n    \n    def search(self, struct=None):\n        \"\"\" Search can be started via a dictionary containing a search\n        construct.\n        \n        Calling this method with a search struct will return a `FHIRSearch`\n        object representing the search struct, with \"$type\" and \"id\" added.\n        \n        :param dict struct: An optional search structure\n        :returns: A FHIRSearch instance\n        \"\"\"\n        if struct is None:\n            struct = {'$type': self.__class__.resource_type}\n        if self._local_id is not None or self.id is not None:\n            struct['id'] = self._local_id or self.id\n        return self.__class__.where(struct)\n    \n    @classmethod\n    def where(cls, struct):\n        \"\"\" Search can be started via a dictionary containing a search\n        construct.\n        \n        Calling this method with a search struct will return a `FHIRSearch`\n        object representing the search struct\n        \n        :param dict struct: A search structure\n        :returns: A FHIRSearch instance\n        \"\"\"\n        return fhirsearch.FHIRSearch(cls, struct)\n\n\nfrom . import fhirsearch\nfrom . import fhirelementfactory\n"
+  },
+  "GT_src_dict": {
+    "fhirclient/models/fhirdate.py": {
+      "FHIRDate.as_json": {
+        "code": "    def as_json(self) -> Union[str, None]:\n        \"\"\"Returns the original JSON string used to create the FHIRDate instance. If the instance was initialized with a valid JSON string, `origval` will contain this string, and it will be returned. If `origval` is not set (i.e., the instance was created without a JSON input or using a string representing the date), the method returns the ISO 8601 string representation of the date stored in the `date` property, obtained via the `isostring` property. \n\nThis method does not take any parameters and can return either a string or `None`. The `origval` attribute is defined during initialization and holds the original input value, while `isostring` converts the internal date representation back to a standardized ISO format. The class also utilizes a regular expression (_REGEX) for validating input formats, although it is not directly involved in this method's operation.\"\"\"\n        'Returns the original JSON string used to create this instance.'\n        if self.origval is not None:\n            return self.origval\n        return self.isostring",
+        "docstring": "Returns the original JSON string used to create the FHIRDate instance. If the instance was initialized with a valid JSON string, `origval` will contain this string, and it will be returned. If `origval` is not set (i.e., the instance was created without a JSON input or using a string representing the date), the method returns the ISO 8601 string representation of the date stored in the `date` property, obtained via the `isostring` property. \n\nThis method does not take any parameters and can return either a string or `None`. The `origval` attribute is defined during initialization and holds the original input value, while `isostring` converts the internal date representation back to a standardized ISO format. The class also utilizes a regular expression (_REGEX) for validating input formats, although it is not directly involved in this method's operation.",
+        "signature": "def as_json(self) -> Union[str, None]:",
+        "type": "Method",
+        "class_signature": "class FHIRDate:"
+      }
+    },
+    "fhirclient/models/fhirinstant.py": {
+      "FHIRInstant.__init__": {
+        "code": "    def __init__(self, jsonval: Union[str, None]=None):\n        \"\"\"Initialize a new instance of the FHIRInstant class, which is designed to work with FHIR instant time values in Python.\n\nParameters:\n- jsonval (Union[str, None]): An optional string representing the FHIR instant value in ISO 8601 format. This value is passed to the superclass (FHIRDate) for parsing and storage.\n\nAttributes:\n- datetime (Union[datetime.datetime, None]): A datetime object initialized to None. This attribute is intended to hold the parsed representation of the FHIR instant once the jsonval is processed by the superclass constructor.\n\nThis initializer relies on the FHIRDate class for parsing the input string and storing the appropriate values, ensuring compatibility with FHIR standards.\"\"\"\n        self.datetime: Union[datetime.datetime, None] = None\n        super().__init__(jsonval)",
+        "docstring": "Initialize a new instance of the FHIRInstant class, which is designed to work with FHIR instant time values in Python.\n\nParameters:\n- jsonval (Union[str, None]): An optional string representing the FHIR instant value in ISO 8601 format. This value is passed to the superclass (FHIRDate) for parsing and storage.\n\nAttributes:\n- datetime (Union[datetime.datetime, None]): A datetime object initialized to None. This attribute is intended to hold the parsed representation of the FHIR instant once the jsonval is processed by the superclass constructor.\n\nThis initializer relies on the FHIRDate class for parsing the input string and storing the appropriate values, ensuring compatibility with FHIR standards.",
+        "signature": "def __init__(self, jsonval: Union[str, None]=None):",
+        "type": "Method",
+        "class_signature": "class FHIRInstant(FHIRDate):"
+      }
+    },
+    "fhirclient/models/auditevent.py": {
+      "AuditEvent.__init__": {
+        "code": "    def __init__(self, jsondict=None, strict=True):\n        \"\"\"Initialize an AuditEvent instance for logging security-related events.\n\nThis constructor sets up the AuditEvent object with various attributes that capture the details of the event such as the type of action performed, the actors involved (agents), the outcome of the event, and other relevant parameters. It can take a JSON dictionary for initializing properties and can enforce strict validation depending on the `strict` parameter.\n\nParameters:\n- jsondict (dict, optional): A JSON dictionary to initialize the AuditEvent properties. If provided, it should map to valid AuditEvent attributes.\n- strict (bool, optional): When set to True (default), invalid variables will raise a TypeError for enhanced validation.\n\nAttributes initialized include:\n- action (str): The type of action performed during the event.\n- agent (list of AuditEventAgent): Actors involved in the event.\n- entity (list of AuditEventEntity): Data or objects used.\n- outcome (str): Indicates whether the event succeeded or failed.\n- outcomeDesc (str): Describes the outcome of the event in detail.\n- period (Period): The time frame in which the event occurred.\n- purposeOfEvent (list of CodeableConcept): The purpose of the event.\n- recorded (FHIRInstant): The time when the event was recorded.\n- source (AuditEventSource): Information about the reporter of the Audit event.\n- subtype (list of Coding): More specific types or IDs for the event.\n- type (Coding): The type or identifier of the event.\n\nThis constructor also calls the superclass constructor to handle any inherited properties or initializations.\"\"\"\n        ' Initialize all valid properties.\\n        \\n        :raises: FHIRValidationError on validation errors, unless strict is False\\n        :param dict jsondict: A JSON dictionary to use for initialization\\n        :param bool strict: If True (the default), invalid variables will raise a TypeError\\n        '\n        self.action = None\n        ' Type of action performed during the event.\\n        Type `str`. '\n        self.agent = None\n        ' Actor involved in the event.\\n        List of `AuditEventAgent` items (represented as `dict` in JSON). '\n        self.entity = None\n        ' Data or objects used.\\n        List of `AuditEventEntity` items (represented as `dict` in JSON). '\n        self.outcome = None\n        ' Whether the event succeeded or failed.\\n        Type `str`. '\n        self.outcomeDesc = None\n        ' Description of the event outcome.\\n        Type `str`. '\n        self.period = None\n        ' When the activity occurred.\\n        Type `Period` (represented as `dict` in JSON). '\n        self.purposeOfEvent = None\n        ' The purposeOfUse of the event.\\n        List of `CodeableConcept` items (represented as `dict` in JSON). '\n        self.recorded = None\n        ' Time when the event was recorded.\\n        Type `FHIRInstant` (represented as `str` in JSON). '\n        self.source = None\n        ' Audit Event Reporter.\\n        Type `AuditEventSource` (represented as `dict` in JSON). '\n        self.subtype = None\n        ' More specific type/id for the event.\\n        List of `Coding` items (represented as `dict` in JSON). '\n        self.type = None\n        ' Type/identifier of event.\\n        Type `Coding` (represented as `dict` in JSON). '\n        super(AuditEvent, self).__init__(jsondict=jsondict, strict=strict)",
+        "docstring": "Initialize an AuditEvent instance for logging security-related events.\n\nThis constructor sets up the AuditEvent object with various attributes that capture the details of the event such as the type of action performed, the actors involved (agents), the outcome of the event, and other relevant parameters. It can take a JSON dictionary for initializing properties and can enforce strict validation depending on the `strict` parameter.\n\nParameters:\n- jsondict (dict, optional): A JSON dictionary to initialize the AuditEvent properties. If provided, it should map to valid AuditEvent attributes.\n- strict (bool, optional): When set to True (default), invalid variables will raise a TypeError for enhanced validation.\n\nAttributes initialized include:\n- action (str): The type of action performed during the event.\n- agent (list of AuditEventAgent): Actors involved in the event.\n- entity (list of AuditEventEntity): Data or objects used.\n- outcome (str): Indicates whether the event succeeded or failed.\n- outcomeDesc (str): Describes the outcome of the event in detail.\n- period (Period): The time frame in which the event occurred.\n- purposeOfEvent (list of CodeableConcept): The purpose of the event.\n- recorded (FHIRInstant): The time when the event was recorded.\n- source (AuditEventSource): Information about the reporter of the Audit event.\n- subtype (list of Coding): More specific types or IDs for the event.\n- type (Coding): The type or identifier of the event.\n\nThis constructor also calls the superclass constructor to handle any inherited properties or initializations.",
+        "signature": "def __init__(self, jsondict=None, strict=True):",
+        "type": "Method",
+        "class_signature": "class AuditEvent(domainresource.DomainResource):"
+      }
+    },
+    "fhirclient/models/fhirabstractresource.py": {
+      "FHIRAbstractResource.as_json": {
+        "code": "    def as_json(self):\n        \"\"\"Converts the FHIRAbstractResource instance into a JSON-compatible dictionary representation. \n\nThis method first calls the parent class's `as_json()` method to obtain a base dictionary and then adds the `resourceType` key, which is derived from the class attribute `resource_type`. This attribute defines the type of the FHIR resource represented by the instance.\n\nReturns:\n    dict: A dictionary representation of the resource including the `resourceType`.\n\nDependencies:\n    - `resource_type`: A class-level constant that indicates the type of the FHIR resource. This is critical for FHIR compliance and ensures that the serialized output correctly specifies the resource type when interacting with FHIR-compatible systems.\"\"\"\n        js = super(FHIRAbstractResource, self).as_json()\n        js['resourceType'] = self.resource_type\n        return js",
+        "docstring": "Converts the FHIRAbstractResource instance into a JSON-compatible dictionary representation. \n\nThis method first calls the parent class's `as_json()` method to obtain a base dictionary and then adds the `resourceType` key, which is derived from the class attribute `resource_type`. This attribute defines the type of the FHIR resource represented by the instance.\n\nReturns:\n    dict: A dictionary representation of the resource including the `resourceType`.\n\nDependencies:\n    - `resource_type`: A class-level constant that indicates the type of the FHIR resource. This is critical for FHIR compliance and ensures that the serialized output correctly specifies the resource type when interacting with FHIR-compatible systems.",
+        "signature": "def as_json(self):",
+        "type": "Method",
+        "class_signature": "class FHIRAbstractResource(fhirabstractbase.FHIRAbstractBase):"
+      }
+    }
+  },
+  "dependency_dict": {
+    "fhirclient/models/auditevent.py:AuditEvent:__init__": {
+      "fhirclient/models/domainresource.py": {
+        "DomainResource.__init__": {
+          "code": "    def __init__(self, jsondict=None, strict=True):\n        \"\"\" Initialize all valid properties.\n        \n        :raises: FHIRValidationError on validation errors, unless strict is False\n        :param dict jsondict: A JSON dictionary to use for initialization\n        :param bool strict: If True (the default), invalid variables will raise a TypeError\n        \"\"\"\n        \n        self.contained = None\n        \"\"\" Contained, inline Resources.\n        List of `Resource` items (represented as `dict` in JSON). \"\"\"\n        \n        self.extension = None\n        \"\"\" Additional content defined by implementations.\n        List of `Extension` items (represented as `dict` in JSON). \"\"\"\n        \n        self.modifierExtension = None\n        \"\"\" Extensions that cannot be ignored.\n        List of `Extension` items (represented as `dict` in JSON). \"\"\"\n        \n        self.text = None\n        \"\"\" Text summary of the resource, for human interpretation.\n        Type `Narrative` (represented as `dict` in JSON). \"\"\"\n        \n        super(DomainResource, self).__init__(jsondict=jsondict, strict=strict)",
+          "docstring": "Initialize all valid properties.\n\n:raises: FHIRValidationError on validation errors, unless strict is False\n:param dict jsondict: A JSON dictionary to use for initialization\n:param bool strict: If True (the default), invalid variables will raise a TypeError",
+          "signature": "def __init__(self, jsondict=None, strict=True):",
+          "type": "Method",
+          "class_signature": "class DomainResource(resource.Resource):"
+        }
+      }
+    },
+    "fhirclient/models/fhirinstant.py:FHIRInstant:__init__": {
+      "fhirclient/models/fhirdate.py": {
+        "FHIRDate.__init__": {
+          "code": "    def __init__(self, jsonval: Union[str, None]=None):\n        self.date: Union[datetime.date, datetime.datetime, datetime.time, None] = None\n        if jsonval is not None:\n            if not isinstance(jsonval, str):\n                raise TypeError('Expecting string when initializing {}, but got {}'.format(type(self), type(jsonval)))\n            if not self._REGEX.fullmatch(jsonval):\n                raise ValueError('does not match expected format')\n            self.date = self._from_string(jsonval)\n        self.origval: Union[str, None] = jsonval",
+          "docstring": "",
+          "signature": "def __init__(self, jsonval: Union[str, None]=None):",
+          "type": "Method",
+          "class_signature": "class FHIRDate:"
+        },
+        "FHIRDate.__setattr__": {
+          "code": "    def __setattr__(self, prop, value):\n        if prop in {'date', self._FIELD}:\n            self.origval = None\n            object.__setattr__(self, self._FIELD, value)\n            object.__setattr__(self, 'date', value)\n        else:\n            object.__setattr__(self, prop, value)",
+          "docstring": "",
+          "signature": "def __setattr__(self, prop, value):",
+          "type": "Method",
+          "class_signature": "class FHIRDate:"
+        }
+      }
+    },
+    "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:as_json": {
+      "fhirclient/models/fhirabstractbase.py": {
+        "FHIRAbstractBase.as_json": {
+          "code": "    def as_json(self):\n        \"\"\" Serializes to JSON by inspecting `elementProperties()` and creating\n        a JSON dictionary of all registered properties. Checks:\n        \n        - whether required properties are not None (and lists not empty)\n        - whether not-None properties are of the correct type\n        \n        :raises: FHIRValidationError if properties have the wrong type or if\n            required properties are empty\n        :returns: A validated dict object that can be JSON serialized\n        \"\"\"\n        js = {}\n        errs = []\n        \n        # JSONify all registered properties\n        found = set()\n        nonoptionals = set()\n        for name, jsname, typ, is_list, of_many, not_optional in self.elementProperties():\n            if not_optional:\n                nonoptionals.add(of_many or jsname)\n            \n            err = None\n            value = getattr(self, name)\n            if value is None:\n                continue\n            \n            if is_list:\n                if not isinstance(value, list):\n                   err = TypeError(\"Expecting property \\\"{}\\\" on {} to be list, but is {}\"\n                       .format(name, type(self), type(value)))\n                elif len(value) > 0:\n                    if not self._matches_type(value[0], typ):\n                        err = TypeError(\"Expecting property \\\"{}\\\" on {} to be {}, but is {}\"\n                            .format(name, type(self), typ, type(value[0])))\n                    else:\n                        lst = []\n                        for v in value:\n                            try:\n                                lst.append(v.as_json() if hasattr(v, 'as_json') else v)\n                            except FHIRValidationError as e:\n                                err = e.prefixed(str(len(lst))).prefixed(name)\n                        found.add(of_many or jsname)\n                        js[jsname] = lst\n            else:\n                if not self._matches_type(value, typ):\n                    err = TypeError(\"Expecting property \\\"{}\\\" on {} to be {}, but is {}\"\n                        .format(name, type(self), typ, type(value)))\n                else:\n                    try:\n                        found.add(of_many or jsname)\n                        js[jsname] = value.as_json() if hasattr(value, 'as_json') else value\n                    except FHIRValidationError as e:\n                        err = e.prefixed(name)\n            \n            if err is not None:\n                errs.append(err if isinstance(err, FHIRValidationError) else FHIRValidationError([err], name))\n        \n        # any missing non-optionals?\n        if len(nonoptionals - found) > 0:\n            for nonop in nonoptionals - found:\n                errs.append(KeyError(\"Property \\\"{}\\\" on {} is not optional, you must provide a value for it\"\n                    .format(nonop, self)))\n        \n        if len(errs) > 0:\n            raise FHIRValidationError(errs)\n        return js",
+          "docstring": "Serializes to JSON by inspecting `elementProperties()` and creating\na JSON dictionary of all registered properties. Checks:\n\n- whether required properties are not None (and lists not empty)\n- whether not-None properties are of the correct type\n\n:raises: FHIRValidationError if properties have the wrong type or if\n    required properties are empty\n:returns: A validated dict object that can be JSON serialized",
+          "signature": "def as_json(self):",
+          "type": "Method",
+          "class_signature": "class FHIRAbstractBase(object):"
+        }
+      }
+    }
+  },
+  "call_tree": {
+    "modified_testcases/models/auditevent_test.py:AuditEventTests:testAuditEvent1": {
+      "modified_testcases/models/auditevent_test.py:AuditEventTests:instantiate_from": {
+        "fhirclient/models/auditevent.py:AuditEvent:__init__": {
+          "fhirclient/models/domainresource.py:DomainResource:__init__": {
+            "fhirclient/models/resource.py:Resource:__init__": {
+              "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRValidationError:FHIRValidationError": {},
+                    "fhirclient/models/auditevent.py:AuditEvent:elementProperties": {
+                      "fhirclient/models/domainresource.py:DomainResource:elementProperties": {}
+                    },
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {}
+                    },
+                    "fhirclient/models/fhirdate.py:FHIRDate:with_json_and_owner": {
+                      "fhirclient/models/fhirdate.py:FHIRDate:with_json": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "modified_testcases/models/auditevent_test.py:AuditEventTests:implAuditEvent1": {
+        "fhirclient/models/fhirinstant.py:FHIRInstant:__init__": {
+          "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "[ignored_or_cut_off]": "..."
+            }
+          },
+          "fhirclient/models/fhirdate.py:FHIRDate:__init__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+                "[ignored_or_cut_off]": "..."
+              }
+            },
+            "fhirclient/models/fhirinstant.py:FHIRInstant:_from_string": {
+              "fhirclient/models/fhirdate.py:FHIRDate:_parse_datetime": {
+                "fhirclient/models/fhirdate.py:FHIRDate:_strip_leap_seconds": {},
+                "fhirclient/models/fhirdate.py:FHIRDate:_parse_partial": {}
+              }
+            }
+          }
+        },
+        "fhirclient/models/fhirdate.py:FHIRDate:as_json": {}
+      },
+      "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:as_json": {
+        "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+          "fhirclient/models/fhirabstractbase.py:FHIRValidationError:FHIRValidationError": {},
+          "fhirclient/models/auditevent.py:AuditEvent:elementProperties": {
+            "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+              "fhirclient/models/resource.py:Resource:elementProperties": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:elementProperties": {}
+              }
+            }
+          },
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+            "[ignored_or_cut_off]": "..."
+          },
+          "fhirclient/models/fhirdate.py:FHIRDate:as_json": {}
+        }
+      },
+      "fhirclient/models/auditevent.py:AuditEvent:__init__": {
+        "fhirclient/models/domainresource.py:DomainResource:__init__": {
+          "fhirclient/models/resource.py:Resource:__init__": {
+            "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+              "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                  "fhirclient/models/auditevent.py:AuditEvent:elementProperties": {
+                    "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+                      "fhirclient/models/resource.py:Resource:elementProperties": {}
+                    }
+                  },
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_with_json_dict": {}
+                    }
+                  },
+                  "fhirclient/models/fhirdate.py:FHIRDate:with_json_and_owner": {
+                    "fhirclient/models/fhirdate.py:FHIRDate:with_json": {
+                      "fhirclient/models/fhirinstant.py:FHIRInstant:__init__": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "modified_testcases/models/auditevent_test.py:AuditEventTests:instantiate_from": {
+      "fhirclient/models/auditevent.py:AuditEvent:__init__": {
+        "fhirclient/models/domainresource.py:DomainResource:__init__": {
+          "fhirclient/models/resource.py:Resource:__init__": {
+            "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+              "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                  "fhirclient/models/auditevent.py:AuditEvent:elementProperties": {
+                    "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+                      "fhirclient/models/resource.py:Resource:elementProperties": {}
+                    }
+                  },
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_with_json_dict": {},
+                      "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:_with_json_dict": {}
+                    }
+                  },
+                  "fhirclient/models/fhirdate.py:FHIRDate:with_json_and_owner": {
+                    "fhirclient/models/fhirdate.py:FHIRDate:with_json": {
+                      "fhirclient/models/fhirinstant.py:FHIRInstant:__init__": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "modified_testcases/models/auditevent_test.py:AuditEventTests:testAuditEvent2": {
+      "modified_testcases/models/auditevent_test.py:AuditEventTests:instantiate_from": {
+        "fhirclient/models/auditevent.py:AuditEvent:__init__": {
+          "fhirclient/models/domainresource.py:DomainResource:__init__": {
+            "fhirclient/models/resource.py:Resource:__init__": {
+              "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                    "fhirclient/models/auditevent.py:AuditEvent:elementProperties": {
+                      "fhirclient/models/domainresource.py:DomainResource:elementProperties": {}
+                    },
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {}
+                    },
+                    "fhirclient/models/fhirdate.py:FHIRDate:with_json_and_owner": {
+                      "fhirclient/models/fhirdate.py:FHIRDate:with_json": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "modified_testcases/models/auditevent_test.py:AuditEventTests:implAuditEvent2": {
+        "fhirclient/models/fhirinstant.py:FHIRInstant:__init__": {
+          "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "[ignored_or_cut_off]": "..."
+            }
+          },
+          "fhirclient/models/fhirdate.py:FHIRDate:__init__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+                "[ignored_or_cut_off]": "..."
+              }
+            },
+            "fhirclient/models/fhirinstant.py:FHIRInstant:_from_string": {
+              "fhirclient/models/fhirdate.py:FHIRDate:_parse_datetime": {
+                "fhirclient/models/fhirdate.py:FHIRDate:_strip_leap_seconds": {},
+                "fhirclient/models/fhirdate.py:FHIRDate:_parse_partial": {}
+              }
+            }
+          }
+        },
+        "fhirclient/models/fhirdate.py:FHIRDate:as_json": {}
+      },
+      "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:as_json": {
+        "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+          "fhirclient/models/auditevent.py:AuditEvent:elementProperties": {
+            "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+              "fhirclient/models/resource.py:Resource:elementProperties": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:elementProperties": {}
+              }
+            }
+          },
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+            "[ignored_or_cut_off]": "..."
+          },
+          "fhirclient/models/fhirdate.py:FHIRDate:as_json": {}
+        }
+      },
+      "fhirclient/models/auditevent.py:AuditEvent:__init__": {
+        "fhirclient/models/domainresource.py:DomainResource:__init__": {
+          "fhirclient/models/resource.py:Resource:__init__": {
+            "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+              "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                  "fhirclient/models/auditevent.py:AuditEvent:elementProperties": {
+                    "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+                      "fhirclient/models/resource.py:Resource:elementProperties": {}
+                    }
+                  },
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_with_json_dict": {}
+                    }
+                  },
+                  "fhirclient/models/fhirdate.py:FHIRDate:with_json_and_owner": {
+                    "fhirclient/models/fhirdate.py:FHIRDate:with_json": {
+                      "fhirclient/models/fhirinstant.py:FHIRInstant:__init__": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "modified_testcases/models/auditevent_test.py:AuditEventTests:testAuditEvent3": {
+      "modified_testcases/models/auditevent_test.py:AuditEventTests:instantiate_from": {
+        "fhirclient/models/auditevent.py:AuditEvent:__init__": {
+          "fhirclient/models/domainresource.py:DomainResource:__init__": {
+            "fhirclient/models/resource.py:Resource:__init__": {
+              "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                    "fhirclient/models/auditevent.py:AuditEvent:elementProperties": {
+                      "fhirclient/models/domainresource.py:DomainResource:elementProperties": {}
+                    },
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {}
+                    },
+                    "fhirclient/models/fhirdate.py:FHIRDate:with_json_and_owner": {
+                      "fhirclient/models/fhirdate.py:FHIRDate:with_json": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "modified_testcases/models/auditevent_test.py:AuditEventTests:implAuditEvent3": {
+        "fhirclient/models/fhirinstant.py:FHIRInstant:__init__": {
+          "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "[ignored_or_cut_off]": "..."
+            }
+          },
+          "fhirclient/models/fhirdate.py:FHIRDate:__init__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+                "[ignored_or_cut_off]": "..."
+              }
+            },
+            "fhirclient/models/fhirinstant.py:FHIRInstant:_from_string": {
+              "fhirclient/models/fhirdate.py:FHIRDate:_parse_datetime": {
+                "fhirclient/models/fhirdate.py:FHIRDate:_strip_leap_seconds": {},
+                "fhirclient/models/fhirdate.py:FHIRDate:_parse_partial": {}
+              }
+            }
+          }
+        },
+        "fhirclient/models/fhirdate.py:FHIRDate:as_json": {}
+      },
+      "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:as_json": {
+        "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+          "fhirclient/models/auditevent.py:AuditEvent:elementProperties": {
+            "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+              "fhirclient/models/resource.py:Resource:elementProperties": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:elementProperties": {}
+              }
+            }
+          },
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+            "[ignored_or_cut_off]": "..."
+          },
+          "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:as_json": {
+            "[ignored_or_cut_off]": "..."
+          },
+          "fhirclient/models/fhirdate.py:FHIRDate:as_json": {}
+        }
+      },
+      "fhirclient/models/auditevent.py:AuditEvent:__init__": {
+        "fhirclient/models/domainresource.py:DomainResource:__init__": {
+          "fhirclient/models/resource.py:Resource:__init__": {
+            "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+              "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                  "fhirclient/models/auditevent.py:AuditEvent:elementProperties": {
+                    "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+                      "fhirclient/models/resource.py:Resource:elementProperties": {}
+                    }
+                  },
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_with_json_dict": {},
+                      "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:_with_json_dict": {}
+                    }
+                  },
+                  "fhirclient/models/fhirdate.py:FHIRDate:with_json_and_owner": {
+                    "fhirclient/models/fhirdate.py:FHIRDate:with_json": {
+                      "fhirclient/models/fhirinstant.py:FHIRInstant:__init__": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "modified_testcases/models/auditevent_test.py:AuditEventTests:testAuditEvent4": {
+      "modified_testcases/models/auditevent_test.py:AuditEventTests:instantiate_from": {
+        "fhirclient/models/auditevent.py:AuditEvent:__init__": {
+          "fhirclient/models/domainresource.py:DomainResource:__init__": {
+            "fhirclient/models/resource.py:Resource:__init__": {
+              "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                    "fhirclient/models/auditevent.py:AuditEvent:elementProperties": {
+                      "fhirclient/models/domainresource.py:DomainResource:elementProperties": {}
+                    },
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {}
+                    },
+                    "fhirclient/models/fhirdate.py:FHIRDate:with_json_and_owner": {
+                      "fhirclient/models/fhirdate.py:FHIRDate:with_json": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "modified_testcases/models/auditevent_test.py:AuditEventTests:implAuditEvent4": {
+        "fhirclient/models/fhirinstant.py:FHIRInstant:__init__": {
+          "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "[ignored_or_cut_off]": "..."
+            }
+          },
+          "fhirclient/models/fhirdate.py:FHIRDate:__init__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+                "[ignored_or_cut_off]": "..."
+              }
+            },
+            "fhirclient/models/fhirinstant.py:FHIRInstant:_from_string": {
+              "fhirclient/models/fhirdate.py:FHIRDate:_parse_datetime": {
+                "fhirclient/models/fhirdate.py:FHIRDate:_strip_leap_seconds": {},
+                "fhirclient/models/fhirdate.py:FHIRDate:_parse_partial": {}
+              }
+            }
+          }
+        },
+        "fhirclient/models/fhirdate.py:FHIRDate:as_json": {}
+      },
+      "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:as_json": {
+        "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+          "fhirclient/models/auditevent.py:AuditEvent:elementProperties": {
+            "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+              "fhirclient/models/resource.py:Resource:elementProperties": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:elementProperties": {}
+              }
+            }
+          },
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+            "[ignored_or_cut_off]": "..."
+          },
+          "fhirclient/models/fhirdate.py:FHIRDate:as_json": {}
+        }
+      },
+      "fhirclient/models/auditevent.py:AuditEvent:__init__": {
+        "fhirclient/models/domainresource.py:DomainResource:__init__": {
+          "fhirclient/models/resource.py:Resource:__init__": {
+            "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+              "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                  "fhirclient/models/auditevent.py:AuditEvent:elementProperties": {
+                    "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+                      "fhirclient/models/resource.py:Resource:elementProperties": {}
+                    }
+                  },
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_with_json_dict": {}
+                    }
+                  },
+                  "fhirclient/models/fhirdate.py:FHIRDate:with_json_and_owner": {
+                    "fhirclient/models/fhirdate.py:FHIRDate:with_json": {
+                      "fhirclient/models/fhirinstant.py:FHIRInstant:__init__": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "modified_testcases/models/auditevent_test.py:AuditEventTests:testAuditEvent5": {
+      "modified_testcases/models/auditevent_test.py:AuditEventTests:instantiate_from": {
+        "fhirclient/models/auditevent.py:AuditEvent:__init__": {
+          "fhirclient/models/domainresource.py:DomainResource:__init__": {
+            "fhirclient/models/resource.py:Resource:__init__": {
+              "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                    "fhirclient/models/auditevent.py:AuditEvent:elementProperties": {
+                      "fhirclient/models/domainresource.py:DomainResource:elementProperties": {}
+                    },
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {}
+                    },
+                    "fhirclient/models/fhirdate.py:FHIRDate:with_json_and_owner": {
+                      "fhirclient/models/fhirdate.py:FHIRDate:with_json": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "modified_testcases/models/auditevent_test.py:AuditEventTests:implAuditEvent5": {
+        "fhirclient/models/fhirinstant.py:FHIRInstant:__init__": {
+          "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "[ignored_or_cut_off]": "..."
+            }
+          },
+          "fhirclient/models/fhirdate.py:FHIRDate:__init__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+                "[ignored_or_cut_off]": "..."
+              }
+            },
+            "fhirclient/models/fhirinstant.py:FHIRInstant:_from_string": {
+              "fhirclient/models/fhirdate.py:FHIRDate:_parse_datetime": {
+                "fhirclient/models/fhirdate.py:FHIRDate:_strip_leap_seconds": {},
+                "fhirclient/models/fhirdate.py:FHIRDate:_parse_partial": {}
+              }
+            }
+          }
+        },
+        "fhirclient/models/fhirdate.py:FHIRDate:as_json": {}
+      },
+      "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:as_json": {
+        "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+          "fhirclient/models/auditevent.py:AuditEvent:elementProperties": {
+            "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+              "fhirclient/models/resource.py:Resource:elementProperties": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:elementProperties": {}
+              }
+            }
+          },
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+            "[ignored_or_cut_off]": "..."
+          },
+          "fhirclient/models/fhirdate.py:FHIRDate:as_json": {}
+        }
+      },
+      "fhirclient/models/auditevent.py:AuditEvent:__init__": {
+        "fhirclient/models/domainresource.py:DomainResource:__init__": {
+          "fhirclient/models/resource.py:Resource:__init__": {
+            "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+              "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                  "fhirclient/models/auditevent.py:AuditEvent:elementProperties": {
+                    "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+                      "fhirclient/models/resource.py:Resource:elementProperties": {}
+                    }
+                  },
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_with_json_dict": {}
+                    }
+                  },
+                  "fhirclient/models/fhirdate.py:FHIRDate:with_json_and_owner": {
+                    "fhirclient/models/fhirdate.py:FHIRDate:with_json": {
+                      "fhirclient/models/fhirinstant.py:FHIRInstant:__init__": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "modified_testcases/models/auditevent_test.py:AuditEventTests:testAuditEvent6": {
+      "modified_testcases/models/auditevent_test.py:AuditEventTests:instantiate_from": {
+        "fhirclient/models/auditevent.py:AuditEvent:__init__": {
+          "fhirclient/models/domainresource.py:DomainResource:__init__": {
+            "fhirclient/models/resource.py:Resource:__init__": {
+              "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                    "fhirclient/models/auditevent.py:AuditEvent:elementProperties": {
+                      "fhirclient/models/domainresource.py:DomainResource:elementProperties": {}
+                    },
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {}
+                    },
+                    "fhirclient/models/fhirdate.py:FHIRDate:with_json_and_owner": {
+                      "fhirclient/models/fhirdate.py:FHIRDate:with_json": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "modified_testcases/models/auditevent_test.py:AuditEventTests:implAuditEvent6": {
+        "fhirclient/models/fhirinstant.py:FHIRInstant:__init__": {
+          "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "[ignored_or_cut_off]": "..."
+            }
+          },
+          "fhirclient/models/fhirdate.py:FHIRDate:__init__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+                "[ignored_or_cut_off]": "..."
+              }
+            },
+            "fhirclient/models/fhirinstant.py:FHIRInstant:_from_string": {
+              "fhirclient/models/fhirdate.py:FHIRDate:_parse_datetime": {
+                "fhirclient/models/fhirdate.py:FHIRDate:_strip_leap_seconds": {},
+                "fhirclient/models/fhirdate.py:FHIRDate:_parse_partial": {}
+              }
+            }
+          }
+        },
+        "fhirclient/models/fhirdate.py:FHIRDate:as_json": {}
+      },
+      "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:as_json": {
+        "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+          "fhirclient/models/auditevent.py:AuditEvent:elementProperties": {
+            "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+              "fhirclient/models/resource.py:Resource:elementProperties": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:elementProperties": {}
+              }
+            }
+          },
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+            "[ignored_or_cut_off]": "..."
+          },
+          "fhirclient/models/fhirdate.py:FHIRDate:as_json": {}
+        }
+      },
+      "fhirclient/models/auditevent.py:AuditEvent:__init__": {
+        "fhirclient/models/domainresource.py:DomainResource:__init__": {
+          "fhirclient/models/resource.py:Resource:__init__": {
+            "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+              "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                  "fhirclient/models/auditevent.py:AuditEvent:elementProperties": {
+                    "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+                      "fhirclient/models/resource.py:Resource:elementProperties": {}
+                    }
+                  },
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_with_json_dict": {}
+                    }
+                  },
+                  "fhirclient/models/fhirdate.py:FHIRDate:with_json_and_owner": {
+                    "fhirclient/models/fhirdate.py:FHIRDate:with_json": {
+                      "fhirclient/models/fhirinstant.py:FHIRInstant:__init__": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "modified_testcases/models/auditevent_test.py:AuditEventTests:testAuditEvent7": {
+      "modified_testcases/models/auditevent_test.py:AuditEventTests:instantiate_from": {
+        "fhirclient/models/auditevent.py:AuditEvent:__init__": {
+          "fhirclient/models/domainresource.py:DomainResource:__init__": {
+            "fhirclient/models/resource.py:Resource:__init__": {
+              "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                    "fhirclient/models/auditevent.py:AuditEvent:elementProperties": {
+                      "fhirclient/models/domainresource.py:DomainResource:elementProperties": {}
+                    },
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {}
+                    },
+                    "fhirclient/models/fhirdate.py:FHIRDate:with_json_and_owner": {
+                      "fhirclient/models/fhirdate.py:FHIRDate:with_json": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "modified_testcases/models/auditevent_test.py:AuditEventTests:implAuditEvent7": {
+        "fhirclient/models/fhirinstant.py:FHIRInstant:__init__": {
+          "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "[ignored_or_cut_off]": "..."
+            }
+          },
+          "fhirclient/models/fhirdate.py:FHIRDate:__init__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+                "[ignored_or_cut_off]": "..."
+              }
+            },
+            "fhirclient/models/fhirinstant.py:FHIRInstant:_from_string": {
+              "fhirclient/models/fhirdate.py:FHIRDate:_parse_datetime": {
+                "fhirclient/models/fhirdate.py:FHIRDate:_strip_leap_seconds": {},
+                "fhirclient/models/fhirdate.py:FHIRDate:_parse_partial": {}
+              }
+            }
+          }
+        },
+        "fhirclient/models/fhirdate.py:FHIRDate:as_json": {}
+      },
+      "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:as_json": {
+        "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+          "fhirclient/models/auditevent.py:AuditEvent:elementProperties": {
+            "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+              "fhirclient/models/resource.py:Resource:elementProperties": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:elementProperties": {}
+              }
+            }
+          },
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+            "[ignored_or_cut_off]": "..."
+          },
+          "fhirclient/models/fhirdate.py:FHIRDate:as_json": {}
+        }
+      },
+      "fhirclient/models/auditevent.py:AuditEvent:__init__": {
+        "fhirclient/models/domainresource.py:DomainResource:__init__": {
+          "fhirclient/models/resource.py:Resource:__init__": {
+            "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+              "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                  "fhirclient/models/auditevent.py:AuditEvent:elementProperties": {
+                    "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+                      "fhirclient/models/resource.py:Resource:elementProperties": {}
+                    }
+                  },
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_with_json_dict": {}
+                    }
+                  },
+                  "fhirclient/models/fhirdate.py:FHIRDate:with_json_and_owner": {
+                    "fhirclient/models/fhirdate.py:FHIRDate:with_json": {
+                      "fhirclient/models/fhirinstant.py:FHIRInstant:__init__": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "modified_testcases/models/auditevent_test.py:AuditEventTests:testAuditEvent8": {
+      "modified_testcases/models/auditevent_test.py:AuditEventTests:instantiate_from": {
+        "fhirclient/models/auditevent.py:AuditEvent:__init__": {
+          "fhirclient/models/domainresource.py:DomainResource:__init__": {
+            "fhirclient/models/resource.py:Resource:__init__": {
+              "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                    "fhirclient/models/auditevent.py:AuditEvent:elementProperties": {
+                      "fhirclient/models/domainresource.py:DomainResource:elementProperties": {}
+                    },
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {}
+                    },
+                    "fhirclient/models/fhirdate.py:FHIRDate:with_json_and_owner": {
+                      "fhirclient/models/fhirdate.py:FHIRDate:with_json": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "modified_testcases/models/auditevent_test.py:AuditEventTests:implAuditEvent8": {
+        "fhirclient/models/fhirinstant.py:FHIRInstant:__init__": {
+          "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "[ignored_or_cut_off]": "..."
+            }
+          },
+          "fhirclient/models/fhirdate.py:FHIRDate:__init__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+                "[ignored_or_cut_off]": "..."
+              }
+            },
+            "fhirclient/models/fhirinstant.py:FHIRInstant:_from_string": {
+              "fhirclient/models/fhirdate.py:FHIRDate:_parse_datetime": {
+                "fhirclient/models/fhirdate.py:FHIRDate:_strip_leap_seconds": {},
+                "fhirclient/models/fhirdate.py:FHIRDate:_parse_partial": {}
+              }
+            }
+          }
+        },
+        "fhirclient/models/fhirdate.py:FHIRDate:as_json": {}
+      },
+      "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:as_json": {
+        "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+          "fhirclient/models/auditevent.py:AuditEvent:elementProperties": {
+            "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+              "fhirclient/models/resource.py:Resource:elementProperties": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:elementProperties": {}
+              }
+            }
+          },
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+            "[ignored_or_cut_off]": "..."
+          },
+          "fhirclient/models/fhirdate.py:FHIRDate:as_json": {}
+        }
+      },
+      "fhirclient/models/auditevent.py:AuditEvent:__init__": {
+        "fhirclient/models/domainresource.py:DomainResource:__init__": {
+          "fhirclient/models/resource.py:Resource:__init__": {
+            "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+              "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                  "fhirclient/models/auditevent.py:AuditEvent:elementProperties": {
+                    "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+                      "fhirclient/models/resource.py:Resource:elementProperties": {}
+                    }
+                  },
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_with_json_dict": {}
+                    }
+                  },
+                  "fhirclient/models/fhirdate.py:FHIRDate:with_json_and_owner": {
+                    "fhirclient/models/fhirdate.py:FHIRDate:with_json": {
+                      "fhirclient/models/fhirinstant.py:FHIRInstant:__init__": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "modified_testcases/models/auditevent_test.py:AuditEventTests:testAuditEvent9": {
+      "modified_testcases/models/auditevent_test.py:AuditEventTests:instantiate_from": {
+        "fhirclient/models/auditevent.py:AuditEvent:__init__": {
+          "fhirclient/models/domainresource.py:DomainResource:__init__": {
+            "fhirclient/models/resource.py:Resource:__init__": {
+              "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                    "fhirclient/models/auditevent.py:AuditEvent:elementProperties": {
+                      "fhirclient/models/domainresource.py:DomainResource:elementProperties": {}
+                    },
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {}
+                    },
+                    "fhirclient/models/fhirdate.py:FHIRDate:with_json_and_owner": {
+                      "fhirclient/models/fhirdate.py:FHIRDate:with_json": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "modified_testcases/models/auditevent_test.py:AuditEventTests:implAuditEvent9": {
+        "fhirclient/models/fhirinstant.py:FHIRInstant:__init__": {
+          "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "[ignored_or_cut_off]": "..."
+            }
+          },
+          "fhirclient/models/fhirdate.py:FHIRDate:__init__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+                "[ignored_or_cut_off]": "..."
+              }
+            },
+            "fhirclient/models/fhirinstant.py:FHIRInstant:_from_string": {
+              "fhirclient/models/fhirdate.py:FHIRDate:_parse_datetime": {
+                "fhirclient/models/fhirdate.py:FHIRDate:_strip_leap_seconds": {},
+                "fhirclient/models/fhirdate.py:FHIRDate:_parse_partial": {}
+              }
+            }
+          }
+        },
+        "fhirclient/models/fhirdate.py:FHIRDate:as_json": {}
+      },
+      "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:as_json": {
+        "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+          "fhirclient/models/auditevent.py:AuditEvent:elementProperties": {
+            "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+              "fhirclient/models/resource.py:Resource:elementProperties": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:elementProperties": {}
+              }
+            }
+          },
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+            "[ignored_or_cut_off]": "..."
+          },
+          "fhirclient/models/fhirdate.py:FHIRDate:as_json": {}
+        }
+      },
+      "fhirclient/models/auditevent.py:AuditEvent:__init__": {
+        "fhirclient/models/domainresource.py:DomainResource:__init__": {
+          "fhirclient/models/resource.py:Resource:__init__": {
+            "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+              "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                  "fhirclient/models/auditevent.py:AuditEvent:elementProperties": {
+                    "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+                      "fhirclient/models/resource.py:Resource:elementProperties": {}
+                    }
+                  },
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_with_json_dict": {}
+                    }
+                  },
+                  "fhirclient/models/fhirdate.py:FHIRDate:with_json_and_owner": {
+                    "fhirclient/models/fhirdate.py:FHIRDate:with_json": {
+                      "fhirclient/models/fhirinstant.py:FHIRInstant:__init__": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "PRD": "# PROJECT NAME: fhirclient-auditevent_test\n\n# FOLDER STRUCTURE:\n```\n..\n\u2514\u2500\u2500 fhirclient/\n    \u2514\u2500\u2500 models/\n        \u251c\u2500\u2500 auditevent.py\n        \u2502   \u2514\u2500\u2500 AuditEvent.__init__\n        \u251c\u2500\u2500 fhirabstractresource.py\n        \u2502   \u2514\u2500\u2500 FHIRAbstractResource.as_json\n        \u251c\u2500\u2500 fhirdate.py\n        \u2502   \u2514\u2500\u2500 FHIRDate.as_json\n        \u2514\u2500\u2500 fhirinstant.py\n            \u2514\u2500\u2500 FHIRInstant.__init__\n```\n\n# IMPLEMENTATION REQUIREMENTS:\n## MODULE DESCRIPTION:\nThe AuditEvent Test Module facilitates the validation and verification of AuditEvent resources, aligning with the FHIR (Fast Healthcare Interoperability Resources) standard. Its primary purpose is to test and ensure the correctness of AuditEvent data structures, which are essential for recording system activity and interactions, including security-related events such as logins, logouts, disclosures, and API interactions. By providing robust unit tests, this module enables developers to validate the integrity of information captured in AuditEvent resources, ensuring compliance with healthcare data exchange standards. This solves the critical problem of maintaining traceability, security auditing, and data reliability within FHIR-based healthcare systems.\n\n## FILE 1: fhirclient/models/fhirdate.py\n\n- CLASS METHOD: FHIRDate.as_json\n  - CLASS SIGNATURE: class FHIRDate:\n  - SIGNATURE: def as_json(self) -> Union[str, None]:\n  - DOCSTRING: \n```python\n\"\"\"\nReturns the original JSON string used to create the FHIRDate instance. If the instance was initialized with a valid JSON string, `origval` will contain this string, and it will be returned. If `origval` is not set (i.e., the instance was created without a JSON input or using a string representing the date), the method returns the ISO 8601 string representation of the date stored in the `date` property, obtained via the `isostring` property. \n\nThis method does not take any parameters and can return either a string or `None`. The `origval` attribute is defined during initialization and holds the original input value, while `isostring` converts the internal date representation back to a standardized ISO format. The class also utilizes a regular expression (_REGEX) for validating input formats, although it is not directly involved in this method's operation.\n\"\"\"\n```\n\n## FILE 2: fhirclient/models/fhirinstant.py\n\n- CLASS METHOD: FHIRInstant.__init__\n  - CLASS SIGNATURE: class FHIRInstant(FHIRDate):\n  - SIGNATURE: def __init__(self, jsonval: Union[str, None]=None):\n  - DOCSTRING: \n```python\n\"\"\"\nInitialize a new instance of the FHIRInstant class, which is designed to work with FHIR instant time values in Python.\n\nParameters:\n- jsonval (Union[str, None]): An optional string representing the FHIR instant value in ISO 8601 format. This value is passed to the superclass (FHIRDate) for parsing and storage.\n\nAttributes:\n- datetime (Union[datetime.datetime, None]): A datetime object initialized to None. This attribute is intended to hold the parsed representation of the FHIR instant once the jsonval is processed by the superclass constructor.\n\nThis initializer relies on the FHIRDate class for parsing the input string and storing the appropriate values, ensuring compatibility with FHIR standards.\n\"\"\"\n```\n\n## FILE 3: fhirclient/models/auditevent.py\n\n- CLASS METHOD: AuditEvent.__init__\n  - CLASS SIGNATURE: class AuditEvent(domainresource.DomainResource):\n  - SIGNATURE: def __init__(self, jsondict=None, strict=True):\n  - DOCSTRING: \n```python\n\"\"\"\nInitialize an AuditEvent instance for logging security-related events.\n\nThis constructor sets up the AuditEvent object with various attributes that capture the details of the event such as the type of action performed, the actors involved (agents), the outcome of the event, and other relevant parameters. It can take a JSON dictionary for initializing properties and can enforce strict validation depending on the `strict` parameter.\n\nParameters:\n- jsondict (dict, optional): A JSON dictionary to initialize the AuditEvent properties. If provided, it should map to valid AuditEvent attributes.\n- strict (bool, optional): When set to True (default), invalid variables will raise a TypeError for enhanced validation.\n\nAttributes initialized include:\n- action (str): The type of action performed during the event.\n- agent (list of AuditEventAgent): Actors involved in the event.\n- entity (list of AuditEventEntity): Data or objects used.\n- outcome (str): Indicates whether the event succeeded or failed.\n- outcomeDesc (str): Describes the outcome of the event in detail.\n- period (Period): The time frame in which the event occurred.\n- purposeOfEvent (list of CodeableConcept): The purpose of the event.\n- recorded (FHIRInstant): The time when the event was recorded.\n- source (AuditEventSource): Information about the reporter of the Audit event.\n- subtype (list of Coding): More specific types or IDs for the event.\n- type (Coding): The type or identifier of the event.\n\nThis constructor also calls the superclass constructor to handle any inherited properties or initializations.\n\"\"\"\n```\n\n## FILE 4: fhirclient/models/fhirabstractresource.py\n\n- CLASS METHOD: FHIRAbstractResource.as_json\n  - CLASS SIGNATURE: class FHIRAbstractResource(fhirabstractbase.FHIRAbstractBase):\n  - SIGNATURE: def as_json(self):\n  - DOCSTRING: \n```python\n\"\"\"\nConverts the FHIRAbstractResource instance into a JSON-compatible dictionary representation. \n\nThis method first calls the parent class's `as_json()` method to obtain a base dictionary and then adds the `resourceType` key, which is derived from the class attribute `resource_type`. This attribute defines the type of the FHIR resource represented by the instance.\n\nReturns:\n    dict: A dictionary representation of the resource including the `resourceType`.\n\nDependencies:\n    - `resource_type`: A class-level constant that indicates the type of the FHIR resource. This is critical for FHIR compliance and ensures that the serialized output correctly specifies the resource type when interacting with FHIR-compatible systems.\n\"\"\"\n```\n\n# TASK DESCRIPTION:\nIn this project, you need to implement the functions and methods listed above. The functions have been removed from the code but their docstrings remain.\nYour task is to:\n1. Read and understand the docstrings of each function/method\n2. Understand the dependencies and how they interact with the target functions\n3. Implement the functions/methods according to their docstrings and signatures\n4. Ensure your implementations work correctly with the rest of the codebase\n",
+  "file_code": {
+    "fhirclient/models/fhirdate.py": "\"\"\"Facilitate working with FHIR dates and times.\"\"\"\nimport datetime\nimport re\nfrom typing import Any, Union\n\nclass FHIRDate:\n    \"\"\"\n    A convenience class for working with FHIR dates in Python.\n\n    http://hl7.org/fhir/R4/datatypes.html#date\n\n    Converting to a Python representation does require some compromises:\n    - This class will convert partial dates (\"reduced precision dates\") like \"2024\" into full\n      dates using the earliest possible time (in this example, \"2024-01-01\") because Python's\n      date class does not support partial dates.\n\n    If such compromise is not useful for you, avoid using the `date` or `isostring`\n    properties and just use the `as_json()` method in order to work with the original,\n    exact string.\n\n    For backwards-compatibility reasons, this class is the parent class of FHIRDateTime,\n    FHIRInstant, and FHIRTime. But they are all separate concepts and in a future major release,\n    they should be split into entirely separate classes.\n\n    Public properties:\n    - `date`: datetime.date representing the JSON value\n    - `isostring`: an ISO 8601 string version of the above Python object\n\n    Public methods:\n    - `as_json`: returns the original JSON used to construct the instance\n    \"\"\"\n\n    def __init__(self, jsonval: Union[str, None]=None):\n        self.date: Union[datetime.date, datetime.datetime, datetime.time, None] = None\n        if jsonval is not None:\n            if not isinstance(jsonval, str):\n                raise TypeError('Expecting string when initializing {}, but got {}'.format(type(self), type(jsonval)))\n            if not self._REGEX.fullmatch(jsonval):\n                raise ValueError('does not match expected format')\n            self.date = self._from_string(jsonval)\n        self.origval: Union[str, None] = jsonval\n\n    def __setattr__(self, prop, value):\n        if prop in {'date', self._FIELD}:\n            self.origval = None\n            object.__setattr__(self, self._FIELD, value)\n            object.__setattr__(self, 'date', value)\n        else:\n            object.__setattr__(self, prop, value)\n\n    @property\n    def isostring(self) -> Union[str, None]:\n        \"\"\"\n        Returns a standardized ISO 8601 version of the Python representation of the FHIR JSON.\n\n        Note that this may not be a fully accurate version of the input JSON.\n        In particular, it will convert partial dates like \"2024\" to full dates like \"2024-01-01\".\n        It will also normalize the timezone, if present.\n        \"\"\"\n        if self.date is None:\n            return None\n        return self.date.isoformat()\n\n    @classmethod\n    def with_json(cls, jsonobj: Union[str, list]):\n        \"\"\" Initialize a date from an ISO date string.\n        \"\"\"\n        if isinstance(jsonobj, str):\n            return cls(jsonobj)\n        if isinstance(jsonobj, list):\n            return [cls(jsonval) for jsonval in jsonobj]\n        raise TypeError('`cls.with_json()` only takes string or list of strings, but you provided {}'.format(type(jsonobj)))\n\n    @classmethod\n    def with_json_and_owner(cls, jsonobj: Union[str, list], owner):\n        \"\"\" Added for compatibility reasons to FHIRElement; \"owner\" is\n        discarded.\n        \"\"\"\n        return cls.with_json(jsonobj)\n    _REGEX = re.compile('([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1]))?)?')\n    _FIELD = 'date'\n\n    @staticmethod\n    def _parse_partial(value: str, cls):\n        \"\"\"\n        Handle partial dates like 1970 or 1980-12.\n\n        FHIR allows them, but Python's datetime classes do not natively parse them.\n        \"\"\"\n        if len(value) < 10:\n            pieces = value.split('-')\n            if len(pieces) == 1:\n                return cls(int(pieces[0]), 1, 1)\n            else:\n                return cls(int(pieces[0]), int(pieces[1]), 1)\n        return cls.fromisoformat(value)\n\n    @staticmethod\n    def _parse_date(value: str) -> datetime.date:\n        return FHIRDate._parse_partial(value, datetime.date)\n\n    @staticmethod\n    def _parse_datetime(value: str) -> datetime.datetime:\n        value = value.replace('Z', '+00:00')\n        value = FHIRDate._strip_leap_seconds(value)\n        return FHIRDate._parse_partial(value, datetime.datetime)\n\n    @staticmethod\n    def _parse_time(value: str) -> datetime.time:\n        value = FHIRDate._strip_leap_seconds(value)\n        return datetime.time.fromisoformat(value)\n\n    @staticmethod\n    def _strip_leap_seconds(value: str) -> str:\n        \"\"\"\n        Manually ignore leap seconds by clamping the seconds value to 59.\n\n        Python native times don't support them (at the time of this writing, but also watch\n        https://bugs.python.org/issue23574). For example, the stdlib's datetime.fromtimestamp()\n        also clamps to 59 if the system gives it leap seconds.\n\n        But FHIR allows leap seconds and says receiving code SHOULD accept them,\n        so we should be graceful enough to at least not throw a ValueError,\n        even though we can't natively represent the most-correct time.\n        \"\"\"\n        return value.replace(':60', ':59')\n\n    @staticmethod\n    def _from_string(value: str) -> Any:\n        return FHIRDate._parse_date(value)",
+    "fhirclient/models/fhirinstant.py": "\"\"\"Facilitate working with FHIR time fields.\"\"\"\nimport datetime\nimport re\nfrom typing import Any, Union\nfrom .fhirdate import FHIRDate\n\nclass FHIRInstant(FHIRDate):\n    \"\"\"\n    A convenience class for working with FHIR instants in Python.\n\n    http://hl7.org/fhir/R4/datatypes.html#instant\n\n    Converting to a Python representation does require some compromises:\n    - FHIR allows arbitrary sub-second precision, but Python only holds microseconds.\n    - Leap seconds (:60) will be changed to the 59th second (:59) because Python's time classes\n      do not support leap seconds.\n\n    If such compromise is not useful for you, avoid using the `date`, `datetime`, or `isostring`\n    properties and just use the `as_json()` method in order to work with the original,\n    exact string.\n\n    Public properties:\n    - `datetime`: datetime.datetime representing the JSON value (aware only)\n    - `date`: backwards-compatibility alias for `datetime`\n    - `isostring`: an ISO 8601 string version of the above Python object\n\n    Public methods:\n    - `as_json`: returns the original JSON used to construct the instance\n    \"\"\"\n    _REGEX = re.compile('([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\\\\.[0-9]+)?(Z|(\\\\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00))')\n    _FIELD = 'datetime'\n\n    @staticmethod\n    def _from_string(value: str) -> Any:\n        return FHIRDate._parse_datetime(value)",
+    "fhirclient/models/auditevent.py": "from . import domainresource\n\nclass AuditEvent(domainresource.DomainResource):\n    \"\"\" Event record kept for security purposes.\n    \n    A record of an event made for purposes of maintaining a security log.\n    Typical uses include detection of intrusion attempts and monitoring for\n    inappropriate usage.\n    \"\"\"\n    resource_type = 'AuditEvent'\n\n    def elementProperties(self):\n        js = super(AuditEvent, self).elementProperties()\n        js.extend([('action', 'action', str, False, None, False), ('agent', 'agent', AuditEventAgent, True, None, True), ('entity', 'entity', AuditEventEntity, True, None, False), ('outcome', 'outcome', str, False, None, False), ('outcomeDesc', 'outcomeDesc', str, False, None, False), ('period', 'period', period.Period, False, None, False), ('purposeOfEvent', 'purposeOfEvent', codeableconcept.CodeableConcept, True, None, False), ('recorded', 'recorded', fhirinstant.FHIRInstant, False, None, True), ('source', 'source', AuditEventSource, False, None, True), ('subtype', 'subtype', coding.Coding, True, None, False), ('type', 'type', coding.Coding, False, None, True)])\n        return js\nfrom . import backboneelement\n\nclass AuditEventAgent(backboneelement.BackboneElement):\n    \"\"\" Actor involved in the event.\n    \n    An actor taking an active role in the event or activity that is logged.\n    \"\"\"\n    resource_type = 'AuditEventAgent'\n\n    def __init__(self, jsondict=None, strict=True):\n        \"\"\" Initialize all valid properties.\n        \n        :raises: FHIRValidationError on validation errors, unless strict is False\n        :param dict jsondict: A JSON dictionary to use for initialization\n        :param bool strict: If True (the default), invalid variables will raise a TypeError\n        \"\"\"\n        self.altId = None\n        ' Alternative User identity.\\n        Type `str`. '\n        self.location = None\n        ' Where.\\n        Type `FHIRReference` (represented as `dict` in JSON). '\n        self.media = None\n        ' Type of media.\\n        Type `Coding` (represented as `dict` in JSON). '\n        self.name = None\n        ' Human friendly name for the agent.\\n        Type `str`. '\n        self.network = None\n        ' Logical network location for application activity.\\n        Type `AuditEventAgentNetwork` (represented as `dict` in JSON). '\n        self.policy = None\n        ' Policy that authorized event.\\n        List of `str` items. '\n        self.purposeOfUse = None\n        ' Reason given for this user.\\n        List of `CodeableConcept` items (represented as `dict` in JSON). '\n        self.requestor = None\n        ' Whether user is initiator.\\n        Type `bool`. '\n        self.role = None\n        ' Agent role in the event.\\n        List of `CodeableConcept` items (represented as `dict` in JSON). '\n        self.type = None\n        ' How agent participated.\\n        Type `CodeableConcept` (represented as `dict` in JSON). '\n        self.who = None\n        ' Identifier of who.\\n        Type `FHIRReference` (represented as `dict` in JSON). '\n        super(AuditEventAgent, self).__init__(jsondict=jsondict, strict=strict)\n\n    def elementProperties(self):\n        js = super(AuditEventAgent, self).elementProperties()\n        js.extend([('altId', 'altId', str, False, None, False), ('location', 'location', fhirreference.FHIRReference, False, None, False), ('media', 'media', coding.Coding, False, None, False), ('name', 'name', str, False, None, False), ('network', 'network', AuditEventAgentNetwork, False, None, False), ('policy', 'policy', str, True, None, False), ('purposeOfUse', 'purposeOfUse', codeableconcept.CodeableConcept, True, None, False), ('requestor', 'requestor', bool, False, None, True), ('role', 'role', codeableconcept.CodeableConcept, True, None, False), ('type', 'type', codeableconcept.CodeableConcept, False, None, False), ('who', 'who', fhirreference.FHIRReference, False, None, False)])\n        return js\n\nclass AuditEventAgentNetwork(backboneelement.BackboneElement):\n    \"\"\" Logical network location for application activity.\n    \n    Logical network location for application activity, if the activity has a\n    network location.\n    \"\"\"\n    resource_type = 'AuditEventAgentNetwork'\n\n    def __init__(self, jsondict=None, strict=True):\n        \"\"\" Initialize all valid properties.\n        \n        :raises: FHIRValidationError on validation errors, unless strict is False\n        :param dict jsondict: A JSON dictionary to use for initialization\n        :param bool strict: If True (the default), invalid variables will raise a TypeError\n        \"\"\"\n        self.address = None\n        ' Identifier for the network access point of the user device.\\n        Type `str`. '\n        self.type = None\n        ' The type of network access point.\\n        Type `str`. '\n        super(AuditEventAgentNetwork, self).__init__(jsondict=jsondict, strict=strict)\n\n    def elementProperties(self):\n        js = super(AuditEventAgentNetwork, self).elementProperties()\n        js.extend([('address', 'address', str, False, None, False), ('type', 'type', str, False, None, False)])\n        return js\n\nclass AuditEventEntity(backboneelement.BackboneElement):\n    \"\"\" Data or objects used.\n    \n    Specific instances of data or objects that have been accessed.\n    \"\"\"\n    resource_type = 'AuditEventEntity'\n\n    def __init__(self, jsondict=None, strict=True):\n        \"\"\" Initialize all valid properties.\n        \n        :raises: FHIRValidationError on validation errors, unless strict is False\n        :param dict jsondict: A JSON dictionary to use for initialization\n        :param bool strict: If True (the default), invalid variables will raise a TypeError\n        \"\"\"\n        self.description = None\n        ' Descriptive text.\\n        Type `str`. '\n        self.detail = None\n        ' Additional Information about the entity.\\n        List of `AuditEventEntityDetail` items (represented as `dict` in JSON). '\n        self.lifecycle = None\n        ' Life-cycle stage for the entity.\\n        Type `Coding` (represented as `dict` in JSON). '\n        self.name = None\n        ' Descriptor for entity.\\n        Type `str`. '\n        self.query = None\n        ' Query parameters.\\n        Type `str`. '\n        self.role = None\n        ' What role the entity played.\\n        Type `Coding` (represented as `dict` in JSON). '\n        self.securityLabel = None\n        ' Security labels on the entity.\\n        List of `Coding` items (represented as `dict` in JSON). '\n        self.type = None\n        ' Type of entity involved.\\n        Type `Coding` (represented as `dict` in JSON). '\n        self.what = None\n        ' Specific instance of resource.\\n        Type `FHIRReference` (represented as `dict` in JSON). '\n        super(AuditEventEntity, self).__init__(jsondict=jsondict, strict=strict)\n\n    def elementProperties(self):\n        js = super(AuditEventEntity, self).elementProperties()\n        js.extend([('description', 'description', str, False, None, False), ('detail', 'detail', AuditEventEntityDetail, True, None, False), ('lifecycle', 'lifecycle', coding.Coding, False, None, False), ('name', 'name', str, False, None, False), ('query', 'query', str, False, None, False), ('role', 'role', coding.Coding, False, None, False), ('securityLabel', 'securityLabel', coding.Coding, True, None, False), ('type', 'type', coding.Coding, False, None, False), ('what', 'what', fhirreference.FHIRReference, False, None, False)])\n        return js\n\nclass AuditEventEntityDetail(backboneelement.BackboneElement):\n    \"\"\" Additional Information about the entity.\n    \n    Tagged value pairs for conveying additional information about the entity.\n    \"\"\"\n    resource_type = 'AuditEventEntityDetail'\n\n    def __init__(self, jsondict=None, strict=True):\n        \"\"\" Initialize all valid properties.\n        \n        :raises: FHIRValidationError on validation errors, unless strict is False\n        :param dict jsondict: A JSON dictionary to use for initialization\n        :param bool strict: If True (the default), invalid variables will raise a TypeError\n        \"\"\"\n        self.type = None\n        ' Name of the property.\\n        Type `str`. '\n        self.valueBase64Binary = None\n        ' Property value.\\n        Type `str`. '\n        self.valueString = None\n        ' Property value.\\n        Type `str`. '\n        super(AuditEventEntityDetail, self).__init__(jsondict=jsondict, strict=strict)\n\n    def elementProperties(self):\n        js = super(AuditEventEntityDetail, self).elementProperties()\n        js.extend([('type', 'type', str, False, None, True), ('valueBase64Binary', 'valueBase64Binary', str, False, 'value', True), ('valueString', 'valueString', str, False, 'value', True)])\n        return js\n\nclass AuditEventSource(backboneelement.BackboneElement):\n    \"\"\" Audit Event Reporter.\n    \n    The system that is reporting the event.\n    \"\"\"\n    resource_type = 'AuditEventSource'\n\n    def __init__(self, jsondict=None, strict=True):\n        \"\"\" Initialize all valid properties.\n        \n        :raises: FHIRValidationError on validation errors, unless strict is False\n        :param dict jsondict: A JSON dictionary to use for initialization\n        :param bool strict: If True (the default), invalid variables will raise a TypeError\n        \"\"\"\n        self.observer = None\n        ' The identity of source detecting the event.\\n        Type `FHIRReference` (represented as `dict` in JSON). '\n        self.site = None\n        ' Logical source location within the enterprise.\\n        Type `str`. '\n        self.type = None\n        ' The type of source where event originated.\\n        List of `Coding` items (represented as `dict` in JSON). '\n        super(AuditEventSource, self).__init__(jsondict=jsondict, strict=strict)\n\n    def elementProperties(self):\n        js = super(AuditEventSource, self).elementProperties()\n        js.extend([('observer', 'observer', fhirreference.FHIRReference, False, None, True), ('site', 'site', str, False, None, False), ('type', 'type', coding.Coding, True, None, False)])\n        return js\nfrom . import codeableconcept\nfrom . import coding\nfrom . import fhirinstant\nfrom . import fhirreference\nfrom . import period",
+    "fhirclient/models/fhirabstractresource.py": "from . import fhirabstractbase\n\nclass FHIRAbstractResource(fhirabstractbase.FHIRAbstractBase):\n    \"\"\" Extends the FHIRAbstractBase with server talking capabilities.\n    \"\"\"\n    resource_type = 'FHIRAbstractResource'\n\n    def __init__(self, jsondict=None, strict=True):\n        self._server = None\n        ' The server the instance was read from. '\n        if jsondict is not None and 'resourceType' in jsondict and (jsondict['resourceType'] != self.resource_type):\n            raise Exception('Attempting to instantiate {} with resource data that defines a resourceType of \"{}\"'.format(self.__class__, jsondict['resourceType']))\n        super(FHIRAbstractResource, self).__init__(jsondict=jsondict, strict=strict)\n\n    @classmethod\n    def _with_json_dict(cls, jsondict):\n        \"\"\" Overridden to use a factory if called when \"resourceType\" is\n        defined in the JSON but does not match the receiver's resource_type.\n        \"\"\"\n        if not isinstance(jsondict, dict):\n            raise Exception('Cannot use this method with anything but a JSON dictionary, got {}'.format(jsondict))\n        res_type = jsondict.get('resourceType')\n        if res_type and res_type != cls.resource_type:\n            return fhirelementfactory.FHIRElementFactory.instantiate(res_type, jsondict)\n        return super(FHIRAbstractResource, cls)._with_json_dict(jsondict)\n\n    def relativeBase(self):\n        return self.__class__.resource_type\n\n    def relativePath(self):\n        if self.id is None:\n            return self.relativeBase()\n        return '{}/{}'.format(self.relativeBase(), self.id)\n\n    @property\n    def origin_server(self):\n        \"\"\" Walks the owner hierarchy until it finds an owner with a server.\n        \"\"\"\n        server = self._server\n        owner = self._owner\n        while server is None and owner is not None:\n            server = getattr(owner, '_server', None)\n            owner = owner._owner\n        return server\n\n    @origin_server.setter\n    def origin_server(self, server):\n        \"\"\" Sets the server on an element. \"\"\"\n        self._server = server\n\n    @classmethod\n    def read(cls, rem_id, server):\n        \"\"\" Read the resource with the given id from the given server. The\n        passed-in server instance must support a `request_json()` method call,\n        taking a relative path as first (and only mandatory) argument.\n        \n        :param str rem_id: The id of the resource on the remote server\n        :param FHIRServer server: An instance of a FHIR server or compatible class\n        :returns: An instance of the receiving class\n        \"\"\"\n        if not rem_id:\n            raise Exception('Cannot read resource without remote id')\n        path = '{}/{}'.format(cls.resource_type, rem_id)\n        instance = cls.read_from(path, server)\n        instance._local_id = rem_id\n        return instance\n\n    @classmethod\n    def read_from(cls, path, server):\n        \"\"\" Requests data from the given REST path on the server and creates\n        an instance of the receiving class.\n        \n        :param str path: The REST path to read from\n        :param FHIRServer server: An instance of a FHIR server or compatible class\n        :returns: An instance of the receiving class\n        \"\"\"\n        if not path:\n            raise Exception('Cannot read resource without REST path')\n        if server is None:\n            raise Exception('Cannot read resource without server instance')\n        ret = server.request_json(path)\n        instance = cls(jsondict=ret)\n        instance.origin_server = server\n        return instance\n\n    def createPath(self):\n        \"\"\" Get the endpoint on the server for creating the resource.\n\n        :returns: The resource endpoint or None for the root endpoint\n        \"\"\"\n        root_post_types = ('batch', 'transaction')\n        if self.resource_type == 'Bundle' and self.type in root_post_types:\n            return None\n        return self.relativeBase()\n\n    def create(self, server):\n        \"\"\" Attempt to create the receiver on the given server, using a POST\n        command.\n        \n        :param FHIRServer server: The server to create the receiver on\n        :returns: None or the response JSON on success\n        \"\"\"\n        srv = server or self.origin_server\n        if srv is None:\n            raise Exception('Cannot create a resource without a server')\n        if self.id:\n            raise Exception('This resource already has an id, cannot create')\n        ret = srv.post_json(self.createPath(), self.as_json())\n        if len(ret.text) > 0:\n            return ret.json()\n        return None\n\n    def update(self, server=None):\n        \"\"\" Update the receiver's representation on the given server, issuing\n        a PUT command.\n        \n        :param FHIRServer server: The server to update the receiver on;\n            optional, will use the instance's `server` if needed.\n        :returns: None or the response JSON on success\n        \"\"\"\n        srv = server or self.origin_server\n        if srv is None:\n            raise Exception('Cannot update a resource that does not have a server')\n        if not self.id:\n            raise Exception('Cannot update a resource that does not have an id')\n        ret = srv.put_json(self.relativePath(), self.as_json())\n        if len(ret.text) > 0:\n            return ret.json()\n        return None\n\n    def delete(self, server=None):\n        \"\"\" Delete the receiver from the given server with a DELETE command.\n        \n        :param FHIRServer server: The server to update the receiver on;\n            optional, will use the instance's `server` if needed.\n        :returns: None or the response JSON on success\n        \"\"\"\n        srv = server or self.origin_server\n        if srv is None:\n            raise Exception('Cannot delete a resource that does not have a server')\n        if not self.id:\n            raise Exception('Cannot delete a resource that does not have an id')\n        ret = srv.delete_json(self.relativePath())\n        if len(ret.text) > 0:\n            return ret.json()\n        return None\n\n    def search(self, struct=None):\n        \"\"\" Search can be started via a dictionary containing a search\n        construct.\n        \n        Calling this method with a search struct will return a `FHIRSearch`\n        object representing the search struct, with \"$type\" and \"id\" added.\n        \n        :param dict struct: An optional search structure\n        :returns: A FHIRSearch instance\n        \"\"\"\n        if struct is None:\n            struct = {'$type': self.__class__.resource_type}\n        if self._local_id is not None or self.id is not None:\n            struct['id'] = self._local_id or self.id\n        return self.__class__.where(struct)\n\n    @classmethod\n    def where(cls, struct):\n        \"\"\" Search can be started via a dictionary containing a search\n        construct.\n        \n        Calling this method with a search struct will return a `FHIRSearch`\n        object representing the search struct\n        \n        :param dict struct: A search structure\n        :returns: A FHIRSearch instance\n        \"\"\"\n        return fhirsearch.FHIRSearch(cls, struct)\nfrom . import fhirsearch\nfrom . import fhirelementfactory"
+  }
+}

@@ -1,0 +1,401 @@
+{
+  "dir_path": "/app/mypy_boto3_s3",
+  "package_name": "mypy_boto3_s3",
+  "sample_name": "mypy_boto3_s3-test_import_record_group",
+  "src_dir": "examples/",
+  "test_dir": "tests/",
+  "test_file": "tests/import_helpers/test_import_record_group.py",
+  "test_code": "from mypy_boto3_builder.import_helpers.import_record import ImportRecord\nfrom mypy_boto3_builder.import_helpers.import_record_group import ImportRecordGroup\nfrom mypy_boto3_builder.import_helpers.import_string import ImportString\n\n\nclass TestImportRecordGroup:\n    def test_init(self) -> None:\n        group = ImportRecordGroup([ImportRecord(ImportString(\"source\"), \"name\", \"alias\")])\n        assert list(group) == [\"from source import name as alias\"]\n\n    def test_add(self) -> None:\n        group = ImportRecordGroup()\n        group.add(ImportRecord(ImportString(\"source\"), \"name\", \"alias\"))\n        assert list(group) == [\"from source import name as alias\"]\n\n    def test_iterate(self) -> None:\n        group = ImportRecordGroup([ImportRecord(ImportString(\"source\"), \"name\", \"alias\")])\n        assert list(group) == [\"from source import name as alias\"]\n\n    def test_fallback(self) -> None:\n        group = ImportRecordGroup()\n        group.add(\n            ImportRecord(\n                ImportString(\"source\"),\n                \"name\",\n                \"alias\",\n                fallback=ImportRecord(ImportString(\"source2\"), \"name\", \"alias\"),\n            ),\n            ImportRecord(\n                ImportString(\"source\"),\n                \"name2\",\n                fallback=ImportRecord(ImportString(\"source2\"), \"name2\"),\n            ),\n            ImportRecord(\n                ImportString(\"another\"),\n                \"name21\",\n                fallback=ImportRecord(ImportString(\"another2\"), \"name213\"),\n            ),\n        )\n        assert list(group) == [\n            (\n                \"try:\"\n                \"\\n    from another import name21\\nexcept ImportError:\"\n                \"\\n    from another2 import name213\"\n            ),\n            (\n                \"try:\"\n                \"\\n    from source import name as alias, name2\\nexcept ImportError:\"\n                \"\\n    from source2 import name as alias, name2\"\n            ),\n        ]\n\n    def test_min_version(self) -> None:\n        group = ImportRecordGroup(\n            [\n                ImportRecord(\n                    ImportString(\"typing\"),\n                    \"Literal\",\n                    min_version=(3, 12),\n                    fallback=ImportRecord(ImportString(\"typing_extensions\"), \"Literal\"),\n                ),\n                ImportRecord(\n                    ImportString(\"typing\"),\n                    \"Unpack\",\n                    min_version=(3, 12),\n                    fallback=ImportRecord(ImportString(\"typing_extensions\"), \"Unpack\"),\n                ),\n                ImportRecord(\n                    ImportString(\"boto3\", \"s3\", \"transfer\"),\n                    \"TransferConfig\",\n                ),\n            ],\n        )\n        assert list(group) == [\n            \"import sys\",\n            \"from boto3.s3.transfer import TransferConfig\",\n            (\n                \"if sys.version_info >= (3, 12):\"\n                \"\\n    from typing import Literal, Unpack\"\n                \"\\nelse:\"\n                \"\\n    from typing_extensions import Literal, Unpack\"\n            ),\n        ]\n",
+  "GT_file_code": {
+    "mypy_boto3_builder/import_helpers/import_string.py": "\"\"\"\nWrapper for Python import strings.\n\nCopyright 2024 Vlad Emelianov\n\"\"\"\n\nimport functools\nfrom typing import Final, Self\n\nfrom mypy_boto3_builder.enums.service_module_name import ServiceModuleName\nfrom mypy_boto3_builder.exceptions import BuildInternalError, StructureError\nfrom mypy_boto3_builder.package_data import Boto3StubsPackageData, TypesAioBotocorePackageData\n\n\n@functools.total_ordering\nclass ImportString:\n    \"\"\"\n    Wrapper for Python import strings.\n\n    Arguments:\n        master -- Master module name\n        parts -- Other import parts\n\n    Examples::\n\n        import_string = ImportString(\"my\", \"name\")\n\n        str(import_string)\n        'my.name'\n\n        import_string.render()\n        'my.name'\n    \"\"\"\n\n    BUILTINS: Final[str] = \"builtins\"\n    _THIRD_PARTY: Final[set[str]] = {\n        \"boto3\",\n        \"botocore\",\n        \"aioboto3\",\n        \"aiobotocore\",\n        \"s3transfer\",\n        \"awscrt\",\n    }\n\n    def __init__(self, parent: str, *parts: str) -> None:\n        all_parts = (parent, *parts)\n        if not parent and not parts:\n            raise StructureError(\"ImportString cannot be empty\")\n        has_not_empty_part = False\n        for part in all_parts:\n            if \".\" in part:\n                raise StructureError(f\"ImportString parts are not splitted correctly: {all_parts}\")\n            if part:\n                has_not_empty_part = True\n            elif has_not_empty_part:\n                raise StructureError(\n                    f\"ImportString cannot have empty parts after parents: {all_parts}\",\n                )\n\n        self.parts: Final[tuple[str, ...]] = tuple(all_parts)\n\n    @classmethod\n    def from_str(cls, import_string: str) -> Self:\n        \"\"\"\n        Create from string.\n        \"\"\"\n        return cls(*import_string.split(\".\"))\n\n    def __str__(self) -> str:\n        \"\"\"\n        Render as a part of a valid Python import statement.\n        \"\"\"\n        return self.render()\n\n    def __hash__(self) -> int:\n        \"\"\"\n        Calculate hash value based on all parts.\n        \"\"\"\n        return hash(self.parts)\n\n    def __eq__(self, other: object) -> bool:\n        \"\"\"\n        Whether import strings produce the same render.\n        \"\"\"\n        if not isinstance(other, ImportString):\n            raise BuildInternalError(f\"{other} is not ImportString\")\n\n        return self.parts == other.parts\n\n    def __gt__(self, other: Self) -> bool:\n        \"\"\"\n        Compare import strings for sorting.\n\n        Emulates `isort` logic.\n        \"\"\"\n        if self == other:\n            return False\n\n        if self.is_local() != other.is_local():\n            return self.is_local() > other.is_local()\n\n        if self.is_third_party() != other.is_third_party():\n            return self.is_third_party() > other.is_third_party()\n\n        return self.parts > other.parts\n\n    def __add__(self: Self, other: Self | str) -> Self:\n        \"\"\"\n        Create a new import string by adding another import string parts to the end.\n        \"\"\"\n        other_import_string = other if isinstance(other, ImportString) else ImportString(other)\n        return self.__class__(*self.parts, *other_import_string.parts)\n\n    def render(self) -> str:\n        \"\"\"\n        Render to string.\n\n        Returns:\n            Ready to use import string.\n        \"\"\"\n        return \".\".join(self.parts)\n\n    @property\n    def parent(self) -> str:\n        \"\"\"\n        Get first import string part or `builtins`.\n        \"\"\"\n        return self.parts[0]\n\n    def is_local(self) -> bool:\n        \"\"\"\n        Whether import is from local module.\n        \"\"\"\n        if self.parent.startswith(Boto3StubsPackageData.SERVICE_PREFIX):\n            return True\n\n        if self.parent.startswith(TypesAioBotocorePackageData.SERVICE_PREFIX):\n            return True\n\n        return self.is_type_defs()\n\n    def is_builtins(self) -> bool:\n        \"\"\"\n        Whether import is from Python `builtins` module.\n        \"\"\"\n        return self.parent == self.BUILTINS\n\n    def is_type_defs(self) -> bool:\n        \"\"\"\n        Whether import is from `type_defs` module.\n        \"\"\"\n        if not self.parts:\n            return False\n        return self.parts[-1] == ServiceModuleName.type_defs.value\n\n    def is_third_party(self) -> bool:\n        \"\"\"\n        Whether import is from 3rd party module.\n        \"\"\"\n        return self.parent in self._THIRD_PARTY\n",
+    "mypy_boto3_builder/import_helpers/import_record.py": "\"\"\"\nHelper for Python import strings.\n\nCopyright 2024 Vlad Emelianov\n\"\"\"\n\nimport functools\nfrom typing import Self\n\nfrom mypy_boto3_builder.exceptions import StructureError\nfrom mypy_boto3_builder.import_helpers.import_string import ImportString\n\n\n@functools.total_ordering\nclass ImportRecord:\n    \"\"\"\n    Helper for Python import strings.\n\n    Arguments:\n        source -- Source of import.\n        name -- Import name.\n        alias -- Import local name.\n        min_version -- Minimum Python version, used for fallback.\n        fallback -- Fallback ImportRecord.\n    \"\"\"\n\n    def __init__(\n        self,\n        source: ImportString,\n        name: str = \"\",\n        alias: str = \"\",\n        min_version: tuple[int, ...] | None = None,\n        fallback: Self | None = None,\n    ) -> None:\n        self.source = source\n        self.name = name\n        self.alias = alias\n        self.min_version = min_version\n        self.fallback = fallback\n\n    def render_name(self) -> str:\n        \"\"\"\n        Get rendered import name.\n        \"\"\"\n        if not self.name:\n            raise StructureError(f\"ImportRecord {self} has no name\")\n\n        if self.alias:\n            return f\"{self.name} as {self.alias}\"\n\n        return self.name\n\n    def render(self) -> str:\n        \"\"\"\n        Get rendered string.\n        \"\"\"\n        if self.name:\n            return f\"from {self.source} import {self.render_name()}\"\n        if self.alias:\n            return f\"import {self.source} as {self.alias}\"\n\n        return f\"import {self.source}\"\n\n    def __str__(self) -> str:\n        \"\"\"\n        Render as a valid Python import statement.\n        \"\"\"\n        return self.render()\n\n    def __hash__(self) -> int:\n        \"\"\"\n        Calculate hash value based on source, name and alias.\n        \"\"\"\n        return hash(\n            (\n                self.source,\n                self.name,\n                self.alias,\n                self.min_version,\n                self.fallback,\n            ),\n        )\n\n    def __eq__(self, other: object) -> bool:\n        \"\"\"\n        Whether two import records produce the same render.\n        \"\"\"\n        if not isinstance(other, ImportRecord):\n            return False\n\n        return str(self) == str(other)\n\n    def __gt__(self: Self, other: Self) -> bool:\n        \"\"\"\n        Compare two import records for sorting.\n\n        Emulates `isort` logic.\n        \"\"\"\n        if self == other:\n            return False\n\n        if self.min_version != other.min_version:\n            return (self.min_version or ()) > (other.min_version or ())\n\n        if bool(self.fallback) != bool(other.fallback):\n            return bool(self.fallback) > bool(other.fallback)\n\n        if self.source != other.source:\n            return self.source > other.source\n\n        return self.name > other.name\n\n    def get_local_name(self) -> str:\n        \"\"\"\n        Get local import name.\n        \"\"\"\n        return self.alias or self.name or self.source.render()\n\n    def needs_sys_fallback(self) -> bool:\n        \"\"\"\n        Whether ImportString requires `sys` module.\n        \"\"\"\n        return bool(self.fallback and self.min_version)\n",
+    "mypy_boto3_builder/import_helpers/import_record_group.py": "\"\"\"\nGroup tool for ImportRecord sets.\n\nCopyright 2024 Vlad Emelianov\n\"\"\"\n\nfrom collections.abc import Iterable, Iterator\nfrom typing import Final\n\nfrom mypy_boto3_builder.import_helpers.import_record import ImportRecord\nfrom mypy_boto3_builder.import_helpers.import_string import ImportString\n\n\nclass ImportRecordGroup:\n    \"\"\"\n    Group tool for ImportRecord sets.\n    \"\"\"\n\n    _SYS_IMPORT_RECORD: Final[ImportRecord] = ImportRecord(ImportString(\"sys\"))\n\n    def __init__(self, records: Iterable[ImportRecord] = ()) -> None:\n        self.records: set[ImportRecord] = set()\n        self.add(*records)\n\n    def add(self, *records: ImportRecord) -> None:\n        \"\"\"\n        Add record to group.\n        \"\"\"\n        for record in records:\n            if record.source.is_builtins():\n                continue\n            if record.needs_sys_fallback():\n                self.add(self._SYS_IMPORT_RECORD)\n\n            self.records.add(record)\n\n    @staticmethod\n    def _render_records(records: set[ImportRecord]) -> Iterator[str]:\n        sources = {x.source for x in records}\n        for source in sorted(sources):\n            source_records = {i for i in records if i.source == source}\n            names = (x.render_name() for x in sorted(source_records))\n            yield f\"from {source.render()} import {', '.join(names)}\"\n\n    def _iterate_render_nameless(self) -> Iterator[str]:\n        \"\"\"\n        Iterate over nameless import records.\n        \"\"\"\n        nameless_records = {i for i in self.records if not i.name}\n        for record in sorted(nameless_records):\n            yield record.render()\n\n    def _iterate_render_regular(self) -> Iterator[str]:\n        \"\"\"\n        Iterate over rendered regular records with name and no fallback.\n        \"\"\"\n        regular_records = {\n            i for i in self.records if i.name and not i.min_version and not i.fallback\n        }\n        yield from self._render_records(regular_records)\n\n    def _iterate_render_source_fallback(self) -> Iterator[str]:\n        \"\"\"\n        Iterate over rendered records with fallback but no min version.\n        \"\"\"\n        records = {i for i in self.records if i.fallback and not i.min_version}\n        sources = {x.source for x in records}\n        for source in sorted(sources):\n            source_records = {i for i in records if i.source == source}\n            fallback_records = {i.fallback for i in source_records if i.fallback}\n            yield \"\\n\".join(\n                (\n                    \"try:\",\n                    *(f\"    {x}\" for x in self._render_records(source_records)),\n                    \"except ImportError:\",\n                    *(f\"    {x}\" for x in self._render_records(fallback_records)),\n                ),\n            )\n\n    def _iterate_render_source_min_version(self) -> Iterator[str]:\n        \"\"\"\n        Iterate over rendered records with min version.\n        \"\"\"\n        records = {i for i in self.records if i.min_version}\n        min_versions = {i.min_version for i in records if i.min_version}\n        for min_version in sorted(min_versions):\n            min_version_records = {i for i in records if i.min_version == min_version}\n            min_version_str = \", \".join(str(i) for i in min_version)\n            fallback_records = {i.fallback for i in min_version_records if i.fallback}\n            yield \"\\n\".join(\n                (\n                    f\"if sys.version_info >= ({min_version_str}):\",\n                    *(f\"    {x}\" for x in self._render_records(min_version_records)),\n                    \"else:\",\n                    *(f\"    {x}\" for x in self._render_records(fallback_records)),\n                ),\n            )\n\n    def __iter__(self) -> Iterator[str]:\n        \"\"\"\n        Iterate over all records grouped by source.\n        \"\"\"\n        yield from self._iterate_render_nameless()\n        yield from self._iterate_render_regular()\n        yield from self._iterate_render_source_fallback()\n        yield from self._iterate_render_source_min_version()\n"
+  },
+  "GT_src_dict": {
+    "mypy_boto3_builder/import_helpers/import_string.py": {
+      "ImportString.__init__": {
+        "code": "    def __init__(self, parent: str, *parts: str) -> None:\n        \"\"\"Initializes an ImportString instance, which represents a structured Python import string.\n\nParameters:\n- parent (str): The main module name or the first part of the import string.\n- *parts (str): Additional parts of the import string which will be appended to the parent.\n\nRaises:\n- StructureError: If both parent and parts are empty, if any part contains a period (.), or if there are empty parts after non-empty parts.\n\nAttributes:\n- parts (tuple[str, ...]): A tuple containing the parent and any additional parts, ensuring they follow the correct structure for a valid import string.\n\nThis constructor ensures that the import string is well-formed and consistent according to the rules defined in the class, utilizing the constants defined in the class such as BUILTINS to identify built-in modules.\"\"\"\n        all_parts = (parent, *parts)\n        if not parent and (not parts):\n            raise StructureError('ImportString cannot be empty')\n        has_not_empty_part = False\n        for part in all_parts:\n            if '.' in part:\n                raise StructureError(f'ImportString parts are not splitted correctly: {all_parts}')\n            if part:\n                has_not_empty_part = True\n            elif has_not_empty_part:\n                raise StructureError(f'ImportString cannot have empty parts after parents: {all_parts}')\n        self.parts: Final[tuple[str, ...]] = tuple(all_parts)",
+        "docstring": "Initializes an ImportString instance, which represents a structured Python import string.\n\nParameters:\n- parent (str): The main module name or the first part of the import string.\n- *parts (str): Additional parts of the import string which will be appended to the parent.\n\nRaises:\n- StructureError: If both parent and parts are empty, if any part contains a period (.), or if there are empty parts after non-empty parts.\n\nAttributes:\n- parts (tuple[str, ...]): A tuple containing the parent and any additional parts, ensuring they follow the correct structure for a valid import string.\n\nThis constructor ensures that the import string is well-formed and consistent according to the rules defined in the class, utilizing the constants defined in the class such as BUILTINS to identify built-in modules.",
+        "signature": "def __init__(self, parent: str, *parts: str) -> None:",
+        "type": "Method",
+        "class_signature": "class ImportString:"
+      }
+    },
+    "mypy_boto3_builder/import_helpers/import_record.py": {
+      "ImportRecord.__init__": {
+        "code": "    def __init__(self, source: ImportString, name: str='', alias: str='', min_version: tuple[int, ...] | None=None, fallback: Self | None=None) -> None:\n        \"\"\"Initialize an ImportRecord instance for managing Python import strings.\n\nThis constructor sets up the ImportRecord with its source, name, alias, minimum version, and an optional fallback record. The `source` must be an instance of `ImportString`, which represents the source of the import. The `name` and `alias` parameters define the import name and its local alias, respectively. The `min_version` parameter specifies the minimum Python version for compatibility, defaulting to None. The `fallback` parameter allows a fallback ImportRecord to be defined, which can be useful for handling version-specific imports.\n\nParameters:\n- source (ImportString): The source module for the import.\n- name (str, optional): The name of the item being imported. Defaults to an empty string.\n- alias (str, optional): The local alias for the import. Defaults to an empty string.\n- min_version (tuple[int, ...] | None, optional): Minimum supported Python version for this import. Defaults to None.\n- fallback (Self | None, optional): An optional fallback ImportRecord for compatibility. Defaults to None.\n\nAttributes initialized:\n- self.source: The source of the import as an ImportString.\n- self.name: The import name as a string.\n- self.alias: The local alias for the import as a string.\n- self.min_version: The minimum version for importing as a tuple of integers or None.\n- self.fallback: A fallback ImportRecord instance or None.\"\"\"\n        self.source = source\n        self.name = name\n        self.alias = alias\n        self.min_version = min_version\n        self.fallback = fallback",
+        "docstring": "Initialize an ImportRecord instance for managing Python import strings.\n\nThis constructor sets up the ImportRecord with its source, name, alias, minimum version, and an optional fallback record. The `source` must be an instance of `ImportString`, which represents the source of the import. The `name` and `alias` parameters define the import name and its local alias, respectively. The `min_version` parameter specifies the minimum Python version for compatibility, defaulting to None. The `fallback` parameter allows a fallback ImportRecord to be defined, which can be useful for handling version-specific imports.\n\nParameters:\n- source (ImportString): The source module for the import.\n- name (str, optional): The name of the item being imported. Defaults to an empty string.\n- alias (str, optional): The local alias for the import. Defaults to an empty string.\n- min_version (tuple[int, ...] | None, optional): Minimum supported Python version for this import. Defaults to None.\n- fallback (Self | None, optional): An optional fallback ImportRecord for compatibility. Defaults to None.\n\nAttributes initialized:\n- self.source: The source of the import as an ImportString.\n- self.name: The import name as a string.\n- self.alias: The local alias for the import as a string.\n- self.min_version: The minimum version for importing as a tuple of integers or None.\n- self.fallback: A fallback ImportRecord instance or None.",
+        "signature": "def __init__(self, source: ImportString, name: str='', alias: str='', min_version: tuple[int, ...] | None=None, fallback: Self | None=None) -> None:",
+        "type": "Method",
+        "class_signature": "class ImportRecord:"
+      }
+    },
+    "mypy_boto3_builder/import_helpers/import_record_group.py": {
+      "ImportRecordGroup.__init__": {
+        "code": "    def __init__(self, records: Iterable[ImportRecord]=()) -> None:\n        \"\"\"Initialize an ImportRecordGroup instance.\n\nThis constructor accepts an optional iterable of ImportRecord objects to populate the group upon instantiation. It initializes the `records` attribute as a set to hold unique ImportRecord instances and calls the `add` method to incorporate any provided records. Notably, the constant `_SYS_IMPORT_RECORD` represents a predefined ImportRecord linked to the built-in \"sys\" module, which may be added during the record addition process if required.\n\nParameters:\n- records (Iterable[ImportRecord], optional): An iterable of ImportRecord objects to add to the group. Defaults to an empty iterable.\n\nReturns:\n- None\n\nSide Effects:\n- Modifies the `records` attribute by adding unique ImportRecord objects.\"\"\"\n        self.records: set[ImportRecord] = set()\n        self.add(*records)",
+        "docstring": "Initialize an ImportRecordGroup instance.\n\nThis constructor accepts an optional iterable of ImportRecord objects to populate the group upon instantiation. It initializes the `records` attribute as a set to hold unique ImportRecord instances and calls the `add` method to incorporate any provided records. Notably, the constant `_SYS_IMPORT_RECORD` represents a predefined ImportRecord linked to the built-in \"sys\" module, which may be added during the record addition process if required.\n\nParameters:\n- records (Iterable[ImportRecord], optional): An iterable of ImportRecord objects to add to the group. Defaults to an empty iterable.\n\nReturns:\n- None\n\nSide Effects:\n- Modifies the `records` attribute by adding unique ImportRecord objects.",
+        "signature": "def __init__(self, records: Iterable[ImportRecord]=()) -> None:",
+        "type": "Method",
+        "class_signature": "class ImportRecordGroup:"
+      },
+      "ImportRecordGroup.add": {
+        "code": "    def add(self, *records: ImportRecord) -> None:\n        \"\"\"Add one or more ImportRecord instances to the ImportRecordGroup, ensuring that only non-builtin records are added. If an ImportRecord indicates a fallback to the system import record (defined as the constant _SYS_IMPORT_RECORD), this record is also added. The method modifies the internal records set to include the provided records.\n\nParameters:\n- *records: Variable number of ImportRecord instances to be added to the group.\n\nReturns:\n- None\n\nSide Effects:\n- Updates the `records` attribute of the ImportRecordGroup instance.\n\nConstants:\n- _SYS_IMPORT_RECORD: A Final constant that represents a specific ImportRecord instance initialized with the ImportString \"sys\". It is used when a record requires a fallback to the system import.\"\"\"\n        '\\n        Add record to group.\\n        '\n        for record in records:\n            if record.source.is_builtins():\n                continue\n            if record.needs_sys_fallback():\n                self.add(self._SYS_IMPORT_RECORD)\n            self.records.add(record)",
+        "docstring": "Add one or more ImportRecord instances to the ImportRecordGroup, ensuring that only non-builtin records are added. If an ImportRecord indicates a fallback to the system import record (defined as the constant _SYS_IMPORT_RECORD), this record is also added. The method modifies the internal records set to include the provided records.\n\nParameters:\n- *records: Variable number of ImportRecord instances to be added to the group.\n\nReturns:\n- None\n\nSide Effects:\n- Updates the `records` attribute of the ImportRecordGroup instance.\n\nConstants:\n- _SYS_IMPORT_RECORD: A Final constant that represents a specific ImportRecord instance initialized with the ImportString \"sys\". It is used when a record requires a fallback to the system import.",
+        "signature": "def add(self, *records: ImportRecord) -> None:",
+        "type": "Method",
+        "class_signature": "class ImportRecordGroup:"
+      },
+      "ImportRecordGroup.__iter__": {
+        "code": "    def __iter__(self) -> Iterator[str]:\n        \"\"\"Iterate over all import records in the ImportRecordGroup, grouped by their source. This method generates a sequence of strings representing the import statements for records without names, for regular records that have names, for records that have fallback options, and for records that require checking against minimum version criteria. The iteration leverages helper methods to structure the output based on specific conditions of the import records.\n\nThere are no parameters for this method, and it returns an iterator yielding strings representing import statements. It interacts with private methods `_iterate_render_nameless`, `_iterate_render_regular`, `_iterate_render_source_fallback`, and `_iterate_render_source_min_version`, each focused on a different category of import records. These methods utilize the internal `records` set, which contains instances of `ImportRecord`, populated during the initialization of the `ImportRecordGroup` instance.\"\"\"\n        '\\n        Iterate over all records grouped by source.\\n        '\n        yield from self._iterate_render_nameless()\n        yield from self._iterate_render_regular()\n        yield from self._iterate_render_source_fallback()\n        yield from self._iterate_render_source_min_version()",
+        "docstring": "Iterate over all import records in the ImportRecordGroup, grouped by their source. This method generates a sequence of strings representing the import statements for records without names, for regular records that have names, for records that have fallback options, and for records that require checking against minimum version criteria. The iteration leverages helper methods to structure the output based on specific conditions of the import records.\n\nThere are no parameters for this method, and it returns an iterator yielding strings representing import statements. It interacts with private methods `_iterate_render_nameless`, `_iterate_render_regular`, `_iterate_render_source_fallback`, and `_iterate_render_source_min_version`, each focused on a different category of import records. These methods utilize the internal `records` set, which contains instances of `ImportRecord`, populated during the initialization of the `ImportRecordGroup` instance.",
+        "signature": "def __iter__(self) -> Iterator[str]:",
+        "type": "Method",
+        "class_signature": "class ImportRecordGroup:"
+      }
+    }
+  },
+  "dependency_dict": {
+    "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:__init__": {},
+    "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:__iter__": {
+      "mypy_boto3_builder/import_helpers/import_record_group.py": {
+        "ImportRecordGroup._iterate_render_nameless": {
+          "code": "    def _iterate_render_nameless(self) -> Iterator[str]:\n        \"\"\"\n        Iterate over nameless import records.\n        \"\"\"\n        nameless_records = {i for i in self.records if not i.name}\n        for record in sorted(nameless_records):\n            yield record.render()",
+          "docstring": "Iterate over nameless import records.",
+          "signature": "def _iterate_render_nameless(self) -> Iterator[str]:",
+          "type": "Method",
+          "class_signature": "class ImportRecordGroup:"
+        },
+        "ImportRecordGroup._iterate_render_regular": {
+          "code": "    def _iterate_render_regular(self) -> Iterator[str]:\n        \"\"\"\n        Iterate over rendered regular records with name and no fallback.\n        \"\"\"\n        regular_records = {i for i in self.records if i.name and (not i.min_version) and (not i.fallback)}\n        yield from self._render_records(regular_records)",
+          "docstring": "Iterate over rendered regular records with name and no fallback.",
+          "signature": "def _iterate_render_regular(self) -> Iterator[str]:",
+          "type": "Method",
+          "class_signature": "class ImportRecordGroup:"
+        },
+        "ImportRecordGroup._iterate_render_source_fallback": {
+          "code": "    def _iterate_render_source_fallback(self) -> Iterator[str]:\n        \"\"\"\n        Iterate over rendered records with fallback but no min version.\n        \"\"\"\n        records = {i for i in self.records if i.fallback and (not i.min_version)}\n        sources = {x.source for x in records}\n        for source in sorted(sources):\n            source_records = {i for i in records if i.source == source}\n            fallback_records = {i.fallback for i in source_records if i.fallback}\n            yield '\\n'.join(('try:', *(f'    {x}' for x in self._render_records(source_records)), 'except ImportError:', *(f'    {x}' for x in self._render_records(fallback_records))))",
+          "docstring": "Iterate over rendered records with fallback but no min version.",
+          "signature": "def _iterate_render_source_fallback(self) -> Iterator[str]:",
+          "type": "Method",
+          "class_signature": "class ImportRecordGroup:"
+        },
+        "ImportRecordGroup._iterate_render_source_min_version": {
+          "code": "    def _iterate_render_source_min_version(self) -> Iterator[str]:\n        \"\"\"\n        Iterate over rendered records with min version.\n        \"\"\"\n        records = {i for i in self.records if i.min_version}\n        min_versions = {i.min_version for i in records if i.min_version}\n        for min_version in sorted(min_versions):\n            min_version_records = {i for i in records if i.min_version == min_version}\n            min_version_str = ', '.join((str(i) for i in min_version))\n            fallback_records = {i.fallback for i in min_version_records if i.fallback}\n            yield '\\n'.join((f'if sys.version_info >= ({min_version_str}):', *(f'    {x}' for x in self._render_records(min_version_records)), 'else:', *(f'    {x}' for x in self._render_records(fallback_records))))",
+          "docstring": "Iterate over rendered records with min version.",
+          "signature": "def _iterate_render_source_min_version(self) -> Iterator[str]:",
+          "type": "Method",
+          "class_signature": "class ImportRecordGroup:"
+        }
+      }
+    },
+    "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:add": {
+      "mypy_boto3_builder/import_helpers/import_record.py": {
+        "ImportRecord.__hash__": {
+          "code": "    def __hash__(self) -> int:\n        \"\"\"\n        Calculate hash value based on source, name and alias.\n        \"\"\"\n        return hash((self.source, self.name, self.alias, self.min_version, self.fallback))",
+          "docstring": "Calculate hash value based on source, name and alias.",
+          "signature": "def __hash__(self) -> int:",
+          "type": "Method",
+          "class_signature": "class ImportRecord:"
+        },
+        "ImportRecord.needs_sys_fallback": {
+          "code": "    def needs_sys_fallback(self) -> bool:\n        \"\"\"\n        Whether ImportString requires `sys` module.\n        \"\"\"\n        return bool(self.fallback and self.min_version)",
+          "docstring": "Whether ImportString requires `sys` module.",
+          "signature": "def needs_sys_fallback(self) -> bool:",
+          "type": "Method",
+          "class_signature": "class ImportRecord:"
+        }
+      },
+      "mypy_boto3_builder/import_helpers/import_string.py": {
+        "ImportString.is_builtins": {
+          "code": "    def is_builtins(self) -> bool:\n        \"\"\"\n        Whether import is from Python `builtins` module.\n        \"\"\"\n        return self.parent == self.BUILTINS",
+          "docstring": "Whether import is from Python `builtins` module.",
+          "signature": "def is_builtins(self) -> bool:",
+          "type": "Method",
+          "class_signature": "class ImportString:"
+        }
+      }
+    }
+  },
+  "call_tree": {
+    "tests/import_helpers/test_import_record_group.py:TestImportRecordGroup:test_init": {
+      "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__init__": {},
+      "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__init__": {},
+      "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:__init__": {
+        "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:add": {
+          "mypy_boto3_builder/import_helpers/import_string.py:ImportString:is_builtins": {
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:parent": {}
+          },
+          "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:needs_sys_fallback": {},
+          "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {}
+          }
+        }
+      },
+      "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:__iter__": {
+        "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:_iterate_render_nameless": {},
+        "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:_iterate_render_regular": {
+          "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {}
+          },
+          "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:_render_records": {
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {},
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__eq__": {
+              "mypy_boto3_builder/import_helpers/import_string.py:ImportString": {}
+            },
+            "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+              "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {}
+            },
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:render": {},
+            "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:render_name": {}
+          }
+        },
+        "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:_iterate_render_source_fallback": {},
+        "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:_iterate_render_source_min_version": {}
+      }
+    },
+    "tests/import_helpers/test_import_record_group.py:TestImportRecordGroup:test_add": {
+      "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:__init__": {
+        "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:add": {}
+      },
+      "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__init__": {},
+      "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__init__": {},
+      "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:add": {
+        "mypy_boto3_builder/import_helpers/import_string.py:ImportString:is_builtins": {
+          "mypy_boto3_builder/import_helpers/import_string.py:ImportString:parent": {}
+        },
+        "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:needs_sys_fallback": {},
+        "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+          "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {}
+        }
+      },
+      "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:__iter__": {
+        "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:_iterate_render_nameless": {},
+        "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:_iterate_render_regular": {
+          "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {}
+          },
+          "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:_render_records": {
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {},
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__eq__": {},
+            "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+              "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {}
+            },
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:render": {},
+            "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:render_name": {}
+          }
+        },
+        "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:_iterate_render_source_fallback": {},
+        "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:_iterate_render_source_min_version": {}
+      }
+    },
+    "tests/import_helpers/test_import_record_group.py:TestImportRecordGroup:test_iterate": {
+      "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__init__": {},
+      "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__init__": {},
+      "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:__init__": {
+        "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:add": {
+          "mypy_boto3_builder/import_helpers/import_string.py:ImportString:is_builtins": {
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:parent": {}
+          },
+          "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:needs_sys_fallback": {},
+          "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {}
+          }
+        }
+      },
+      "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:__iter__": {
+        "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:_iterate_render_nameless": {},
+        "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:_iterate_render_regular": {
+          "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {}
+          },
+          "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:_render_records": {
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {},
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__eq__": {},
+            "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+              "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {}
+            },
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:render": {},
+            "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:render_name": {}
+          }
+        },
+        "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:_iterate_render_source_fallback": {},
+        "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:_iterate_render_source_min_version": {}
+      }
+    },
+    "tests/import_helpers/test_import_record_group.py:TestImportRecordGroup:test_fallback": {
+      "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:__init__": {
+        "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:add": {}
+      },
+      "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__init__": {},
+      "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__init__": {},
+      "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:add": {
+        "mypy_boto3_builder/import_helpers/import_string.py:ImportString:is_builtins": {
+          "mypy_boto3_builder/import_helpers/import_string.py:ImportString:parent": {}
+        },
+        "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:needs_sys_fallback": {},
+        "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+          "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {},
+          "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+            "[ignored_or_cut_off]": "..."
+          }
+        }
+      },
+      "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:__iter__": {
+        "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:_iterate_render_nameless": {},
+        "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:_iterate_render_regular": {
+          "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:_render_records": {}
+        },
+        "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:_iterate_render_source_fallback": {
+          "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {},
+            "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+              "[ignored_or_cut_off]": "..."
+            }
+          },
+          "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {},
+          "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__eq__": {},
+          "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__gt__": {
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__eq__": {},
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:is_local": {
+              "mypy_boto3_builder/import_helpers/import_string.py:ImportString:parent": {},
+              "mypy_boto3_builder/import_helpers/import_string.py:ImportString:is_type_defs": {}
+            },
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:is_third_party": {
+              "mypy_boto3_builder/import_helpers/import_string.py:ImportString:parent": {}
+            }
+          },
+          "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:_render_records": {
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {},
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__eq__": {},
+            "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+              "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {},
+              "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+                "[ignored_or_cut_off]": "..."
+              }
+            },
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:render": {},
+            "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:render_name": {},
+            "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__gt__": {
+              "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__eq__": {
+                "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord": {},
+                "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__str__": {
+                  "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:render": {
+                    "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__str__": {},
+                    "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:render_name": {}
+                  }
+                }
+              },
+              "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__eq__": {}
+            },
+            "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__eq__": {
+              "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__str__": {
+                "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:render": {
+                  "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__str__": {
+                    "mypy_boto3_builder/import_helpers/import_string.py:ImportString:render": {}
+                  },
+                  "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:render_name": {}
+                }
+              }
+            }
+          }
+        },
+        "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:_iterate_render_source_min_version": {}
+      }
+    },
+    "tests/import_helpers/test_import_record_group.py:TestImportRecordGroup:test_min_version": {
+      "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__init__": {},
+      "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__init__": {},
+      "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:__init__": {
+        "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:add": {
+          "mypy_boto3_builder/import_helpers/import_string.py:ImportString:is_builtins": {
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:parent": {}
+          },
+          "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:needs_sys_fallback": {},
+          "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:add": {
+            "[ignored_or_cut_off]": "..."
+          },
+          "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {},
+            "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+              "[ignored_or_cut_off]": "..."
+            }
+          }
+        }
+      },
+      "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:__iter__": {
+        "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:_iterate_render_nameless": {
+          "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {}
+          },
+          "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:render": {
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__str__": {
+              "mypy_boto3_builder/import_helpers/import_string.py:ImportString:render": {}
+            }
+          }
+        },
+        "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:_iterate_render_regular": {
+          "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {}
+          },
+          "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:_render_records": {
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {},
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__eq__": {},
+            "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+              "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {}
+            },
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:render": {},
+            "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:render_name": {}
+          }
+        },
+        "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:_iterate_render_source_fallback": {},
+        "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:_iterate_render_source_min_version": {
+          "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {},
+            "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+              "[ignored_or_cut_off]": "..."
+            }
+          },
+          "mypy_boto3_builder/import_helpers/import_record_group.py:ImportRecordGroup:_render_records": {
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {},
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__eq__": {},
+            "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+              "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__hash__": {},
+              "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__hash__": {
+                "[ignored_or_cut_off]": "..."
+              }
+            },
+            "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__gt__": {
+              "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__eq__": {
+                "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__str__": {
+                  "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:render": {
+                    "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__str__": {},
+                    "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:render_name": {}
+                  }
+                }
+              },
+              "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__eq__": {}
+            },
+            "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__eq__": {
+              "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:__str__": {
+                "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:render": {
+                  "mypy_boto3_builder/import_helpers/import_string.py:ImportString:__str__": {
+                    "mypy_boto3_builder/import_helpers/import_string.py:ImportString:render": {}
+                  },
+                  "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:render_name": {}
+                }
+              }
+            },
+            "mypy_boto3_builder/import_helpers/import_string.py:ImportString:render": {},
+            "mypy_boto3_builder/import_helpers/import_record.py:ImportRecord:render_name": {}
+          }
+        }
+      }
+    }
+  },
+  "PRD": "# PROJECT NAME: mypy_boto3_s3-test_import_record_group\n\n# FOLDER STRUCTURE:\n```\n..\n\u2514\u2500\u2500 mypy_boto3_builder/\n    \u2514\u2500\u2500 import_helpers/\n        \u251c\u2500\u2500 import_record.py\n        \u2502   \u2514\u2500\u2500 ImportRecord.__init__\n        \u251c\u2500\u2500 import_record_group.py\n        \u2502   \u251c\u2500\u2500 ImportRecordGroup.__init__\n        \u2502   \u251c\u2500\u2500 ImportRecordGroup.__iter__\n        \u2502   \u2514\u2500\u2500 ImportRecordGroup.add\n        \u2514\u2500\u2500 import_string.py\n            \u2514\u2500\u2500 ImportString.__init__\n```\n\n# IMPLEMENTATION REQUIREMENTS:\n## MODULE DESCRIPTION:\nThe module provides functionality to manage and organize Python import statements programmatically, offering a robust mechanism for handling imports with support for version-specific requirements and fallback options. It allows developers to define and group import records, automatically resolving import conflicts, handling aliases, and generating structured fallback logic for cases such as missing modules or version constraints. By streamlining the creation and management of complex import statements, the module simplifies compatibility handling across Python versions and external dependencies, ultimately reducing boilerplate code and ensuring maintainable, dynamic imports in various development scenarios. This functionality is designed to enhance developer efficiency and reliability when working with dynamically constructed codebases or dependency-rich environments.\n\n## FILE 1: mypy_boto3_builder/import_helpers/import_string.py\n\n- CLASS METHOD: ImportString.__init__\n  - CLASS SIGNATURE: class ImportString:\n  - SIGNATURE: def __init__(self, parent: str, *parts: str) -> None:\n  - DOCSTRING: \n```python\n\"\"\"\nInitializes an ImportString instance, which represents a structured Python import string.\n\nParameters:\n- parent (str): The main module name or the first part of the import string.\n- *parts (str): Additional parts of the import string which will be appended to the parent.\n\nRaises:\n- StructureError: If both parent and parts are empty, if any part contains a period (.), or if there are empty parts after non-empty parts.\n\nAttributes:\n- parts (tuple[str, ...]): A tuple containing the parent and any additional parts, ensuring they follow the correct structure for a valid import string.\n\nThis constructor ensures that the import string is well-formed and consistent according to the rules defined in the class, utilizing the constants defined in the class such as BUILTINS to identify built-in modules.\n\"\"\"\n```\n\n## FILE 2: mypy_boto3_builder/import_helpers/import_record.py\n\n- CLASS METHOD: ImportRecord.__init__\n  - CLASS SIGNATURE: class ImportRecord:\n  - SIGNATURE: def __init__(self, source: ImportString, name: str='', alias: str='', min_version: tuple[int, ...] | None=None, fallback: Self | None=None) -> None:\n  - DOCSTRING: \n```python\n\"\"\"\nInitialize an ImportRecord instance for managing Python import strings.\n\nThis constructor sets up the ImportRecord with its source, name, alias, minimum version, and an optional fallback record. The `source` must be an instance of `ImportString`, which represents the source of the import. The `name` and `alias` parameters define the import name and its local alias, respectively. The `min_version` parameter specifies the minimum Python version for compatibility, defaulting to None. The `fallback` parameter allows a fallback ImportRecord to be defined, which can be useful for handling version-specific imports.\n\nParameters:\n- source (ImportString): The source module for the import.\n- name (str, optional): The name of the item being imported. Defaults to an empty string.\n- alias (str, optional): The local alias for the import. Defaults to an empty string.\n- min_version (tuple[int, ...] | None, optional): Minimum supported Python version for this import. Defaults to None.\n- fallback (Self | None, optional): An optional fallback ImportRecord for compatibility. Defaults to None.\n\nAttributes initialized:\n- self.source: The source of the import as an ImportString.\n- self.name: The import name as a string.\n- self.alias: The local alias for the import as a string.\n- self.min_version: The minimum version for importing as a tuple of integers or None.\n- self.fallback: A fallback ImportRecord instance or None.\n\"\"\"\n```\n\n## FILE 3: mypy_boto3_builder/import_helpers/import_record_group.py\n\n- CLASS METHOD: ImportRecordGroup.__iter__\n  - CLASS SIGNATURE: class ImportRecordGroup:\n  - SIGNATURE: def __iter__(self) -> Iterator[str]:\n  - DOCSTRING: \n```python\n\"\"\"\nIterate over all import records in the ImportRecordGroup, grouped by their source. This method generates a sequence of strings representing the import statements for records without names, for regular records that have names, for records that have fallback options, and for records that require checking against minimum version criteria. The iteration leverages helper methods to structure the output based on specific conditions of the import records.\n\nThere are no parameters for this method, and it returns an iterator yielding strings representing import statements. It interacts with private methods `_iterate_render_nameless`, `_iterate_render_regular`, `_iterate_render_source_fallback`, and `_iterate_render_source_min_version`, each focused on a different category of import records. These methods utilize the internal `records` set, which contains instances of `ImportRecord`, populated during the initialization of the `ImportRecordGroup` instance.\n\"\"\"\n```\n\n- CLASS METHOD: ImportRecordGroup.__init__\n  - CLASS SIGNATURE: class ImportRecordGroup:\n  - SIGNATURE: def __init__(self, records: Iterable[ImportRecord]=()) -> None:\n  - DOCSTRING: \n```python\n\"\"\"\nInitialize an ImportRecordGroup instance.\n\nThis constructor accepts an optional iterable of ImportRecord objects to populate the group upon instantiation. It initializes the `records` attribute as a set to hold unique ImportRecord instances and calls the `add` method to incorporate any provided records. Notably, the constant `_SYS_IMPORT_RECORD` represents a predefined ImportRecord linked to the built-in \"sys\" module, which may be added during the record addition process if required.\n\nParameters:\n- records (Iterable[ImportRecord], optional): An iterable of ImportRecord objects to add to the group. Defaults to an empty iterable.\n\nReturns:\n- None\n\nSide Effects:\n- Modifies the `records` attribute by adding unique ImportRecord objects.\n\"\"\"\n```\n\n- CLASS METHOD: ImportRecordGroup.add\n  - CLASS SIGNATURE: class ImportRecordGroup:\n  - SIGNATURE: def add(self, *records: ImportRecord) -> None:\n  - DOCSTRING: \n```python\n\"\"\"\nAdd one or more ImportRecord instances to the ImportRecordGroup, ensuring that only non-builtin records are added. If an ImportRecord indicates a fallback to the system import record (defined as the constant _SYS_IMPORT_RECORD), this record is also added. The method modifies the internal records set to include the provided records.\n\nParameters:\n- *records: Variable number of ImportRecord instances to be added to the group.\n\nReturns:\n- None\n\nSide Effects:\n- Updates the `records` attribute of the ImportRecordGroup instance.\n\nConstants:\n- _SYS_IMPORT_RECORD: A Final constant that represents a specific ImportRecord instance initialized with the ImportString \"sys\". It is used when a record requires a fallback to the system import.\n\"\"\"\n```\n\n# TASK DESCRIPTION:\nIn this project, you need to implement the functions and methods listed above. The functions have been removed from the code but their docstrings remain.\nYour task is to:\n1. Read and understand the docstrings of each function/method\n2. Understand the dependencies and how they interact with the target functions\n3. Implement the functions/methods according to their docstrings and signatures\n4. Ensure your implementations work correctly with the rest of the codebase\n",
+  "file_code": {
+    "mypy_boto3_builder/import_helpers/import_string.py": "\"\"\"\nWrapper for Python import strings.\n\nCopyright 2024 Vlad Emelianov\n\"\"\"\nimport functools\nfrom typing import Final, Self\nfrom mypy_boto3_builder.enums.service_module_name import ServiceModuleName\nfrom mypy_boto3_builder.exceptions import BuildInternalError, StructureError\nfrom mypy_boto3_builder.package_data import Boto3StubsPackageData, TypesAioBotocorePackageData\n\n@functools.total_ordering\nclass ImportString:\n    \"\"\"\n    Wrapper for Python import strings.\n\n    Arguments:\n        master -- Master module name\n        parts -- Other import parts\n\n    Examples::\n\n        import_string = ImportString(\"my\", \"name\")\n\n        str(import_string)\n        'my.name'\n\n        import_string.render()\n        'my.name'\n    \"\"\"\n    BUILTINS: Final[str] = 'builtins'\n    _THIRD_PARTY: Final[set[str]] = {'boto3', 'botocore', 'aioboto3', 'aiobotocore', 's3transfer', 'awscrt'}\n\n    @classmethod\n    def from_str(cls, import_string: str) -> Self:\n        \"\"\"\n        Create from string.\n        \"\"\"\n        return cls(*import_string.split('.'))\n\n    def __str__(self) -> str:\n        \"\"\"\n        Render as a part of a valid Python import statement.\n        \"\"\"\n        return self.render()\n\n    def __hash__(self) -> int:\n        \"\"\"\n        Calculate hash value based on all parts.\n        \"\"\"\n        return hash(self.parts)\n\n    def __eq__(self, other: object) -> bool:\n        \"\"\"\n        Whether import strings produce the same render.\n        \"\"\"\n        if not isinstance(other, ImportString):\n            raise BuildInternalError(f'{other} is not ImportString')\n        return self.parts == other.parts\n\n    def __gt__(self, other: Self) -> bool:\n        \"\"\"\n        Compare import strings for sorting.\n\n        Emulates `isort` logic.\n        \"\"\"\n        if self == other:\n            return False\n        if self.is_local() != other.is_local():\n            return self.is_local() > other.is_local()\n        if self.is_third_party() != other.is_third_party():\n            return self.is_third_party() > other.is_third_party()\n        return self.parts > other.parts\n\n    def __add__(self: Self, other: Self | str) -> Self:\n        \"\"\"\n        Create a new import string by adding another import string parts to the end.\n        \"\"\"\n        other_import_string = other if isinstance(other, ImportString) else ImportString(other)\n        return self.__class__(*self.parts, *other_import_string.parts)\n\n    def render(self) -> str:\n        \"\"\"\n        Render to string.\n\n        Returns:\n            Ready to use import string.\n        \"\"\"\n        return '.'.join(self.parts)\n\n    @property\n    def parent(self) -> str:\n        \"\"\"\n        Get first import string part or `builtins`.\n        \"\"\"\n        return self.parts[0]\n\n    def is_local(self) -> bool:\n        \"\"\"\n        Whether import is from local module.\n        \"\"\"\n        if self.parent.startswith(Boto3StubsPackageData.SERVICE_PREFIX):\n            return True\n        if self.parent.startswith(TypesAioBotocorePackageData.SERVICE_PREFIX):\n            return True\n        return self.is_type_defs()\n\n    def is_builtins(self) -> bool:\n        \"\"\"\n        Whether import is from Python `builtins` module.\n        \"\"\"\n        return self.parent == self.BUILTINS\n\n    def is_type_defs(self) -> bool:\n        \"\"\"\n        Whether import is from `type_defs` module.\n        \"\"\"\n        if not self.parts:\n            return False\n        return self.parts[-1] == ServiceModuleName.type_defs.value\n\n    def is_third_party(self) -> bool:\n        \"\"\"\n        Whether import is from 3rd party module.\n        \"\"\"\n        return self.parent in self._THIRD_PARTY",
+    "mypy_boto3_builder/import_helpers/import_record.py": "\"\"\"\nHelper for Python import strings.\n\nCopyright 2024 Vlad Emelianov\n\"\"\"\nimport functools\nfrom typing import Self\nfrom mypy_boto3_builder.exceptions import StructureError\nfrom mypy_boto3_builder.import_helpers.import_string import ImportString\n\n@functools.total_ordering\nclass ImportRecord:\n    \"\"\"\n    Helper for Python import strings.\n\n    Arguments:\n        source -- Source of import.\n        name -- Import name.\n        alias -- Import local name.\n        min_version -- Minimum Python version, used for fallback.\n        fallback -- Fallback ImportRecord.\n    \"\"\"\n\n    def render_name(self) -> str:\n        \"\"\"\n        Get rendered import name.\n        \"\"\"\n        if not self.name:\n            raise StructureError(f'ImportRecord {self} has no name')\n        if self.alias:\n            return f'{self.name} as {self.alias}'\n        return self.name\n\n    def render(self) -> str:\n        \"\"\"\n        Get rendered string.\n        \"\"\"\n        if self.name:\n            return f'from {self.source} import {self.render_name()}'\n        if self.alias:\n            return f'import {self.source} as {self.alias}'\n        return f'import {self.source}'\n\n    def __str__(self) -> str:\n        \"\"\"\n        Render as a valid Python import statement.\n        \"\"\"\n        return self.render()\n\n    def __hash__(self) -> int:\n        \"\"\"\n        Calculate hash value based on source, name and alias.\n        \"\"\"\n        return hash((self.source, self.name, self.alias, self.min_version, self.fallback))\n\n    def __eq__(self, other: object) -> bool:\n        \"\"\"\n        Whether two import records produce the same render.\n        \"\"\"\n        if not isinstance(other, ImportRecord):\n            return False\n        return str(self) == str(other)\n\n    def __gt__(self: Self, other: Self) -> bool:\n        \"\"\"\n        Compare two import records for sorting.\n\n        Emulates `isort` logic.\n        \"\"\"\n        if self == other:\n            return False\n        if self.min_version != other.min_version:\n            return (self.min_version or ()) > (other.min_version or ())\n        if bool(self.fallback) != bool(other.fallback):\n            return bool(self.fallback) > bool(other.fallback)\n        if self.source != other.source:\n            return self.source > other.source\n        return self.name > other.name\n\n    def get_local_name(self) -> str:\n        \"\"\"\n        Get local import name.\n        \"\"\"\n        return self.alias or self.name or self.source.render()\n\n    def needs_sys_fallback(self) -> bool:\n        \"\"\"\n        Whether ImportString requires `sys` module.\n        \"\"\"\n        return bool(self.fallback and self.min_version)",
+    "mypy_boto3_builder/import_helpers/import_record_group.py": "\"\"\"\nGroup tool for ImportRecord sets.\n\nCopyright 2024 Vlad Emelianov\n\"\"\"\nfrom collections.abc import Iterable, Iterator\nfrom typing import Final\nfrom mypy_boto3_builder.import_helpers.import_record import ImportRecord\nfrom mypy_boto3_builder.import_helpers.import_string import ImportString\n\nclass ImportRecordGroup:\n    \"\"\"\n    Group tool for ImportRecord sets.\n    \"\"\"\n    _SYS_IMPORT_RECORD: Final[ImportRecord] = ImportRecord(ImportString('sys'))\n\n    @staticmethod\n    def _render_records(records: set[ImportRecord]) -> Iterator[str]:\n        sources = {x.source for x in records}\n        for source in sorted(sources):\n            source_records = {i for i in records if i.source == source}\n            names = (x.render_name() for x in sorted(source_records))\n            yield f'from {source.render()} import {', '.join(names)}'\n\n    def _iterate_render_nameless(self) -> Iterator[str]:\n        \"\"\"\n        Iterate over nameless import records.\n        \"\"\"\n        nameless_records = {i for i in self.records if not i.name}\n        for record in sorted(nameless_records):\n            yield record.render()\n\n    def _iterate_render_regular(self) -> Iterator[str]:\n        \"\"\"\n        Iterate over rendered regular records with name and no fallback.\n        \"\"\"\n        regular_records = {i for i in self.records if i.name and (not i.min_version) and (not i.fallback)}\n        yield from self._render_records(regular_records)\n\n    def _iterate_render_source_fallback(self) -> Iterator[str]:\n        \"\"\"\n        Iterate over rendered records with fallback but no min version.\n        \"\"\"\n        records = {i for i in self.records if i.fallback and (not i.min_version)}\n        sources = {x.source for x in records}\n        for source in sorted(sources):\n            source_records = {i for i in records if i.source == source}\n            fallback_records = {i.fallback for i in source_records if i.fallback}\n            yield '\\n'.join(('try:', *(f'    {x}' for x in self._render_records(source_records)), 'except ImportError:', *(f'    {x}' for x in self._render_records(fallback_records))))\n\n    def _iterate_render_source_min_version(self) -> Iterator[str]:\n        \"\"\"\n        Iterate over rendered records with min version.\n        \"\"\"\n        records = {i for i in self.records if i.min_version}\n        min_versions = {i.min_version for i in records if i.min_version}\n        for min_version in sorted(min_versions):\n            min_version_records = {i for i in records if i.min_version == min_version}\n            min_version_str = ', '.join((str(i) for i in min_version))\n            fallback_records = {i.fallback for i in min_version_records if i.fallback}\n            yield '\\n'.join((f'if sys.version_info >= ({min_version_str}):', *(f'    {x}' for x in self._render_records(min_version_records)), 'else:', *(f'    {x}' for x in self._render_records(fallback_records))))"
+  }
+}

@@ -1,0 +1,462 @@
+{
+  "dir_path": "/app/fhirclient",
+  "package_name": "fhirclient",
+  "sample_name": "fhirclient-location_test",
+  "src_dir": "fhirclient/",
+  "test_dir": "tests/",
+  "test_file": "tests/models/location_test.py",
+  "test_code": "#  Generated from FHIR 4.0.1-9346c8cc45, SMART Health IT.\n\nimport os\nimport io\nimport unittest\nimport json\nfrom fhirclient.models import location\nfrom fhirclient.models.fhirdate import FHIRDate\nfrom fhirclient.models.fhirdatetime import FHIRDateTime\nfrom fhirclient.models.fhirinstant import FHIRInstant\nfrom fhirclient.models.fhirtime import FHIRTime\n\n\nclass LocationTests(unittest.TestCase):\n    def instantiate_from(self, filename):\n        datadir = os.path.join(os.path.dirname(__file__), '..', 'data', 'examples')\n        with io.open(os.path.join(datadir, filename), 'r', encoding='utf-8') as handle:\n            js = json.load(handle)\n            self.assertEqual(\"Location\", js[\"resourceType\"])\n        return location.Location(js)\n    \n    def testLocation1(self):\n        inst = self.instantiate_from(\"location-example.json\")\n        self.assertIsNotNone(inst, \"Must have instantiated a Location instance\")\n        self.implLocation1(inst)\n        \n        js = inst.as_json()\n        self.assertEqual(\"Location\", js[\"resourceType\"])\n        inst2 = location.Location(js)\n        self.implLocation1(inst2)\n    \n    def implLocation1(self, inst):\n        self.assertEqual(inst.address.city, \"Den Burg\")\n        self.assertEqual(inst.address.country, \"NLD\")\n        self.assertEqual(inst.address.line[0], \"Galapagosweg 91, Building A\")\n        self.assertEqual(inst.address.postalCode, \"9105 PZ\")\n        self.assertEqual(inst.address.use, \"work\")\n        self.assertEqual(inst.alias[0], \"BU MC, SW, F2\")\n        self.assertEqual(inst.alias[1], \"Burgers University Medical Center, South Wing, second floor\")\n        self.assertEqual(inst.description, \"Second floor of the Old South Wing, formerly in use by Psychiatry\")\n        self.assertEqual(inst.id, \"1\")\n        self.assertEqual(inst.identifier[0].value, \"B1-S.F2\")\n        self.assertEqual(inst.meta.tag[0].code, \"HTEST\")\n        self.assertEqual(inst.meta.tag[0].display, \"test health data\")\n        self.assertEqual(inst.meta.tag[0].system, \"http://terminology.hl7.org/CodeSystem/v3-ActReason\")\n        self.assertEqual(inst.mode, \"instance\")\n        self.assertEqual(inst.name, \"South Wing, second floor\")\n        self.assertEqual(inst.physicalType.coding[0].code, \"wi\")\n        self.assertEqual(inst.physicalType.coding[0].display, \"Wing\")\n        self.assertEqual(inst.physicalType.coding[0].system, \"http://terminology.hl7.org/CodeSystem/location-physical-type\")\n        self.assertEqual(inst.position.altitude, 0)\n        self.assertEqual(inst.position.latitude, 42.25475478)\n        self.assertEqual(inst.position.longitude, -83.6945691)\n        self.assertEqual(inst.status, \"active\")\n        self.assertEqual(inst.telecom[0].system, \"phone\")\n        self.assertEqual(inst.telecom[0].use, \"work\")\n        self.assertEqual(inst.telecom[0].value, \"2328\")\n        self.assertEqual(inst.telecom[1].system, \"fax\")\n        self.assertEqual(inst.telecom[1].use, \"work\")\n        self.assertEqual(inst.telecom[1].value, \"2329\")\n        self.assertEqual(inst.telecom[2].system, \"email\")\n        self.assertEqual(inst.telecom[2].value, \"second wing admissions\")\n        self.assertEqual(inst.telecom[3].system, \"url\")\n        self.assertEqual(inst.telecom[3].use, \"work\")\n        self.assertEqual(inst.telecom[3].value, \"http://sampleorg.com/southwing\")\n        self.assertEqual(inst.text.div, \"<div xmlns=\\\"http://www.w3.org/1999/xhtml\\\">Burgers UMC, South Wing, second floor</div>\")\n        self.assertEqual(inst.text.status, \"generated\")\n    \n    def testLocation2(self):\n        inst = self.instantiate_from(\"location-example-ambulance.json\")\n        self.assertIsNotNone(inst, \"Must have instantiated a Location instance\")\n        self.implLocation2(inst)\n        \n        js = inst.as_json()\n        self.assertEqual(\"Location\", js[\"resourceType\"])\n        inst2 = location.Location(js)\n        self.implLocation2(inst2)\n    \n    def implLocation2(self, inst):\n        self.assertEqual(inst.description, \"Ambulance provided by Burgers University Medical Center\")\n        self.assertEqual(inst.id, \"amb\")\n        self.assertEqual(inst.meta.tag[0].code, \"HTEST\")\n        self.assertEqual(inst.meta.tag[0].display, \"test health data\")\n        self.assertEqual(inst.meta.tag[0].system, \"http://terminology.hl7.org/CodeSystem/v3-ActReason\")\n        self.assertEqual(inst.mode, \"kind\")\n        self.assertEqual(inst.name, \"BUMC Ambulance\")\n        self.assertEqual(inst.physicalType.coding[0].code, \"ve\")\n        self.assertEqual(inst.physicalType.coding[0].display, \"Vehicle\")\n        self.assertEqual(inst.physicalType.coding[0].system, \"http://terminology.hl7.org/CodeSystem/location-physical-type\")\n        self.assertEqual(inst.status, \"active\")\n        self.assertEqual(inst.telecom[0].system, \"phone\")\n        self.assertEqual(inst.telecom[0].use, \"mobile\")\n        self.assertEqual(inst.telecom[0].value, \"2329\")\n        self.assertEqual(inst.text.div, \"<div xmlns=\\\"http://www.w3.org/1999/xhtml\\\">Mobile Clinic</div>\")\n        self.assertEqual(inst.text.status, \"generated\")\n        self.assertEqual(inst.type[0].coding[0].code, \"AMB\")\n        self.assertEqual(inst.type[0].coding[0].display, \"Ambulance\")\n        self.assertEqual(inst.type[0].coding[0].system, \"http://terminology.hl7.org/CodeSystem/v3-RoleCode\")\n    \n    def testLocation3(self):\n        inst = self.instantiate_from(\"location-example-hl7hq.json\")\n        self.assertIsNotNone(inst, \"Must have instantiated a Location instance\")\n        self.implLocation3(inst)\n        \n        js = inst.as_json()\n        self.assertEqual(\"Location\", js[\"resourceType\"])\n        inst2 = location.Location(js)\n        self.implLocation3(inst2)\n    \n    def implLocation3(self, inst):\n        self.assertEqual(inst.address.city, \"Ann Arbor\")\n        self.assertEqual(inst.address.country, \"USA\")\n        self.assertEqual(inst.address.line[0], \"3300 Washtenaw Avenue, Suite 227\")\n        self.assertEqual(inst.address.postalCode, \"48104\")\n        self.assertEqual(inst.address.state, \"MI\")\n        self.assertEqual(inst.description, \"HL7 Headquarters\")\n        self.assertEqual(inst.id, \"hl7\")\n        self.assertEqual(inst.meta.tag[0].code, \"HTEST\")\n        self.assertEqual(inst.meta.tag[0].display, \"test health data\")\n        self.assertEqual(inst.meta.tag[0].system, \"http://terminology.hl7.org/CodeSystem/v3-ActReason\")\n        self.assertEqual(inst.mode, \"instance\")\n        self.assertEqual(inst.name, \"Health Level Seven International\")\n        self.assertEqual(inst.physicalType.coding[0].code, \"bu\")\n        self.assertEqual(inst.physicalType.coding[0].display, \"Building\")\n        self.assertEqual(inst.physicalType.coding[0].system, \"http://terminology.hl7.org/CodeSystem/location-physical-type\")\n        self.assertEqual(inst.position.latitude, -83.69471)\n        self.assertEqual(inst.position.longitude, 42.2565)\n        self.assertEqual(inst.status, \"active\")\n        self.assertEqual(inst.telecom[0].system, \"phone\")\n        self.assertEqual(inst.telecom[0].value, \"(+1) 734-677-7777\")\n        self.assertEqual(inst.telecom[1].system, \"fax\")\n        self.assertEqual(inst.telecom[1].value, \"(+1) 734-677-6622\")\n        self.assertEqual(inst.telecom[2].system, \"email\")\n        self.assertEqual(inst.telecom[2].value, \"hq@HL7.org\")\n        self.assertEqual(inst.text.status, \"generated\")\n        self.assertEqual(inst.type[0].coding[0].code, \"SLEEP\")\n        self.assertEqual(inst.type[0].coding[0].display, \"Sleep disorders unit\")\n        self.assertEqual(inst.type[0].coding[0].system, \"http://terminology.hl7.org/CodeSystem/v3-RoleCode\")\n    \n    def testLocation4(self):\n        inst = self.instantiate_from(\"location-example-room.json\")\n        self.assertIsNotNone(inst, \"Must have instantiated a Location instance\")\n        self.implLocation4(inst)\n        \n        js = inst.as_json()\n        self.assertEqual(\"Location\", js[\"resourceType\"])\n        inst2 = location.Location(js)\n        self.implLocation4(inst2)\n    \n    def implLocation4(self, inst):\n        self.assertEqual(inst.alias[0], \"South Wing OR 5\")\n        self.assertEqual(inst.alias[1], \"Main Wing OR 2\")\n        self.assertEqual(inst.description, \"Old South Wing, Neuro Radiology Operation Room 1 on second floor\")\n        self.assertEqual(inst.id, \"2\")\n        self.assertEqual(inst.identifier[0].value, \"B1-S.F2.1.00\")\n        self.assertEqual(inst.meta.tag[0].code, \"HTEST\")\n        self.assertEqual(inst.meta.tag[0].display, \"test health data\")\n        self.assertEqual(inst.meta.tag[0].system, \"http://terminology.hl7.org/CodeSystem/v3-ActReason\")\n        self.assertEqual(inst.mode, \"instance\")\n        self.assertEqual(inst.name, \"South Wing Neuro OR 1\")\n        self.assertEqual(inst.operationalStatus.code, \"H\")\n        self.assertEqual(inst.operationalStatus.display, \"Housekeeping\")\n        self.assertEqual(inst.operationalStatus.system, \"http://terminology.hl7.org/CodeSystem/v2-0116\")\n        self.assertEqual(inst.physicalType.coding[0].code, \"ro\")\n        self.assertEqual(inst.physicalType.coding[0].display, \"Room\")\n        self.assertEqual(inst.physicalType.coding[0].system, \"http://terminology.hl7.org/CodeSystem/location-physical-type\")\n        self.assertEqual(inst.status, \"suspended\")\n        self.assertEqual(inst.telecom[0].system, \"phone\")\n        self.assertEqual(inst.telecom[0].value, \"2329\")\n        self.assertEqual(inst.text.div, \"<div xmlns=\\\"http://www.w3.org/1999/xhtml\\\">Burgers UMC, South Wing, second floor, Neuro Radiology Operation Room 1</div>\")\n        self.assertEqual(inst.text.status, \"generated\")\n        self.assertEqual(inst.type[0].coding[0].code, \"RNEU\")\n        self.assertEqual(inst.type[0].coding[0].display, \"Neuroradiology unit\")\n        self.assertEqual(inst.type[0].coding[0].system, \"http://terminology.hl7.org/CodeSystem/v3-RoleCode\")\n    \n    def testLocation5(self):\n        inst = self.instantiate_from(\"location-example-patients-home.json\")\n        self.assertIsNotNone(inst, \"Must have instantiated a Location instance\")\n        self.implLocation5(inst)\n        \n        js = inst.as_json()\n        self.assertEqual(\"Location\", js[\"resourceType\"])\n        inst2 = location.Location(js)\n        self.implLocation5(inst2)\n    \n    def implLocation5(self, inst):\n        self.assertEqual(inst.description, \"Patient's Home\")\n        self.assertEqual(inst.id, \"ph\")\n        self.assertEqual(inst.meta.tag[0].code, \"HTEST\")\n        self.assertEqual(inst.meta.tag[0].display, \"test health data\")\n        self.assertEqual(inst.meta.tag[0].system, \"http://terminology.hl7.org/CodeSystem/v3-ActReason\")\n        self.assertEqual(inst.mode, \"kind\")\n        self.assertEqual(inst.name, \"Patient's Home\")\n        self.assertEqual(inst.physicalType.coding[0].code, \"ho\")\n        self.assertEqual(inst.physicalType.coding[0].display, \"House\")\n        self.assertEqual(inst.physicalType.coding[0].system, \"http://terminology.hl7.org/CodeSystem/location-physical-type\")\n        self.assertEqual(inst.status, \"active\")\n        self.assertEqual(inst.text.div, \"<div xmlns=\\\"http://www.w3.org/1999/xhtml\\\">Patient's Home</div>\")\n        self.assertEqual(inst.text.status, \"generated\")\n        self.assertEqual(inst.type[0].coding[0].code, \"PTRES\")\n        self.assertEqual(inst.type[0].coding[0].display, \"Patient's Residence\")\n        self.assertEqual(inst.type[0].coding[0].system, \"http://terminology.hl7.org/CodeSystem/v3-RoleCode\")\n    \n    def testLocation6(self):\n        inst = self.instantiate_from(\"location-example-ukpharmacy.json\")\n        self.assertIsNotNone(inst, \"Must have instantiated a Location instance\")\n        self.implLocation6(inst)\n        \n        js = inst.as_json()\n        self.assertEqual(\"Location\", js[\"resourceType\"])\n        inst2 = location.Location(js)\n        self.implLocation6(inst2)\n    \n    def implLocation6(self, inst):\n        self.assertEqual(inst.description, \"All Pharmacies in the United Kingdom covered by the National Pharmacy Association\")\n        self.assertEqual(inst.id, \"ukp\")\n        self.assertEqual(inst.meta.tag[0].code, \"HTEST\")\n        self.assertEqual(inst.meta.tag[0].display, \"test health data\")\n        self.assertEqual(inst.meta.tag[0].system, \"http://terminology.hl7.org/CodeSystem/v3-ActReason\")\n        self.assertEqual(inst.mode, \"kind\")\n        self.assertEqual(inst.name, \"UK Pharmacies\")\n        self.assertEqual(inst.physicalType.coding[0].code, \"jdn\")\n        self.assertEqual(inst.physicalType.coding[0].display, \"Jurisdiction\")\n        self.assertEqual(inst.physicalType.coding[0].system, \"http://terminology.hl7.org/CodeSystem/location-physical-type\")\n        self.assertEqual(inst.status, \"active\")\n        self.assertEqual(inst.text.div, \"<div xmlns=\\\"http://www.w3.org/1999/xhtml\\\">UK Pharmacies</div>\")\n        self.assertEqual(inst.text.status, \"generated\")\n        self.assertEqual(inst.type[0].coding[0].code, \"PHARM\")\n        self.assertEqual(inst.type[0].coding[0].display, \"Pharmacy\")\n        self.assertEqual(inst.type[0].coding[0].system, \"http://terminology.hl7.org/CodeSystem/v3-RoleCode\")\n\n",
+  "GT_file_code": {
+    "fhirclient/models/location.py": "# Generated from FHIR 4.0.1-9346c8cc45 (http://hl7.org/fhir/StructureDefinition/Location).\n# 2024, SMART Health IT.\n\n\nfrom . import domainresource\n\nclass Location(domainresource.DomainResource):\n    \"\"\" Details and position information for a physical place.\n    \n    Details and position information for a physical place where services are\n    provided and resources and participants may be stored, found, contained, or\n    accommodated.\n    \"\"\"\n    \n    resource_type = \"Location\"\n    \n    def __init__(self, jsondict=None, strict=True):\n        \"\"\" Initialize all valid properties.\n        \n        :raises: FHIRValidationError on validation errors, unless strict is False\n        :param dict jsondict: A JSON dictionary to use for initialization\n        :param bool strict: If True (the default), invalid variables will raise a TypeError\n        \"\"\"\n        \n        self.address = None\n        \"\"\" Physical location.\n        Type `Address` (represented as `dict` in JSON). \"\"\"\n        \n        self.alias = None\n        \"\"\" A list of alternate names that the location is known as, or was\n        known as, in the past.\n        List of `str` items. \"\"\"\n        \n        self.availabilityExceptions = None\n        \"\"\" Description of availability exceptions.\n        Type `str`. \"\"\"\n        \n        self.description = None\n        \"\"\" Additional details about the location that could be displayed as\n        further information to identify the location beyond its name.\n        Type `str`. \"\"\"\n        \n        self.endpoint = None\n        \"\"\" Technical endpoints providing access to services operated for the\n        location.\n        List of `FHIRReference` items (represented as `dict` in JSON). \"\"\"\n        \n        self.hoursOfOperation = None\n        \"\"\" What days/times during a week is this location usually open.\n        List of `LocationHoursOfOperation` items (represented as `dict` in JSON). \"\"\"\n        \n        self.identifier = None\n        \"\"\" Unique code or number identifying the location to its users.\n        List of `Identifier` items (represented as `dict` in JSON). \"\"\"\n        \n        self.managingOrganization = None\n        \"\"\" Organization responsible for provisioning and upkeep.\n        Type `FHIRReference` (represented as `dict` in JSON). \"\"\"\n        \n        self.mode = None\n        \"\"\" instance | kind.\n        Type `str`. \"\"\"\n        \n        self.name = None\n        \"\"\" Name of the location as used by humans.\n        Type `str`. \"\"\"\n        \n        self.operationalStatus = None\n        \"\"\" The operational status of the location (typically only for a\n        bed/room).\n        Type `Coding` (represented as `dict` in JSON). \"\"\"\n        \n        self.partOf = None\n        \"\"\" Another Location this one is physically a part of.\n        Type `FHIRReference` (represented as `dict` in JSON). \"\"\"\n        \n        self.physicalType = None\n        \"\"\" Physical form of the location.\n        Type `CodeableConcept` (represented as `dict` in JSON). \"\"\"\n        \n        self.position = None\n        \"\"\" The absolute geographic location.\n        Type `LocationPosition` (represented as `dict` in JSON). \"\"\"\n        \n        self.status = None\n        \"\"\" active | suspended | inactive.\n        Type `str`. \"\"\"\n        \n        self.telecom = None\n        \"\"\" Contact details of the location.\n        List of `ContactPoint` items (represented as `dict` in JSON). \"\"\"\n        \n        self.type = None\n        \"\"\" Type of function performed.\n        List of `CodeableConcept` items (represented as `dict` in JSON). \"\"\"\n        \n        super(Location, self).__init__(jsondict=jsondict, strict=strict)\n    \n    def elementProperties(self):\n        js = super(Location, self).elementProperties()\n        js.extend([\n            (\"address\", \"address\", address.Address, False, None, False),\n            (\"alias\", \"alias\", str, True, None, False),\n            (\"availabilityExceptions\", \"availabilityExceptions\", str, False, None, False),\n            (\"description\", \"description\", str, False, None, False),\n            (\"endpoint\", \"endpoint\", fhirreference.FHIRReference, True, None, False),\n            (\"hoursOfOperation\", \"hoursOfOperation\", LocationHoursOfOperation, True, None, False),\n            (\"identifier\", \"identifier\", identifier.Identifier, True, None, False),\n            (\"managingOrganization\", \"managingOrganization\", fhirreference.FHIRReference, False, None, False),\n            (\"mode\", \"mode\", str, False, None, False),\n            (\"name\", \"name\", str, False, None, False),\n            (\"operationalStatus\", \"operationalStatus\", coding.Coding, False, None, False),\n            (\"partOf\", \"partOf\", fhirreference.FHIRReference, False, None, False),\n            (\"physicalType\", \"physicalType\", codeableconcept.CodeableConcept, False, None, False),\n            (\"position\", \"position\", LocationPosition, False, None, False),\n            (\"status\", \"status\", str, False, None, False),\n            (\"telecom\", \"telecom\", contactpoint.ContactPoint, True, None, False),\n            (\"type\", \"type\", codeableconcept.CodeableConcept, True, None, False),\n        ])\n        return js\n\n\nfrom . import backboneelement\n\nclass LocationHoursOfOperation(backboneelement.BackboneElement):\n    \"\"\" What days/times during a week is this location usually open.\n    \"\"\"\n    \n    resource_type = \"LocationHoursOfOperation\"\n    \n    def __init__(self, jsondict=None, strict=True):\n        \"\"\" Initialize all valid properties.\n        \n        :raises: FHIRValidationError on validation errors, unless strict is False\n        :param dict jsondict: A JSON dictionary to use for initialization\n        :param bool strict: If True (the default), invalid variables will raise a TypeError\n        \"\"\"\n        \n        self.allDay = None\n        \"\"\" The Location is open all day.\n        Type `bool`. \"\"\"\n        \n        self.closingTime = None\n        \"\"\" Time that the Location closes.\n        Type `FHIRTime` (represented as `str` in JSON). \"\"\"\n        \n        self.daysOfWeek = None\n        \"\"\" mon | tue | wed | thu | fri | sat | sun.\n        List of `str` items. \"\"\"\n        \n        self.openingTime = None\n        \"\"\" Time that the Location opens.\n        Type `FHIRTime` (represented as `str` in JSON). \"\"\"\n        \n        super(LocationHoursOfOperation, self).__init__(jsondict=jsondict, strict=strict)\n    \n    def elementProperties(self):\n        js = super(LocationHoursOfOperation, self).elementProperties()\n        js.extend([\n            (\"allDay\", \"allDay\", bool, False, None, False),\n            (\"closingTime\", \"closingTime\", fhirtime.FHIRTime, False, None, False),\n            (\"daysOfWeek\", \"daysOfWeek\", str, True, None, False),\n            (\"openingTime\", \"openingTime\", fhirtime.FHIRTime, False, None, False),\n        ])\n        return js\n\n\nclass LocationPosition(backboneelement.BackboneElement):\n    \"\"\" The absolute geographic location.\n    \n    The absolute geographic location of the Location, expressed using the WGS84\n    datum (This is the same co-ordinate system used in KML).\n    \"\"\"\n    \n    resource_type = \"LocationPosition\"\n    \n    def __init__(self, jsondict=None, strict=True):\n        \"\"\" Initialize all valid properties.\n        \n        :raises: FHIRValidationError on validation errors, unless strict is False\n        :param dict jsondict: A JSON dictionary to use for initialization\n        :param bool strict: If True (the default), invalid variables will raise a TypeError\n        \"\"\"\n        \n        self.altitude = None\n        \"\"\" Altitude with WGS84 datum.\n        Type `float`. \"\"\"\n        \n        self.latitude = None\n        \"\"\" Latitude with WGS84 datum.\n        Type `float`. \"\"\"\n        \n        self.longitude = None\n        \"\"\" Longitude with WGS84 datum.\n        Type `float`. \"\"\"\n        \n        super(LocationPosition, self).__init__(jsondict=jsondict, strict=strict)\n    \n    def elementProperties(self):\n        js = super(LocationPosition, self).elementProperties()\n        js.extend([\n            (\"altitude\", \"altitude\", float, False, None, False),\n            (\"latitude\", \"latitude\", float, False, None, True),\n            (\"longitude\", \"longitude\", float, False, None, True),\n        ])\n        return js\n\n\nfrom . import address\nfrom . import codeableconcept\nfrom . import coding\nfrom . import contactpoint\nfrom . import fhirreference\nfrom . import fhirtime\nfrom . import identifier\n",
+    "fhirclient/models/fhirabstractresource.py": "#!/usr/bin/env python\n# -*- coding: utf-8 -*-\n#\n#  Base class for FHIR resources.\n#  2014, SMART Health IT.\n\nfrom . import fhirabstractbase\n\n\nclass FHIRAbstractResource(fhirabstractbase.FHIRAbstractBase):\n    \"\"\" Extends the FHIRAbstractBase with server talking capabilities.\n    \"\"\"\n    resource_type = 'FHIRAbstractResource'\n    \n    def __init__(self, jsondict=None, strict=True):\n        self._server = None\n        \"\"\" The server the instance was read from. \"\"\"\n        \n        # raise if \"resourceType\" does not match\n        if jsondict is not None and 'resourceType' in jsondict \\\n            and jsondict['resourceType'] != self.resource_type:\n            raise Exception(\"Attempting to instantiate {} with resource data that defines a resourceType of \\\"{}\\\"\"\n                .format(self.__class__, jsondict['resourceType']))\n        \n        super(FHIRAbstractResource, self).__init__(jsondict=jsondict, strict=strict)\n    \n    @classmethod\n    def _with_json_dict(cls, jsondict):\n        \"\"\" Overridden to use a factory if called when \"resourceType\" is\n        defined in the JSON but does not match the receiver's resource_type.\n        \"\"\"\n        if not isinstance(jsondict, dict):\n            raise Exception(\"Cannot use this method with anything but a JSON dictionary, got {}\"\n                .format(jsondict))\n        \n        res_type = jsondict.get('resourceType')\n        if res_type and res_type != cls.resource_type:\n            return fhirelementfactory.FHIRElementFactory.instantiate(res_type, jsondict)\n        return super(FHIRAbstractResource, cls)._with_json_dict(jsondict)\n    \n    def as_json(self):\n        js = super(FHIRAbstractResource, self).as_json()\n        js['resourceType'] = self.resource_type\n        return js\n    \n    \n    # MARK: Handling Paths\n    \n    def relativeBase(self):\n        return self.__class__.resource_type\n    \n    def relativePath(self):\n        if self.id is None:\n            return self.relativeBase()\n        return \"{}/{}\".format(self.relativeBase(), self.id)\n    \n    \n    # MARK: - Server Connection\n    \n    @property\n    def origin_server(self):\n        \"\"\" Walks the owner hierarchy until it finds an owner with a server.\n        \"\"\"\n        server = self._server\n        owner = self._owner\n        while server is None and owner is not None:\n            server = getattr(owner, '_server', None)\n            owner = owner._owner\n        return server\n\n    @origin_server.setter\n    def origin_server(self, server):\n        \"\"\" Sets the server on an element. \"\"\"\n        self._server = server\n    \n    @classmethod\n    def read(cls, rem_id, server):\n        \"\"\" Read the resource with the given id from the given server. The\n        passed-in server instance must support a `request_json()` method call,\n        taking a relative path as first (and only mandatory) argument.\n        \n        :param str rem_id: The id of the resource on the remote server\n        :param FHIRServer server: An instance of a FHIR server or compatible class\n        :returns: An instance of the receiving class\n        \"\"\"\n        if not rem_id:\n            raise Exception(\"Cannot read resource without remote id\")\n        \n        path = '{}/{}'.format(cls.resource_type, rem_id)\n        instance = cls.read_from(path, server)\n        instance._local_id = rem_id\n        \n        return instance\n    \n    @classmethod\n    def read_from(cls, path, server):\n        \"\"\" Requests data from the given REST path on the server and creates\n        an instance of the receiving class.\n        \n        :param str path: The REST path to read from\n        :param FHIRServer server: An instance of a FHIR server or compatible class\n        :returns: An instance of the receiving class\n        \"\"\"\n        if not path:\n            raise Exception(\"Cannot read resource without REST path\")\n        if server is None:\n            raise Exception(\"Cannot read resource without server instance\")\n        \n        ret = server.request_json(path)\n        instance = cls(jsondict=ret)\n        instance.origin_server = server\n        return instance\n\n    def createPath(self):\n        \"\"\" Get the endpoint on the server for creating the resource.\n\n        :returns: The resource endpoint or None for the root endpoint\n        \"\"\"\n        root_post_types = (\"batch\", \"transaction\")\n\n        if self.resource_type == \"Bundle\" and self.type in root_post_types:\n            return None\n\n        return self.relativeBase()\n\n    def create(self, server):\n        \"\"\" Attempt to create the receiver on the given server, using a POST\n        command.\n        \n        :param FHIRServer server: The server to create the receiver on\n        :returns: None or the response JSON on success\n        \"\"\"\n        srv = server or self.origin_server\n        if srv is None:\n            raise Exception(\"Cannot create a resource without a server\")\n        if self.id:\n            raise Exception(\"This resource already has an id, cannot create\")\n\n        ret = srv.post_json(self.createPath(), self.as_json())\n        if len(ret.text) > 0:\n            return ret.json()\n        return None\n    \n    def update(self, server=None):\n        \"\"\" Update the receiver's representation on the given server, issuing\n        a PUT command.\n        \n        :param FHIRServer server: The server to update the receiver on;\n            optional, will use the instance's `server` if needed.\n        :returns: None or the response JSON on success\n        \"\"\"\n        srv = server or self.origin_server\n        if srv is None:\n            raise Exception(\"Cannot update a resource that does not have a server\")\n        if not self.id:\n            raise Exception(\"Cannot update a resource that does not have an id\")\n        \n        ret = srv.put_json(self.relativePath(), self.as_json())\n        if len(ret.text) > 0:\n            return ret.json()\n        return None\n    \n    def delete(self, server=None):\n        \"\"\" Delete the receiver from the given server with a DELETE command.\n        \n        :param FHIRServer server: The server to update the receiver on;\n            optional, will use the instance's `server` if needed.\n        :returns: None or the response JSON on success\n        \"\"\"\n        srv = server or self.origin_server\n        if srv is None:\n            raise Exception(\"Cannot delete a resource that does not have a server\")\n        if not self.id:\n            raise Exception(\"Cannot delete a resource that does not have an id\")\n        \n        ret = srv.delete_json(self.relativePath())\n        if len(ret.text) > 0:\n            return ret.json()\n        return None\n    \n    \n    # MARK: - Search\n    \n    def search(self, struct=None):\n        \"\"\" Search can be started via a dictionary containing a search\n        construct.\n        \n        Calling this method with a search struct will return a `FHIRSearch`\n        object representing the search struct, with \"$type\" and \"id\" added.\n        \n        :param dict struct: An optional search structure\n        :returns: A FHIRSearch instance\n        \"\"\"\n        if struct is None:\n            struct = {'$type': self.__class__.resource_type}\n        if self._local_id is not None or self.id is not None:\n            struct['id'] = self._local_id or self.id\n        return self.__class__.where(struct)\n    \n    @classmethod\n    def where(cls, struct):\n        \"\"\" Search can be started via a dictionary containing a search\n        construct.\n        \n        Calling this method with a search struct will return a `FHIRSearch`\n        object representing the search struct\n        \n        :param dict struct: A search structure\n        :returns: A FHIRSearch instance\n        \"\"\"\n        return fhirsearch.FHIRSearch(cls, struct)\n\n\nfrom . import fhirsearch\nfrom . import fhirelementfactory\n"
+  },
+  "GT_src_dict": {
+    "fhirclient/models/location.py": {
+      "Location.__init__": {
+        "code": "    def __init__(self, jsondict=None, strict=True):\n        \"\"\"Initialize a Location object representing a physical place where services are provided and resources may be stored or found.\n\nParameters:\n- jsondict (dict, optional): A JSON dictionary used for initialization, allowing the object to be populated with properties defined in the FHIR Location structure.\n- strict (bool, default=True): If set to True, invalid properties in the jsondict raise a FHIRValidationError, ensuring the object's integrity; otherwise, such properties are ignored.\n\nAttributes:\n- address: Physical location of the place, represented as an Address object.\n- alias: List of alternate names for the location as strings.\n- availabilityExceptions: Description of exceptions to typical availability as a string.\n- description: Additional details to identify the location beyond its name.\n- endpoint: List of technical endpoints for services related to the location, represented as FHIRReference items.\n- hoursOfOperation: Typical operating hours represented as LocationHoursOfOperation items.\n- identifier: Unique identifiers for the location represented as Identifier items.\n- managingOrganization: Reference to the organization responsible for the location.\n- mode: Indicates the type of location (instance or kind).\n- name: Human-readable name of the location.\n- operationalStatus: Operational status of the location represented as Coding.\n- partOf: Reference to a location that this location is a part of.\n- physicalType: Physical form of the location represented as CodeableConcept.\n- position: Geographic location represented as LocationPosition.\n- status: Current status of the location (active, suspended, inactive).\n- telecom: Contact details for the location represented as ContactPoint items.\n- type: Function type performed by the location represented as CodeableConcept items.\n\nThis class extends the DomainResource class, establishing a connection with the broader FHIR structure for healthcare-related resources.\"\"\"\n        ' Initialize all valid properties.\\n        \\n        :raises: FHIRValidationError on validation errors, unless strict is False\\n        :param dict jsondict: A JSON dictionary to use for initialization\\n        :param bool strict: If True (the default), invalid variables will raise a TypeError\\n        '\n        self.address = None\n        ' Physical location.\\n        Type `Address` (represented as `dict` in JSON). '\n        self.alias = None\n        ' A list of alternate names that the location is known as, or was\\n        known as, in the past.\\n        List of `str` items. '\n        self.availabilityExceptions = None\n        ' Description of availability exceptions.\\n        Type `str`. '\n        self.description = None\n        ' Additional details about the location that could be displayed as\\n        further information to identify the location beyond its name.\\n        Type `str`. '\n        self.endpoint = None\n        ' Technical endpoints providing access to services operated for the\\n        location.\\n        List of `FHIRReference` items (represented as `dict` in JSON). '\n        self.hoursOfOperation = None\n        ' What days/times during a week is this location usually open.\\n        List of `LocationHoursOfOperation` items (represented as `dict` in JSON). '\n        self.identifier = None\n        ' Unique code or number identifying the location to its users.\\n        List of `Identifier` items (represented as `dict` in JSON). '\n        self.managingOrganization = None\n        ' Organization responsible for provisioning and upkeep.\\n        Type `FHIRReference` (represented as `dict` in JSON). '\n        self.mode = None\n        ' instance | kind.\\n        Type `str`. '\n        self.name = None\n        ' Name of the location as used by humans.\\n        Type `str`. '\n        self.operationalStatus = None\n        ' The operational status of the location (typically only for a\\n        bed/room).\\n        Type `Coding` (represented as `dict` in JSON). '\n        self.partOf = None\n        ' Another Location this one is physically a part of.\\n        Type `FHIRReference` (represented as `dict` in JSON). '\n        self.physicalType = None\n        ' Physical form of the location.\\n        Type `CodeableConcept` (represented as `dict` in JSON). '\n        self.position = None\n        ' The absolute geographic location.\\n        Type `LocationPosition` (represented as `dict` in JSON). '\n        self.status = None\n        ' active | suspended | inactive.\\n        Type `str`. '\n        self.telecom = None\n        ' Contact details of the location.\\n        List of `ContactPoint` items (represented as `dict` in JSON). '\n        self.type = None\n        ' Type of function performed.\\n        List of `CodeableConcept` items (represented as `dict` in JSON). '\n        super(Location, self).__init__(jsondict=jsondict, strict=strict)",
+        "docstring": "Initialize a Location object representing a physical place where services are provided and resources may be stored or found.\n\nParameters:\n- jsondict (dict, optional): A JSON dictionary used for initialization, allowing the object to be populated with properties defined in the FHIR Location structure.\n- strict (bool, default=True): If set to True, invalid properties in the jsondict raise a FHIRValidationError, ensuring the object's integrity; otherwise, such properties are ignored.\n\nAttributes:\n- address: Physical location of the place, represented as an Address object.\n- alias: List of alternate names for the location as strings.\n- availabilityExceptions: Description of exceptions to typical availability as a string.\n- description: Additional details to identify the location beyond its name.\n- endpoint: List of technical endpoints for services related to the location, represented as FHIRReference items.\n- hoursOfOperation: Typical operating hours represented as LocationHoursOfOperation items.\n- identifier: Unique identifiers for the location represented as Identifier items.\n- managingOrganization: Reference to the organization responsible for the location.\n- mode: Indicates the type of location (instance or kind).\n- name: Human-readable name of the location.\n- operationalStatus: Operational status of the location represented as Coding.\n- partOf: Reference to a location that this location is a part of.\n- physicalType: Physical form of the location represented as CodeableConcept.\n- position: Geographic location represented as LocationPosition.\n- status: Current status of the location (active, suspended, inactive).\n- telecom: Contact details for the location represented as ContactPoint items.\n- type: Function type performed by the location represented as CodeableConcept items.\n\nThis class extends the DomainResource class, establishing a connection with the broader FHIR structure for healthcare-related resources.",
+        "signature": "def __init__(self, jsondict=None, strict=True):",
+        "type": "Method",
+        "class_signature": "class Location(domainresource.DomainResource):"
+      }
+    },
+    "fhirclient/models/fhirabstractresource.py": {
+      "FHIRAbstractResource.as_json": {
+        "code": "    def as_json(self):\n        \"\"\"Convert the FHIR resource instance into a JSON representation.\n\nThis method overrides the `as_json` method from the superclass `FHIRAbstractBase` to include the `resourceType` key, which identifies the type of the FHIR resource being represented. The `resource_type` is a class attribute of `FHIRAbstractResource` that is set to `'FHIRAbstractResource'`. This ensures that when the resource is serialized to JSON, it accurately reflects its type.\n\n:returns: A dictionary representing the FHIR resource in JSON format, including the `resourceType`.\"\"\"\n        js = super(FHIRAbstractResource, self).as_json()\n        js['resourceType'] = self.resource_type\n        return js",
+        "docstring": "Convert the FHIR resource instance into a JSON representation.\n\nThis method overrides the `as_json` method from the superclass `FHIRAbstractBase` to include the `resourceType` key, which identifies the type of the FHIR resource being represented. The `resource_type` is a class attribute of `FHIRAbstractResource` that is set to `'FHIRAbstractResource'`. This ensures that when the resource is serialized to JSON, it accurately reflects its type.\n\n:returns: A dictionary representing the FHIR resource in JSON format, including the `resourceType`.",
+        "signature": "def as_json(self):",
+        "type": "Method",
+        "class_signature": "class FHIRAbstractResource(fhirabstractbase.FHIRAbstractBase):"
+      }
+    }
+  },
+  "dependency_dict": {
+    "fhirclient/models/location.py:Location:__init__": {
+      "fhirclient/models/domainresource.py": {
+        "DomainResource.__init__": {
+          "code": "    def __init__(self, jsondict=None, strict=True):\n        \"\"\" Initialize all valid properties.\n        \n        :raises: FHIRValidationError on validation errors, unless strict is False\n        :param dict jsondict: A JSON dictionary to use for initialization\n        :param bool strict: If True (the default), invalid variables will raise a TypeError\n        \"\"\"\n        \n        self.contained = None\n        \"\"\" Contained, inline Resources.\n        List of `Resource` items (represented as `dict` in JSON). \"\"\"\n        \n        self.extension = None\n        \"\"\" Additional content defined by implementations.\n        List of `Extension` items (represented as `dict` in JSON). \"\"\"\n        \n        self.modifierExtension = None\n        \"\"\" Extensions that cannot be ignored.\n        List of `Extension` items (represented as `dict` in JSON). \"\"\"\n        \n        self.text = None\n        \"\"\" Text summary of the resource, for human interpretation.\n        Type `Narrative` (represented as `dict` in JSON). \"\"\"\n        \n        super(DomainResource, self).__init__(jsondict=jsondict, strict=strict)",
+          "docstring": "Initialize all valid properties.\n\n:raises: FHIRValidationError on validation errors, unless strict is False\n:param dict jsondict: A JSON dictionary to use for initialization\n:param bool strict: If True (the default), invalid variables will raise a TypeError",
+          "signature": "def __init__(self, jsondict=None, strict=True):",
+          "type": "Method",
+          "class_signature": "class DomainResource(resource.Resource):"
+        }
+      }
+    },
+    "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:as_json": {
+      "fhirclient/models/fhirabstractbase.py": {
+        "FHIRAbstractBase.as_json": {
+          "code": "    def as_json(self):\n        \"\"\" Serializes to JSON by inspecting `elementProperties()` and creating\n        a JSON dictionary of all registered properties. Checks:\n        \n        - whether required properties are not None (and lists not empty)\n        - whether not-None properties are of the correct type\n        \n        :raises: FHIRValidationError if properties have the wrong type or if\n            required properties are empty\n        :returns: A validated dict object that can be JSON serialized\n        \"\"\"\n        js = {}\n        errs = []\n        \n        # JSONify all registered properties\n        found = set()\n        nonoptionals = set()\n        for name, jsname, typ, is_list, of_many, not_optional in self.elementProperties():\n            if not_optional:\n                nonoptionals.add(of_many or jsname)\n            \n            err = None\n            value = getattr(self, name)\n            if value is None:\n                continue\n            \n            if is_list:\n                if not isinstance(value, list):\n                   err = TypeError(\"Expecting property \\\"{}\\\" on {} to be list, but is {}\"\n                       .format(name, type(self), type(value)))\n                elif len(value) > 0:\n                    if not self._matches_type(value[0], typ):\n                        err = TypeError(\"Expecting property \\\"{}\\\" on {} to be {}, but is {}\"\n                            .format(name, type(self), typ, type(value[0])))\n                    else:\n                        lst = []\n                        for v in value:\n                            try:\n                                lst.append(v.as_json() if hasattr(v, 'as_json') else v)\n                            except FHIRValidationError as e:\n                                err = e.prefixed(str(len(lst))).prefixed(name)\n                        found.add(of_many or jsname)\n                        js[jsname] = lst\n            else:\n                if not self._matches_type(value, typ):\n                    err = TypeError(\"Expecting property \\\"{}\\\" on {} to be {}, but is {}\"\n                        .format(name, type(self), typ, type(value)))\n                else:\n                    try:\n                        found.add(of_many or jsname)\n                        js[jsname] = value.as_json() if hasattr(value, 'as_json') else value\n                    except FHIRValidationError as e:\n                        err = e.prefixed(name)\n            \n            if err is not None:\n                errs.append(err if isinstance(err, FHIRValidationError) else FHIRValidationError([err], name))\n        \n        # any missing non-optionals?\n        if len(nonoptionals - found) > 0:\n            for nonop in nonoptionals - found:\n                errs.append(KeyError(\"Property \\\"{}\\\" on {} is not optional, you must provide a value for it\"\n                    .format(nonop, self)))\n        \n        if len(errs) > 0:\n            raise FHIRValidationError(errs)\n        return js",
+          "docstring": "Serializes to JSON by inspecting `elementProperties()` and creating\na JSON dictionary of all registered properties. Checks:\n\n- whether required properties are not None (and lists not empty)\n- whether not-None properties are of the correct type\n\n:raises: FHIRValidationError if properties have the wrong type or if\n    required properties are empty\n:returns: A validated dict object that can be JSON serialized",
+          "signature": "def as_json(self):",
+          "type": "Method",
+          "class_signature": "class FHIRAbstractBase(object):"
+        }
+      }
+    }
+  },
+  "call_tree": {
+    "tests/models/location_test.py:LocationTests:testLocation1": {
+      "tests/models/location_test.py:LocationTests:instantiate_from": {
+        "fhirclient/models/location.py:Location:__init__": {
+          "fhirclient/models/domainresource.py:DomainResource:__init__": {
+            "fhirclient/models/resource.py:Resource:__init__": {
+              "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRValidationError:FHIRValidationError": {},
+                    "fhirclient/models/location.py:Location:elementProperties": {
+                      "fhirclient/models/domainresource.py:DomainResource:elementProperties": {}
+                    },
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "tests/models/location_test.py:LocationTests:implLocation1": {},
+      "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:as_json": {
+        "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+          "fhirclient/models/fhirabstractbase.py:FHIRValidationError:FHIRValidationError": {},
+          "fhirclient/models/location.py:Location:elementProperties": {
+            "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+              "fhirclient/models/resource.py:Resource:elementProperties": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:elementProperties": {}
+              }
+            }
+          },
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+            "[ignored_or_cut_off]": "..."
+          }
+        }
+      },
+      "fhirclient/models/location.py:Location:__init__": {
+        "fhirclient/models/domainresource.py:DomainResource:__init__": {
+          "fhirclient/models/resource.py:Resource:__init__": {
+            "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+              "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                  "fhirclient/models/location.py:Location:elementProperties": {
+                    "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+                      "fhirclient/models/resource.py:Resource:elementProperties": {}
+                    }
+                  },
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_with_json_dict": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tests/models/location_test.py:LocationTests:instantiate_from": {
+      "fhirclient/models/location.py:Location:__init__": {
+        "fhirclient/models/domainresource.py:DomainResource:__init__": {
+          "fhirclient/models/resource.py:Resource:__init__": {
+            "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+              "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                  "fhirclient/models/location.py:Location:elementProperties": {
+                    "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+                      "fhirclient/models/resource.py:Resource:elementProperties": {}
+                    }
+                  },
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_with_json_dict": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tests/models/location_test.py:LocationTests:testLocation2": {
+      "tests/models/location_test.py:LocationTests:instantiate_from": {
+        "fhirclient/models/location.py:Location:__init__": {
+          "fhirclient/models/domainresource.py:DomainResource:__init__": {
+            "fhirclient/models/resource.py:Resource:__init__": {
+              "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                    "fhirclient/models/location.py:Location:elementProperties": {
+                      "fhirclient/models/domainresource.py:DomainResource:elementProperties": {}
+                    },
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "tests/models/location_test.py:LocationTests:implLocation2": {},
+      "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:as_json": {
+        "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+          "fhirclient/models/location.py:Location:elementProperties": {
+            "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+              "fhirclient/models/resource.py:Resource:elementProperties": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:elementProperties": {}
+              }
+            }
+          },
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+            "[ignored_or_cut_off]": "..."
+          }
+        }
+      },
+      "fhirclient/models/location.py:Location:__init__": {
+        "fhirclient/models/domainresource.py:DomainResource:__init__": {
+          "fhirclient/models/resource.py:Resource:__init__": {
+            "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+              "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                  "fhirclient/models/location.py:Location:elementProperties": {
+                    "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+                      "fhirclient/models/resource.py:Resource:elementProperties": {}
+                    }
+                  },
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_with_json_dict": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tests/models/location_test.py:LocationTests:testLocation3": {
+      "tests/models/location_test.py:LocationTests:instantiate_from": {
+        "fhirclient/models/location.py:Location:__init__": {
+          "fhirclient/models/domainresource.py:DomainResource:__init__": {
+            "fhirclient/models/resource.py:Resource:__init__": {
+              "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                    "fhirclient/models/location.py:Location:elementProperties": {
+                      "fhirclient/models/domainresource.py:DomainResource:elementProperties": {}
+                    },
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "tests/models/location_test.py:LocationTests:implLocation3": {},
+      "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:as_json": {
+        "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+          "fhirclient/models/location.py:Location:elementProperties": {
+            "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+              "fhirclient/models/resource.py:Resource:elementProperties": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:elementProperties": {}
+              }
+            }
+          },
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+            "[ignored_or_cut_off]": "..."
+          }
+        }
+      },
+      "fhirclient/models/location.py:Location:__init__": {
+        "fhirclient/models/domainresource.py:DomainResource:__init__": {
+          "fhirclient/models/resource.py:Resource:__init__": {
+            "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+              "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                  "fhirclient/models/location.py:Location:elementProperties": {
+                    "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+                      "fhirclient/models/resource.py:Resource:elementProperties": {}
+                    }
+                  },
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_with_json_dict": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tests/models/location_test.py:LocationTests:testLocation4": {
+      "tests/models/location_test.py:LocationTests:instantiate_from": {
+        "fhirclient/models/location.py:Location:__init__": {
+          "fhirclient/models/domainresource.py:DomainResource:__init__": {
+            "fhirclient/models/resource.py:Resource:__init__": {
+              "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                    "fhirclient/models/location.py:Location:elementProperties": {
+                      "fhirclient/models/domainresource.py:DomainResource:elementProperties": {}
+                    },
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "tests/models/location_test.py:LocationTests:implLocation4": {},
+      "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:as_json": {
+        "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+          "fhirclient/models/location.py:Location:elementProperties": {
+            "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+              "fhirclient/models/resource.py:Resource:elementProperties": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:elementProperties": {}
+              }
+            }
+          },
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+            "[ignored_or_cut_off]": "..."
+          }
+        }
+      },
+      "fhirclient/models/location.py:Location:__init__": {
+        "fhirclient/models/domainresource.py:DomainResource:__init__": {
+          "fhirclient/models/resource.py:Resource:__init__": {
+            "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+              "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                  "fhirclient/models/location.py:Location:elementProperties": {
+                    "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+                      "fhirclient/models/resource.py:Resource:elementProperties": {}
+                    }
+                  },
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_with_json_dict": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tests/models/location_test.py:LocationTests:testLocation5": {
+      "tests/models/location_test.py:LocationTests:instantiate_from": {
+        "fhirclient/models/location.py:Location:__init__": {
+          "fhirclient/models/domainresource.py:DomainResource:__init__": {
+            "fhirclient/models/resource.py:Resource:__init__": {
+              "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                    "fhirclient/models/location.py:Location:elementProperties": {
+                      "fhirclient/models/domainresource.py:DomainResource:elementProperties": {}
+                    },
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "tests/models/location_test.py:LocationTests:implLocation5": {},
+      "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:as_json": {
+        "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+          "fhirclient/models/location.py:Location:elementProperties": {
+            "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+              "fhirclient/models/resource.py:Resource:elementProperties": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:elementProperties": {}
+              }
+            }
+          },
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+            "[ignored_or_cut_off]": "..."
+          }
+        }
+      },
+      "fhirclient/models/location.py:Location:__init__": {
+        "fhirclient/models/domainresource.py:DomainResource:__init__": {
+          "fhirclient/models/resource.py:Resource:__init__": {
+            "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+              "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                  "fhirclient/models/location.py:Location:elementProperties": {
+                    "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+                      "fhirclient/models/resource.py:Resource:elementProperties": {}
+                    }
+                  },
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_with_json_dict": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tests/models/location_test.py:LocationTests:testLocation6": {
+      "tests/models/location_test.py:LocationTests:instantiate_from": {
+        "fhirclient/models/location.py:Location:__init__": {
+          "fhirclient/models/domainresource.py:DomainResource:__init__": {
+            "fhirclient/models/resource.py:Resource:__init__": {
+              "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                    "fhirclient/models/location.py:Location:elementProperties": {
+                      "fhirclient/models/domainresource.py:DomainResource:elementProperties": {}
+                    },
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "tests/models/location_test.py:LocationTests:implLocation6": {},
+      "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:as_json": {
+        "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+          "fhirclient/models/location.py:Location:elementProperties": {
+            "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+              "fhirclient/models/resource.py:Resource:elementProperties": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:elementProperties": {}
+              }
+            }
+          },
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+            "[ignored_or_cut_off]": "..."
+          }
+        }
+      },
+      "fhirclient/models/location.py:Location:__init__": {
+        "fhirclient/models/domainresource.py:DomainResource:__init__": {
+          "fhirclient/models/resource.py:Resource:__init__": {
+            "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+              "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                  "fhirclient/models/location.py:Location:elementProperties": {
+                    "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+                      "fhirclient/models/resource.py:Resource:elementProperties": {}
+                    }
+                  },
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_with_json_dict": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "PRD": "# PROJECT NAME: fhirclient-location_test\n\n# FOLDER STRUCTURE:\n```\n..\n\u2514\u2500\u2500 fhirclient/\n    \u2514\u2500\u2500 models/\n        \u251c\u2500\u2500 fhirabstractresource.py\n        \u2502   \u2514\u2500\u2500 FHIRAbstractResource.as_json\n        \u2514\u2500\u2500 location.py\n            \u2514\u2500\u2500 Location.__init__\n```\n\n# IMPLEMENTATION REQUIREMENTS:\n## MODULE DESCRIPTION:\nThe module is designed for validating and interacting with FHIR Location resources in a healthcare context. It provides functionality to test and ensure the accuracy, consistency, and compliance of FHIR Location data, which includes detailed attributes such as physical address, status, type, mode, and telecommunications. By offering comprehensive validation and transformations of Location resources, the module ensures that healthcare applications can accurately represent physical and logical locations, such as buildings, rooms, ambulances, and patient residences, within FHIR-based systems. This solves the problem of ensuring the reliability and integrity of location-related data critical for interoperability, system integration, and location-driven workflows in healthcare environments.\n\n## FILE 1: fhirclient/models/location.py\n\n- CLASS METHOD: Location.__init__\n  - CLASS SIGNATURE: class Location(domainresource.DomainResource):\n  - SIGNATURE: def __init__(self, jsondict=None, strict=True):\n  - DOCSTRING: \n```python\n\"\"\"\nInitialize a Location object representing a physical place where services are provided and resources may be stored or found.\n\nParameters:\n- jsondict (dict, optional): A JSON dictionary used for initialization, allowing the object to be populated with properties defined in the FHIR Location structure.\n- strict (bool, default=True): If set to True, invalid properties in the jsondict raise a FHIRValidationError, ensuring the object's integrity; otherwise, such properties are ignored.\n\nAttributes:\n- address: Physical location of the place, represented as an Address object.\n- alias: List of alternate names for the location as strings.\n- availabilityExceptions: Description of exceptions to typical availability as a string.\n- description: Additional details to identify the location beyond its name.\n- endpoint: List of technical endpoints for services related to the location, represented as FHIRReference items.\n- hoursOfOperation: Typical operating hours represented as LocationHoursOfOperation items.\n- identifier: Unique identifiers for the location represented as Identifier items.\n- managingOrganization: Reference to the organization responsible for the location.\n- mode: Indicates the type of location (instance or kind).\n- name: Human-readable name of the location.\n- operationalStatus: Operational status of the location represented as Coding.\n- partOf: Reference to a location that this location is a part of.\n- physicalType: Physical form of the location represented as CodeableConcept.\n- position: Geographic location represented as LocationPosition.\n- status: Current status of the location (active, suspended, inactive).\n- telecom: Contact details for the location represented as ContactPoint items.\n- type: Function type performed by the location represented as CodeableConcept items.\n\nThis class extends the DomainResource class, establishing a connection with the broader FHIR structure for healthcare-related resources.\n\"\"\"\n```\n\n## FILE 2: fhirclient/models/fhirabstractresource.py\n\n- CLASS METHOD: FHIRAbstractResource.as_json\n  - CLASS SIGNATURE: class FHIRAbstractResource(fhirabstractbase.FHIRAbstractBase):\n  - SIGNATURE: def as_json(self):\n  - DOCSTRING: \n```python\n\"\"\"\nConvert the FHIR resource instance into a JSON representation.\n\nThis method overrides the `as_json` method from the superclass `FHIRAbstractBase` to include the `resourceType` key, which identifies the type of the FHIR resource being represented. The `resource_type` is a class attribute of `FHIRAbstractResource` that is set to `'FHIRAbstractResource'`. This ensures that when the resource is serialized to JSON, it accurately reflects its type.\n\n:returns: A dictionary representing the FHIR resource in JSON format, including the `resourceType`.\n\"\"\"\n```\n\n# TASK DESCRIPTION:\nIn this project, you need to implement the functions and methods listed above. The functions have been removed from the code but their docstrings remain.\nYour task is to:\n1. Read and understand the docstrings of each function/method\n2. Understand the dependencies and how they interact with the target functions\n3. Implement the functions/methods according to their docstrings and signatures\n4. Ensure your implementations work correctly with the rest of the codebase\n",
+  "file_code": {
+    "fhirclient/models/location.py": "from . import domainresource\n\nclass Location(domainresource.DomainResource):\n    \"\"\" Details and position information for a physical place.\n    \n    Details and position information for a physical place where services are\n    provided and resources and participants may be stored, found, contained, or\n    accommodated.\n    \"\"\"\n    resource_type = 'Location'\n\n    def elementProperties(self):\n        js = super(Location, self).elementProperties()\n        js.extend([('address', 'address', address.Address, False, None, False), ('alias', 'alias', str, True, None, False), ('availabilityExceptions', 'availabilityExceptions', str, False, None, False), ('description', 'description', str, False, None, False), ('endpoint', 'endpoint', fhirreference.FHIRReference, True, None, False), ('hoursOfOperation', 'hoursOfOperation', LocationHoursOfOperation, True, None, False), ('identifier', 'identifier', identifier.Identifier, True, None, False), ('managingOrganization', 'managingOrganization', fhirreference.FHIRReference, False, None, False), ('mode', 'mode', str, False, None, False), ('name', 'name', str, False, None, False), ('operationalStatus', 'operationalStatus', coding.Coding, False, None, False), ('partOf', 'partOf', fhirreference.FHIRReference, False, None, False), ('physicalType', 'physicalType', codeableconcept.CodeableConcept, False, None, False), ('position', 'position', LocationPosition, False, None, False), ('status', 'status', str, False, None, False), ('telecom', 'telecom', contactpoint.ContactPoint, True, None, False), ('type', 'type', codeableconcept.CodeableConcept, True, None, False)])\n        return js\nfrom . import backboneelement\n\nclass LocationHoursOfOperation(backboneelement.BackboneElement):\n    \"\"\" What days/times during a week is this location usually open.\n    \"\"\"\n    resource_type = 'LocationHoursOfOperation'\n\n    def __init__(self, jsondict=None, strict=True):\n        \"\"\" Initialize all valid properties.\n        \n        :raises: FHIRValidationError on validation errors, unless strict is False\n        :param dict jsondict: A JSON dictionary to use for initialization\n        :param bool strict: If True (the default), invalid variables will raise a TypeError\n        \"\"\"\n        self.allDay = None\n        ' The Location is open all day.\\n        Type `bool`. '\n        self.closingTime = None\n        ' Time that the Location closes.\\n        Type `FHIRTime` (represented as `str` in JSON). '\n        self.daysOfWeek = None\n        ' mon | tue | wed | thu | fri | sat | sun.\\n        List of `str` items. '\n        self.openingTime = None\n        ' Time that the Location opens.\\n        Type `FHIRTime` (represented as `str` in JSON). '\n        super(LocationHoursOfOperation, self).__init__(jsondict=jsondict, strict=strict)\n\n    def elementProperties(self):\n        js = super(LocationHoursOfOperation, self).elementProperties()\n        js.extend([('allDay', 'allDay', bool, False, None, False), ('closingTime', 'closingTime', fhirtime.FHIRTime, False, None, False), ('daysOfWeek', 'daysOfWeek', str, True, None, False), ('openingTime', 'openingTime', fhirtime.FHIRTime, False, None, False)])\n        return js\n\nclass LocationPosition(backboneelement.BackboneElement):\n    \"\"\" The absolute geographic location.\n    \n    The absolute geographic location of the Location, expressed using the WGS84\n    datum (This is the same co-ordinate system used in KML).\n    \"\"\"\n    resource_type = 'LocationPosition'\n\n    def __init__(self, jsondict=None, strict=True):\n        \"\"\" Initialize all valid properties.\n        \n        :raises: FHIRValidationError on validation errors, unless strict is False\n        :param dict jsondict: A JSON dictionary to use for initialization\n        :param bool strict: If True (the default), invalid variables will raise a TypeError\n        \"\"\"\n        self.altitude = None\n        ' Altitude with WGS84 datum.\\n        Type `float`. '\n        self.latitude = None\n        ' Latitude with WGS84 datum.\\n        Type `float`. '\n        self.longitude = None\n        ' Longitude with WGS84 datum.\\n        Type `float`. '\n        super(LocationPosition, self).__init__(jsondict=jsondict, strict=strict)\n\n    def elementProperties(self):\n        js = super(LocationPosition, self).elementProperties()\n        js.extend([('altitude', 'altitude', float, False, None, False), ('latitude', 'latitude', float, False, None, True), ('longitude', 'longitude', float, False, None, True)])\n        return js\nfrom . import address\nfrom . import codeableconcept\nfrom . import coding\nfrom . import contactpoint\nfrom . import fhirreference\nfrom . import fhirtime\nfrom . import identifier",
+    "fhirclient/models/fhirabstractresource.py": "from . import fhirabstractbase\n\nclass FHIRAbstractResource(fhirabstractbase.FHIRAbstractBase):\n    \"\"\" Extends the FHIRAbstractBase with server talking capabilities.\n    \"\"\"\n    resource_type = 'FHIRAbstractResource'\n\n    def __init__(self, jsondict=None, strict=True):\n        self._server = None\n        ' The server the instance was read from. '\n        if jsondict is not None and 'resourceType' in jsondict and (jsondict['resourceType'] != self.resource_type):\n            raise Exception('Attempting to instantiate {} with resource data that defines a resourceType of \"{}\"'.format(self.__class__, jsondict['resourceType']))\n        super(FHIRAbstractResource, self).__init__(jsondict=jsondict, strict=strict)\n\n    @classmethod\n    def _with_json_dict(cls, jsondict):\n        \"\"\" Overridden to use a factory if called when \"resourceType\" is\n        defined in the JSON but does not match the receiver's resource_type.\n        \"\"\"\n        if not isinstance(jsondict, dict):\n            raise Exception('Cannot use this method with anything but a JSON dictionary, got {}'.format(jsondict))\n        res_type = jsondict.get('resourceType')\n        if res_type and res_type != cls.resource_type:\n            return fhirelementfactory.FHIRElementFactory.instantiate(res_type, jsondict)\n        return super(FHIRAbstractResource, cls)._with_json_dict(jsondict)\n\n    def relativeBase(self):\n        return self.__class__.resource_type\n\n    def relativePath(self):\n        if self.id is None:\n            return self.relativeBase()\n        return '{}/{}'.format(self.relativeBase(), self.id)\n\n    @property\n    def origin_server(self):\n        \"\"\" Walks the owner hierarchy until it finds an owner with a server.\n        \"\"\"\n        server = self._server\n        owner = self._owner\n        while server is None and owner is not None:\n            server = getattr(owner, '_server', None)\n            owner = owner._owner\n        return server\n\n    @origin_server.setter\n    def origin_server(self, server):\n        \"\"\" Sets the server on an element. \"\"\"\n        self._server = server\n\n    @classmethod\n    def read(cls, rem_id, server):\n        \"\"\" Read the resource with the given id from the given server. The\n        passed-in server instance must support a `request_json()` method call,\n        taking a relative path as first (and only mandatory) argument.\n        \n        :param str rem_id: The id of the resource on the remote server\n        :param FHIRServer server: An instance of a FHIR server or compatible class\n        :returns: An instance of the receiving class\n        \"\"\"\n        if not rem_id:\n            raise Exception('Cannot read resource without remote id')\n        path = '{}/{}'.format(cls.resource_type, rem_id)\n        instance = cls.read_from(path, server)\n        instance._local_id = rem_id\n        return instance\n\n    @classmethod\n    def read_from(cls, path, server):\n        \"\"\" Requests data from the given REST path on the server and creates\n        an instance of the receiving class.\n        \n        :param str path: The REST path to read from\n        :param FHIRServer server: An instance of a FHIR server or compatible class\n        :returns: An instance of the receiving class\n        \"\"\"\n        if not path:\n            raise Exception('Cannot read resource without REST path')\n        if server is None:\n            raise Exception('Cannot read resource without server instance')\n        ret = server.request_json(path)\n        instance = cls(jsondict=ret)\n        instance.origin_server = server\n        return instance\n\n    def createPath(self):\n        \"\"\" Get the endpoint on the server for creating the resource.\n\n        :returns: The resource endpoint or None for the root endpoint\n        \"\"\"\n        root_post_types = ('batch', 'transaction')\n        if self.resource_type == 'Bundle' and self.type in root_post_types:\n            return None\n        return self.relativeBase()\n\n    def create(self, server):\n        \"\"\" Attempt to create the receiver on the given server, using a POST\n        command.\n        \n        :param FHIRServer server: The server to create the receiver on\n        :returns: None or the response JSON on success\n        \"\"\"\n        srv = server or self.origin_server\n        if srv is None:\n            raise Exception('Cannot create a resource without a server')\n        if self.id:\n            raise Exception('This resource already has an id, cannot create')\n        ret = srv.post_json(self.createPath(), self.as_json())\n        if len(ret.text) > 0:\n            return ret.json()\n        return None\n\n    def update(self, server=None):\n        \"\"\" Update the receiver's representation on the given server, issuing\n        a PUT command.\n        \n        :param FHIRServer server: The server to update the receiver on;\n            optional, will use the instance's `server` if needed.\n        :returns: None or the response JSON on success\n        \"\"\"\n        srv = server or self.origin_server\n        if srv is None:\n            raise Exception('Cannot update a resource that does not have a server')\n        if not self.id:\n            raise Exception('Cannot update a resource that does not have an id')\n        ret = srv.put_json(self.relativePath(), self.as_json())\n        if len(ret.text) > 0:\n            return ret.json()\n        return None\n\n    def delete(self, server=None):\n        \"\"\" Delete the receiver from the given server with a DELETE command.\n        \n        :param FHIRServer server: The server to update the receiver on;\n            optional, will use the instance's `server` if needed.\n        :returns: None or the response JSON on success\n        \"\"\"\n        srv = server or self.origin_server\n        if srv is None:\n            raise Exception('Cannot delete a resource that does not have a server')\n        if not self.id:\n            raise Exception('Cannot delete a resource that does not have an id')\n        ret = srv.delete_json(self.relativePath())\n        if len(ret.text) > 0:\n            return ret.json()\n        return None\n\n    def search(self, struct=None):\n        \"\"\" Search can be started via a dictionary containing a search\n        construct.\n        \n        Calling this method with a search struct will return a `FHIRSearch`\n        object representing the search struct, with \"$type\" and \"id\" added.\n        \n        :param dict struct: An optional search structure\n        :returns: A FHIRSearch instance\n        \"\"\"\n        if struct is None:\n            struct = {'$type': self.__class__.resource_type}\n        if self._local_id is not None or self.id is not None:\n            struct['id'] = self._local_id or self.id\n        return self.__class__.where(struct)\n\n    @classmethod\n    def where(cls, struct):\n        \"\"\" Search can be started via a dictionary containing a search\n        construct.\n        \n        Calling this method with a search struct will return a `FHIRSearch`\n        object representing the search struct\n        \n        :param dict struct: A search structure\n        :returns: A FHIRSearch instance\n        \"\"\"\n        return fhirsearch.FHIRSearch(cls, struct)\nfrom . import fhirsearch\nfrom . import fhirelementfactory"
+  }
+}

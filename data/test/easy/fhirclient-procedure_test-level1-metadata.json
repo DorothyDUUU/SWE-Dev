@@ -1,0 +1,945 @@
+{
+  "dir_path": "/app/fhirclient",
+  "package_name": "fhirclient",
+  "sample_name": "fhirclient-procedure_test",
+  "src_dir": "fhirclient/",
+  "test_dir": "tests/",
+  "test_file": "tests/models/procedure_test.py",
+  "test_code": "#  Generated from FHIR 4.0.1-9346c8cc45, SMART Health IT.\n\nimport os\nimport io\nimport unittest\nimport json\nfrom fhirclient.models import procedure\nfrom fhirclient.models.fhirdate import FHIRDate\nfrom fhirclient.models.fhirdatetime import FHIRDateTime\nfrom fhirclient.models.fhirinstant import FHIRInstant\nfrom fhirclient.models.fhirtime import FHIRTime\n\n\nclass ProcedureTests(unittest.TestCase):\n    def instantiate_from(self, filename):\n        datadir = os.path.join(os.path.dirname(__file__), '..', 'data', 'examples')\n        with io.open(os.path.join(datadir, filename), 'r', encoding='utf-8') as handle:\n            js = json.load(handle)\n            self.assertEqual(\"Procedure\", js[\"resourceType\"])\n        return procedure.Procedure(js)\n    \n    def testProcedure1(self):\n        inst = self.instantiate_from(\"procedure-example-ambulation.json\")\n        self.assertIsNotNone(inst, \"Must have instantiated a Procedure instance\")\n        self.implProcedure1(inst)\n        \n        js = inst.as_json()\n        self.assertEqual(\"Procedure\", js[\"resourceType\"])\n        inst2 = procedure.Procedure(js)\n        self.implProcedure1(inst2)\n    \n    def implProcedure1(self, inst):\n        self.assertEqual(inst.code.coding[0].code, \"62013009\")\n        self.assertEqual(inst.code.coding[0].display, \"Ambulating patient (procedure)\")\n        self.assertEqual(inst.code.coding[0].system, \"http://snomed.info/sct\")\n        self.assertEqual(inst.code.text, \"Ambulation\")\n        self.assertEqual(inst.id, \"ambulation\")\n        self.assertEqual(inst.identifier[0].value, \"12345\")\n        self.assertEqual(inst.instantiatesUri[0], \"http://example.org/protocol-for-hypertension-during-pregnancy\")\n        self.assertEqual(inst.meta.tag[0].code, \"HTEST\")\n        self.assertEqual(inst.meta.tag[0].display, \"test health data\")\n        self.assertEqual(inst.meta.tag[0].system, \"http://terminology.hl7.org/CodeSystem/v3-ActReason\")\n        self.assertEqual(inst.status, \"not-done\")\n        self.assertEqual(inst.statusReason.coding[0].code, \"398254007\")\n        self.assertEqual(inst.statusReason.coding[0].display, \"  Pre-eclampsia (disorder)\")\n        self.assertEqual(inst.statusReason.coding[0].system, \"http://snomed.info/sct\")\n        self.assertEqual(inst.statusReason.text, \"Pre-eclampsia\")\n        self.assertEqual(inst.text.div, \"<div xmlns=\\\"http://www.w3.org/1999/xhtml\\\">Ambulation procedure was not done</div>\")\n        self.assertEqual(inst.text.status, \"generated\")\n    \n    def testProcedure2(self):\n        inst = self.instantiate_from(\"procedure-example-biopsy.json\")\n        self.assertIsNotNone(inst, \"Must have instantiated a Procedure instance\")\n        self.implProcedure2(inst)\n        \n        js = inst.as_json()\n        self.assertEqual(\"Procedure\", js[\"resourceType\"])\n        inst2 = procedure.Procedure(js)\n        self.implProcedure2(inst2)\n    \n    def implProcedure2(self, inst):\n        self.assertEqual(inst.bodySite[0].coding[0].code, \"368225008\")\n        self.assertEqual(inst.bodySite[0].coding[0].display, \"Entire Left Forearm\")\n        self.assertEqual(inst.bodySite[0].coding[0].system, \"http://snomed.info/sct\")\n        self.assertEqual(inst.bodySite[0].text, \"Left forearm\")\n        self.assertEqual(inst.category.coding[0].code, \"103693007\")\n        self.assertEqual(inst.category.coding[0].display, \"Diagnostic procedure (procedure)\")\n        self.assertEqual(inst.category.coding[0].system, \"http://snomed.info/sct\")\n        self.assertEqual(inst.category.text, \"Diagnostic procedure\")\n        self.assertEqual(inst.code.coding[0].code, \"90105005\")\n        self.assertEqual(inst.code.coding[0].display, \"Biopsy of soft tissue of forearm (Procedure)\")\n        self.assertEqual(inst.code.coding[0].system, \"http://snomed.info/sct\")\n        self.assertEqual(inst.code.text, \"Biopsy of suspected melanoma L) arm\")\n        self.assertEqual(inst.complication[0].coding[0].code, \"67750007\")\n        self.assertEqual(inst.complication[0].coding[0].display, \"Ineffective airway clearance (finding)\")\n        self.assertEqual(inst.complication[0].coding[0].system, \"http://snomed.info/sct\")\n        self.assertEqual(inst.complication[0].text, \"Ineffective airway clearance\")\n        self.assertEqual(inst.followUp[0].text, \"Review in clinic\")\n        self.assertEqual(inst.id, \"biopsy\")\n        self.assertEqual(inst.meta.tag[0].code, \"HTEST\")\n        self.assertEqual(inst.meta.tag[0].display, \"test health data\")\n        self.assertEqual(inst.meta.tag[0].system, \"http://terminology.hl7.org/CodeSystem/v3-ActReason\")\n        self.assertEqual(inst.note[0].text, \"Standard Biopsy\")\n        self.assertEqual(inst.performedDateTime.datetime, FHIRDateTime(\"2014-02-03\").datetime)\n        self.assertEqual(inst.performedDateTime.as_json(), \"2014-02-03\")\n        self.assertEqual(inst.reasonCode[0].text, \"Dark lesion l) forearm. getting darker last 3 months.\")\n        self.assertEqual(inst.status, \"completed\")\n        self.assertEqual(inst.text.div, \"<div xmlns=\\\"http://www.w3.org/1999/xhtml\\\">Biopsy of suspected melanoma L) arm</div>\")\n        self.assertEqual(inst.text.status, \"generated\")\n        self.assertEqual(inst.usedCode[0].coding[0].code, \"79068005\")\n        self.assertEqual(inst.usedCode[0].coding[0].display, \"Needle, device (physical object)\")\n        self.assertEqual(inst.usedCode[0].coding[0].system, \"http://snomed.info/sct\")\n        self.assertEqual(inst.usedCode[0].text, \"30-guage needle\")\n    \n    def testProcedure3(self):\n        inst = self.instantiate_from(\"procedure-example-appendectomy-narrative.json\")\n        self.assertIsNotNone(inst, \"Must have instantiated a Procedure instance\")\n        self.implProcedure3(inst)\n        \n        js = inst.as_json()\n        self.assertEqual(\"Procedure\", js[\"resourceType\"])\n        inst2 = procedure.Procedure(js)\n        self.implProcedure3(inst2)\n    \n    def implProcedure3(self, inst):\n        self.assertEqual(inst.id, \"appendectomy-narrative\")\n        self.assertEqual(inst.meta.tag[0].code, \"HTEST\")\n        self.assertEqual(inst.meta.tag[0].display, \"test health data\")\n        self.assertEqual(inst.meta.tag[0].system, \"http://terminology.hl7.org/CodeSystem/v3-ActReason\")\n        self.assertEqual(inst.status, \"completed\")\n        self.assertEqual(inst.text.div, \"<div xmlns=\\\"http://www.w3.org/1999/xhtml\\\">Routine Appendectomy in April 2013 performed by Dr Cecil Surgeon</div>\")\n        self.assertEqual(inst.text.status, \"additional\")\n    \n    def testProcedure4(self):\n        inst = self.instantiate_from(\"procedure-example-f003-abscess.json\")\n        self.assertIsNotNone(inst, \"Must have instantiated a Procedure instance\")\n        self.implProcedure4(inst)\n        \n        js = inst.as_json()\n        self.assertEqual(\"Procedure\", js[\"resourceType\"])\n        inst2 = procedure.Procedure(js)\n        self.implProcedure4(inst2)\n    \n    def implProcedure4(self, inst):\n        self.assertEqual(inst.bodySite[0].coding[0].code, \"83030008\")\n        self.assertEqual(inst.bodySite[0].coding[0].display, \"Retropharyngeal area\")\n        self.assertEqual(inst.bodySite[0].coding[0].system, \"http://snomed.info/sct\")\n        self.assertEqual(inst.code.coding[0].code, \"172960003\")\n        self.assertEqual(inst.code.coding[0].display, \"Incision of retropharyngeal abscess\")\n        self.assertEqual(inst.code.coding[0].system, \"http://snomed.info/sct\")\n        self.assertEqual(inst.followUp[0].text, \"described in care plan\")\n        self.assertEqual(inst.id, \"f003\")\n        self.assertEqual(inst.meta.tag[0].code, \"HTEST\")\n        self.assertEqual(inst.meta.tag[0].display, \"test health data\")\n        self.assertEqual(inst.meta.tag[0].system, \"http://terminology.hl7.org/CodeSystem/v3-ActReason\")\n        self.assertEqual(inst.outcome.text, \"removal of the retropharyngeal abscess\")\n        self.assertEqual(inst.performedPeriod.end.datetime, FHIRDateTime(\"2013-03-24T10:30:10+01:00\").datetime)\n        self.assertEqual(inst.performedPeriod.end.as_json(), \"2013-03-24T10:30:10+01:00\")\n        self.assertEqual(inst.performedPeriod.start.datetime, FHIRDateTime(\"2013-03-24T09:30:10+01:00\").datetime)\n        self.assertEqual(inst.performedPeriod.start.as_json(), \"2013-03-24T09:30:10+01:00\")\n        self.assertEqual(inst.performer[0].function.coding[0].code, \"01.000\")\n        self.assertEqual(inst.performer[0].function.coding[0].display, \"Arts\")\n        self.assertEqual(inst.performer[0].function.coding[0].system, \"urn:oid:2.16.840.1.113883.2.4.15.111\")\n        self.assertEqual(inst.performer[0].function.text, \"Care role\")\n        self.assertEqual(inst.reasonCode[0].text, \"abcess in retropharyngeal area\")\n        self.assertEqual(inst.status, \"completed\")\n        self.assertEqual(inst.text.status, \"generated\")\n    \n    def testProcedure5(self):\n        inst = self.instantiate_from(\"procedure-example-education.json\")\n        self.assertIsNotNone(inst, \"Must have instantiated a Procedure instance\")\n        self.implProcedure5(inst)\n        \n        js = inst.as_json()\n        self.assertEqual(\"Procedure\", js[\"resourceType\"])\n        inst2 = procedure.Procedure(js)\n        self.implProcedure5(inst2)\n    \n    def implProcedure5(self, inst):\n        self.assertEqual(inst.category.coding[0].code, \"311401005\")\n        self.assertEqual(inst.category.coding[0].display, \"Patient education (procedure)\")\n        self.assertEqual(inst.category.coding[0].system, \"http://snomed.info/sct\")\n        self.assertEqual(inst.category.text, \"Education\")\n        self.assertEqual(inst.code.coding[0].code, \"48023004\")\n        self.assertEqual(inst.code.coding[0].display, \"Breast self-examination technique education (procedure)\")\n        self.assertEqual(inst.code.coding[0].system, \"http://snomed.info/sct\")\n        self.assertEqual(inst.code.text, \"Health education - breast examination\")\n        self.assertEqual(inst.id, \"education\")\n        self.assertEqual(inst.meta.tag[0].code, \"HTEST\")\n        self.assertEqual(inst.meta.tag[0].display, \"test health data\")\n        self.assertEqual(inst.meta.tag[0].system, \"http://terminology.hl7.org/CodeSystem/v3-ActReason\")\n        self.assertEqual(inst.performedDateTime.datetime, FHIRDateTime(\"2014-08-16\").datetime)\n        self.assertEqual(inst.performedDateTime.as_json(), \"2014-08-16\")\n        self.assertEqual(inst.reasonCode[0].text, \"early detection of breast mass\")\n        self.assertEqual(inst.status, \"completed\")\n        self.assertEqual(inst.text.div, \"<div xmlns=\\\"http://www.w3.org/1999/xhtml\\\">Health education - breast examination for early detection of breast mass</div>\")\n        self.assertEqual(inst.text.status, \"generated\")\n    \n    def testProcedure6(self):\n        inst = self.instantiate_from(\"procedure-example-colonoscopy.json\")\n        self.assertIsNotNone(inst, \"Must have instantiated a Procedure instance\")\n        self.implProcedure6(inst)\n        \n        js = inst.as_json()\n        self.assertEqual(\"Procedure\", js[\"resourceType\"])\n        inst2 = procedure.Procedure(js)\n        self.implProcedure6(inst2)\n    \n    def implProcedure6(self, inst):\n        self.assertEqual(inst.code.coding[0].code, \"73761001\")\n        self.assertEqual(inst.code.coding[0].display, \"Colonoscopy (procedure)\")\n        self.assertEqual(inst.code.coding[0].system, \"http://snomed.info/sct\")\n        self.assertEqual(inst.code.text, \"Colonoscopy\")\n        self.assertEqual(inst.id, \"colonoscopy\")\n        self.assertEqual(inst.identifier[0].value, \"12345\")\n        self.assertEqual(inst.meta.tag[0].code, \"HTEST\")\n        self.assertEqual(inst.meta.tag[0].display, \"test health data\")\n        self.assertEqual(inst.meta.tag[0].system, \"http://terminology.hl7.org/CodeSystem/v3-ActReason\")\n        self.assertEqual(inst.status, \"completed\")\n        self.assertEqual(inst.text.div, \"<div xmlns=\\\"http://www.w3.org/1999/xhtml\\\">Colonoscopy with complication</div>\")\n        self.assertEqual(inst.text.status, \"generated\")\n    \n    def testProcedure7(self):\n        inst = self.instantiate_from(\"procedure-example-ob.json\")\n        self.assertIsNotNone(inst, \"Must have instantiated a Procedure instance\")\n        self.implProcedure7(inst)\n        \n        js = inst.as_json()\n        self.assertEqual(\"Procedure\", js[\"resourceType\"])\n        inst2 = procedure.Procedure(js)\n        self.implProcedure7(inst2)\n    \n    def implProcedure7(self, inst):\n        self.assertEqual(inst.category.coding[0].code, \"386637004\")\n        self.assertEqual(inst.category.coding[0].display, \"Obstetric procedure (procedure)\")\n        self.assertEqual(inst.category.coding[0].system, \"http://snomed.info/sct\")\n        self.assertEqual(inst.category.text, \"OB\")\n        self.assertEqual(inst.code.coding[0].code, \"22633006\")\n        self.assertEqual(inst.code.coding[0].display, \"Vaginal delivery, medical personnel present (procedure)\")\n        self.assertEqual(inst.code.coding[0].system, \"http://snomed.info/sct\")\n        self.assertEqual(inst.code.text, \"Vaginal delivery\")\n        self.assertEqual(inst.id, \"ob\")\n        self.assertEqual(inst.meta.tag[0].code, \"HTEST\")\n        self.assertEqual(inst.meta.tag[0].display, \"test health data\")\n        self.assertEqual(inst.meta.tag[0].system, \"http://terminology.hl7.org/CodeSystem/v3-ActReason\")\n        self.assertEqual(inst.outcome.text, \"delivery of healthy male infant\")\n        self.assertEqual(inst.performedDateTime.datetime, FHIRDateTime(\"2012-06-02\").datetime)\n        self.assertEqual(inst.performedDateTime.as_json(), \"2012-06-02\")\n        self.assertEqual(inst.reasonCode[0].text, \"term pregnancy, active labor\")\n        self.assertEqual(inst.status, \"completed\")\n        self.assertEqual(inst.text.div, \"<div xmlns=\\\"http://www.w3.org/1999/xhtml\\\">Vaginal delivery of healthy male infant on June 2, 2012</div>\")\n        self.assertEqual(inst.text.status, \"generated\")\n    \n    def testProcedure8(self):\n        inst = self.instantiate_from(\"procedure-example-f001-heart.json\")\n        self.assertIsNotNone(inst, \"Must have instantiated a Procedure instance\")\n        self.implProcedure8(inst)\n        \n        js = inst.as_json()\n        self.assertEqual(\"Procedure\", js[\"resourceType\"])\n        inst2 = procedure.Procedure(js)\n        self.implProcedure8(inst2)\n    \n    def implProcedure8(self, inst):\n        self.assertEqual(inst.bodySite[0].coding[0].code, \"17401000\")\n        self.assertEqual(inst.bodySite[0].coding[0].display, \"Heart valve structure\")\n        self.assertEqual(inst.bodySite[0].coding[0].system, \"http://snomed.info/sct\")\n        self.assertEqual(inst.code.coding[0].code, \"34068001\")\n        self.assertEqual(inst.code.coding[0].display, \"Heart valve replacement\")\n        self.assertEqual(inst.code.coding[0].system, \"http://snomed.info/sct\")\n        self.assertEqual(inst.followUp[0].text, \"described in care plan\")\n        self.assertEqual(inst.id, \"f001\")\n        self.assertEqual(inst.meta.tag[0].code, \"HTEST\")\n        self.assertEqual(inst.meta.tag[0].display, \"test health data\")\n        self.assertEqual(inst.meta.tag[0].system, \"http://terminology.hl7.org/CodeSystem/v3-ActReason\")\n        self.assertEqual(inst.outcome.text, \"improved blood circulation\")\n        self.assertEqual(inst.performedPeriod.end.datetime, FHIRDateTime(\"2011-06-27\").datetime)\n        self.assertEqual(inst.performedPeriod.end.as_json(), \"2011-06-27\")\n        self.assertEqual(inst.performedPeriod.start.datetime, FHIRDateTime(\"2011-06-26\").datetime)\n        self.assertEqual(inst.performedPeriod.start.as_json(), \"2011-06-26\")\n        self.assertEqual(inst.performer[0].function.coding[0].code, \"01.000\")\n        self.assertEqual(inst.performer[0].function.coding[0].display, \"Arts\")\n        self.assertEqual(inst.performer[0].function.coding[0].system, \"urn:oid:2.16.840.1.113883.2.4.15.111\")\n        self.assertEqual(inst.performer[0].function.text, \"Care role\")\n        self.assertEqual(inst.reasonCode[0].text, \"Heart valve disorder\")\n        self.assertEqual(inst.status, \"completed\")\n        self.assertEqual(inst.text.status, \"generated\")\n    \n    def testProcedure9(self):\n        inst = self.instantiate_from(\"procedure-example-f004-tracheotomy.json\")\n        self.assertIsNotNone(inst, \"Must have instantiated a Procedure instance\")\n        self.implProcedure9(inst)\n        \n        js = inst.as_json()\n        self.assertEqual(\"Procedure\", js[\"resourceType\"])\n        inst2 = procedure.Procedure(js)\n        self.implProcedure9(inst2)\n    \n    def implProcedure9(self, inst):\n        self.assertEqual(inst.bodySite[0].coding[0].code, \"83030008\")\n        self.assertEqual(inst.bodySite[0].coding[0].display, \"Retropharyngeal area\")\n        self.assertEqual(inst.bodySite[0].coding[0].system, \"http://snomed.info/sct\")\n        self.assertEqual(inst.code.coding[0].code, \"48387007\")\n        self.assertEqual(inst.code.coding[0].display, \"Tracheotomy\")\n        self.assertEqual(inst.code.coding[0].system, \"http://snomed.info/sct\")\n        self.assertEqual(inst.followUp[0].text, \"described in care plan\")\n        self.assertEqual(inst.id, \"f004\")\n        self.assertEqual(inst.meta.tag[0].code, \"HTEST\")\n        self.assertEqual(inst.meta.tag[0].display, \"test health data\")\n        self.assertEqual(inst.meta.tag[0].system, \"http://terminology.hl7.org/CodeSystem/v3-ActReason\")\n        self.assertEqual(inst.outcome.text, \"removal of the retropharyngeal abscess\")\n        self.assertEqual(inst.performedPeriod.end.datetime, FHIRDateTime(\"2013-03-22T10:30:10+01:00\").datetime)\n        self.assertEqual(inst.performedPeriod.end.as_json(), \"2013-03-22T10:30:10+01:00\")\n        self.assertEqual(inst.performedPeriod.start.datetime, FHIRDateTime(\"2013-03-22T09:30:10+01:00\").datetime)\n        self.assertEqual(inst.performedPeriod.start.as_json(), \"2013-03-22T09:30:10+01:00\")\n        self.assertEqual(inst.performer[0].function.coding[0].code, \"01.000\")\n        self.assertEqual(inst.performer[0].function.coding[0].display, \"Arts\")\n        self.assertEqual(inst.performer[0].function.coding[0].system, \"urn:oid:2.16.840.1.113883.2.4.15.111\")\n        self.assertEqual(inst.performer[0].function.text, \"Care role\")\n        self.assertEqual(inst.reasonCode[0].text, \"ensure breathing during surgery\")\n        self.assertEqual(inst.status, \"completed\")\n        self.assertEqual(inst.text.status, \"generated\")\n    \n    def testProcedure10(self):\n        inst = self.instantiate_from(\"procedure-example-implant.json\")\n        self.assertIsNotNone(inst, \"Must have instantiated a Procedure instance\")\n        self.implProcedure10(inst)\n        \n        js = inst.as_json()\n        self.assertEqual(\"Procedure\", js[\"resourceType\"])\n        inst2 = procedure.Procedure(js)\n        self.implProcedure10(inst2)\n    \n    def implProcedure10(self, inst):\n        self.assertEqual(inst.code.coding[0].code, \"25267002\")\n        self.assertEqual(inst.code.coding[0].display, \"Insertion of intracardiac pacemaker (procedure)\")\n        self.assertEqual(inst.code.coding[0].system, \"http://snomed.info/sct\")\n        self.assertEqual(inst.code.text, \"Implant Pacemaker\")\n        self.assertEqual(inst.focalDevice[0].action.coding[0].code, \"implanted\")\n        self.assertEqual(inst.focalDevice[0].action.coding[0].system, \"http://hl7.org/fhir/device-action\")\n        self.assertEqual(inst.followUp[0].text, \"ROS 5 days  - 2013-04-10\")\n        self.assertEqual(inst.id, \"example-implant\")\n        self.assertEqual(inst.meta.tag[0].code, \"HTEST\")\n        self.assertEqual(inst.meta.tag[0].display, \"test health data\")\n        self.assertEqual(inst.meta.tag[0].system, \"http://terminology.hl7.org/CodeSystem/v3-ActReason\")\n        self.assertEqual(inst.note[0].text, \"Routine Appendectomy. Appendix was inflamed and in retro-caecal position\")\n        self.assertEqual(inst.performedDateTime.datetime, FHIRDateTime(\"2015-04-05\").datetime)\n        self.assertEqual(inst.performedDateTime.as_json(), \"2015-04-05\")\n        self.assertEqual(inst.reasonCode[0].text, \"Bradycardia\")\n        self.assertEqual(inst.status, \"completed\")\n        self.assertEqual(inst.text.status, \"generated\")\n\n",
+  "GT_file_code": {
+    "fhirclient/models/procedure.py": "# Generated from FHIR 4.0.1-9346c8cc45 (http://hl7.org/fhir/StructureDefinition/Procedure).\n# 2024, SMART Health IT.\n\n\nfrom . import domainresource\n\nclass Procedure(domainresource.DomainResource):\n    \"\"\" An action that is being or was performed on a patient.\n    \n    An action that is or was performed on or for a patient. This can be a\n    physical intervention like an operation, or less invasive like long term\n    services, counseling, or hypnotherapy.\n    \"\"\"\n    \n    resource_type = \"Procedure\"\n    \n    def __init__(self, jsondict=None, strict=True):\n        \"\"\" Initialize all valid properties.\n        \n        :raises: FHIRValidationError on validation errors, unless strict is False\n        :param dict jsondict: A JSON dictionary to use for initialization\n        :param bool strict: If True (the default), invalid variables will raise a TypeError\n        \"\"\"\n        \n        self.asserter = None\n        \"\"\" Person who asserts this procedure.\n        Type `FHIRReference` (represented as `dict` in JSON). \"\"\"\n        \n        self.basedOn = None\n        \"\"\" A request for this procedure.\n        List of `FHIRReference` items (represented as `dict` in JSON). \"\"\"\n        \n        self.bodySite = None\n        \"\"\" Target body sites.\n        List of `CodeableConcept` items (represented as `dict` in JSON). \"\"\"\n        \n        self.category = None\n        \"\"\" Classification of the procedure.\n        Type `CodeableConcept` (represented as `dict` in JSON). \"\"\"\n        \n        self.code = None\n        \"\"\" Identification of the procedure.\n        Type `CodeableConcept` (represented as `dict` in JSON). \"\"\"\n        \n        self.complication = None\n        \"\"\" Complication following the procedure.\n        List of `CodeableConcept` items (represented as `dict` in JSON). \"\"\"\n        \n        self.complicationDetail = None\n        \"\"\" A condition that is a result of the procedure.\n        List of `FHIRReference` items (represented as `dict` in JSON). \"\"\"\n        \n        self.encounter = None\n        \"\"\" Encounter created as part of.\n        Type `FHIRReference` (represented as `dict` in JSON). \"\"\"\n        \n        self.focalDevice = None\n        \"\"\" Manipulated, implanted, or removed device.\n        List of `ProcedureFocalDevice` items (represented as `dict` in JSON). \"\"\"\n        \n        self.followUp = None\n        \"\"\" Instructions for follow up.\n        List of `CodeableConcept` items (represented as `dict` in JSON). \"\"\"\n        \n        self.identifier = None\n        \"\"\" External Identifiers for this procedure.\n        List of `Identifier` items (represented as `dict` in JSON). \"\"\"\n        \n        self.instantiatesCanonical = None\n        \"\"\" Instantiates FHIR protocol or definition.\n        List of `str` items. \"\"\"\n        \n        self.instantiatesUri = None\n        \"\"\" Instantiates external protocol or definition.\n        List of `str` items. \"\"\"\n        \n        self.location = None\n        \"\"\" Where the procedure happened.\n        Type `FHIRReference` (represented as `dict` in JSON). \"\"\"\n        \n        self.note = None\n        \"\"\" Additional information about the procedure.\n        List of `Annotation` items (represented as `dict` in JSON). \"\"\"\n        \n        self.outcome = None\n        \"\"\" The result of procedure.\n        Type `CodeableConcept` (represented as `dict` in JSON). \"\"\"\n        \n        self.partOf = None\n        \"\"\" Part of referenced event.\n        List of `FHIRReference` items (represented as `dict` in JSON). \"\"\"\n        \n        self.performedAge = None\n        \"\"\" When the procedure was performed.\n        Type `Age` (represented as `dict` in JSON). \"\"\"\n        \n        self.performedDateTime = None\n        \"\"\" When the procedure was performed.\n        Type `FHIRDateTime` (represented as `str` in JSON). \"\"\"\n        \n        self.performedPeriod = None\n        \"\"\" When the procedure was performed.\n        Type `Period` (represented as `dict` in JSON). \"\"\"\n        \n        self.performedRange = None\n        \"\"\" When the procedure was performed.\n        Type `Range` (represented as `dict` in JSON). \"\"\"\n        \n        self.performedString = None\n        \"\"\" When the procedure was performed.\n        Type `str`. \"\"\"\n        \n        self.performer = None\n        \"\"\" The people who performed the procedure.\n        List of `ProcedurePerformer` items (represented as `dict` in JSON). \"\"\"\n        \n        self.reasonCode = None\n        \"\"\" Coded reason procedure performed.\n        List of `CodeableConcept` items (represented as `dict` in JSON). \"\"\"\n        \n        self.reasonReference = None\n        \"\"\" The justification that the procedure was performed.\n        List of `FHIRReference` items (represented as `dict` in JSON). \"\"\"\n        \n        self.recorder = None\n        \"\"\" Who recorded the procedure.\n        Type `FHIRReference` (represented as `dict` in JSON). \"\"\"\n        \n        self.report = None\n        \"\"\" Any report resulting from the procedure.\n        List of `FHIRReference` items (represented as `dict` in JSON). \"\"\"\n        \n        self.status = None\n        \"\"\" preparation | in-progress | not-done | on-hold | stopped |\n        completed | entered-in-error | unknown.\n        Type `str`. \"\"\"\n        \n        self.statusReason = None\n        \"\"\" Reason for current status.\n        Type `CodeableConcept` (represented as `dict` in JSON). \"\"\"\n        \n        self.subject = None\n        \"\"\" Who the procedure was performed on.\n        Type `FHIRReference` (represented as `dict` in JSON). \"\"\"\n        \n        self.usedCode = None\n        \"\"\" Coded items used during the procedure.\n        List of `CodeableConcept` items (represented as `dict` in JSON). \"\"\"\n        \n        self.usedReference = None\n        \"\"\" Items used during procedure.\n        List of `FHIRReference` items (represented as `dict` in JSON). \"\"\"\n        \n        super(Procedure, self).__init__(jsondict=jsondict, strict=strict)\n    \n    def elementProperties(self):\n        js = super(Procedure, self).elementProperties()\n        js.extend([\n            (\"asserter\", \"asserter\", fhirreference.FHIRReference, False, None, False),\n            (\"basedOn\", \"basedOn\", fhirreference.FHIRReference, True, None, False),\n            (\"bodySite\", \"bodySite\", codeableconcept.CodeableConcept, True, None, False),\n            (\"category\", \"category\", codeableconcept.CodeableConcept, False, None, False),\n            (\"code\", \"code\", codeableconcept.CodeableConcept, False, None, False),\n            (\"complication\", \"complication\", codeableconcept.CodeableConcept, True, None, False),\n            (\"complicationDetail\", \"complicationDetail\", fhirreference.FHIRReference, True, None, False),\n            (\"encounter\", \"encounter\", fhirreference.FHIRReference, False, None, False),\n            (\"focalDevice\", \"focalDevice\", ProcedureFocalDevice, True, None, False),\n            (\"followUp\", \"followUp\", codeableconcept.CodeableConcept, True, None, False),\n            (\"identifier\", \"identifier\", identifier.Identifier, True, None, False),\n            (\"instantiatesCanonical\", \"instantiatesCanonical\", str, True, None, False),\n            (\"instantiatesUri\", \"instantiatesUri\", str, True, None, False),\n            (\"location\", \"location\", fhirreference.FHIRReference, False, None, False),\n            (\"note\", \"note\", annotation.Annotation, True, None, False),\n            (\"outcome\", \"outcome\", codeableconcept.CodeableConcept, False, None, False),\n            (\"partOf\", \"partOf\", fhirreference.FHIRReference, True, None, False),\n            (\"performedAge\", \"performedAge\", age.Age, False, \"performed\", False),\n            (\"performedDateTime\", \"performedDateTime\", fhirdatetime.FHIRDateTime, False, \"performed\", False),\n            (\"performedPeriod\", \"performedPeriod\", period.Period, False, \"performed\", False),\n            (\"performedRange\", \"performedRange\", range.Range, False, \"performed\", False),\n            (\"performedString\", \"performedString\", str, False, \"performed\", False),\n            (\"performer\", \"performer\", ProcedurePerformer, True, None, False),\n            (\"reasonCode\", \"reasonCode\", codeableconcept.CodeableConcept, True, None, False),\n            (\"reasonReference\", \"reasonReference\", fhirreference.FHIRReference, True, None, False),\n            (\"recorder\", \"recorder\", fhirreference.FHIRReference, False, None, False),\n            (\"report\", \"report\", fhirreference.FHIRReference, True, None, False),\n            (\"status\", \"status\", str, False, None, True),\n            (\"statusReason\", \"statusReason\", codeableconcept.CodeableConcept, False, None, False),\n            (\"subject\", \"subject\", fhirreference.FHIRReference, False, None, True),\n            (\"usedCode\", \"usedCode\", codeableconcept.CodeableConcept, True, None, False),\n            (\"usedReference\", \"usedReference\", fhirreference.FHIRReference, True, None, False),\n        ])\n        return js\n\n\nfrom . import backboneelement\n\nclass ProcedureFocalDevice(backboneelement.BackboneElement):\n    \"\"\" Manipulated, implanted, or removed device.\n    \n    A device that is implanted, removed or otherwise manipulated (calibration,\n    battery replacement, fitting a prosthesis, attaching a wound-vac, etc.) as\n    a focal portion of the Procedure.\n    \"\"\"\n    \n    resource_type = \"ProcedureFocalDevice\"\n    \n    def __init__(self, jsondict=None, strict=True):\n        \"\"\" Initialize all valid properties.\n        \n        :raises: FHIRValidationError on validation errors, unless strict is False\n        :param dict jsondict: A JSON dictionary to use for initialization\n        :param bool strict: If True (the default), invalid variables will raise a TypeError\n        \"\"\"\n        \n        self.action = None\n        \"\"\" Kind of change to device.\n        Type `CodeableConcept` (represented as `dict` in JSON). \"\"\"\n        \n        self.manipulated = None\n        \"\"\" Device that was changed.\n        Type `FHIRReference` (represented as `dict` in JSON). \"\"\"\n        \n        super(ProcedureFocalDevice, self).__init__(jsondict=jsondict, strict=strict)\n    \n    def elementProperties(self):\n        js = super(ProcedureFocalDevice, self).elementProperties()\n        js.extend([\n            (\"action\", \"action\", codeableconcept.CodeableConcept, False, None, False),\n            (\"manipulated\", \"manipulated\", fhirreference.FHIRReference, False, None, True),\n        ])\n        return js\n\n\nclass ProcedurePerformer(backboneelement.BackboneElement):\n    \"\"\" The people who performed the procedure.\n    \n    Limited to \"real\" people rather than equipment.\n    \"\"\"\n    \n    resource_type = \"ProcedurePerformer\"\n    \n    def __init__(self, jsondict=None, strict=True):\n        \"\"\" Initialize all valid properties.\n        \n        :raises: FHIRValidationError on validation errors, unless strict is False\n        :param dict jsondict: A JSON dictionary to use for initialization\n        :param bool strict: If True (the default), invalid variables will raise a TypeError\n        \"\"\"\n        \n        self.actor = None\n        \"\"\" The reference to the practitioner.\n        Type `FHIRReference` (represented as `dict` in JSON). \"\"\"\n        \n        self.function = None\n        \"\"\" Type of performance.\n        Type `CodeableConcept` (represented as `dict` in JSON). \"\"\"\n        \n        self.onBehalfOf = None\n        \"\"\" Organization the device or practitioner was acting for.\n        Type `FHIRReference` (represented as `dict` in JSON). \"\"\"\n        \n        super(ProcedurePerformer, self).__init__(jsondict=jsondict, strict=strict)\n    \n    def elementProperties(self):\n        js = super(ProcedurePerformer, self).elementProperties()\n        js.extend([\n            (\"actor\", \"actor\", fhirreference.FHIRReference, False, None, True),\n            (\"function\", \"function\", codeableconcept.CodeableConcept, False, None, False),\n            (\"onBehalfOf\", \"onBehalfOf\", fhirreference.FHIRReference, False, None, False),\n        ])\n        return js\n\n\nfrom . import age\nfrom . import annotation\nfrom . import codeableconcept\nfrom . import fhirdatetime\nfrom . import fhirreference\nfrom . import identifier\nfrom . import period\nfrom . import range\n",
+    "fhirclient/models/fhirdate.py": "\"\"\"Facilitate working with FHIR dates and times.\"\"\"\n# 2014-2024, SMART Health IT.\n\nimport datetime\nimport re\nfrom typing import Any, Union\n\n\nclass FHIRDate:\n    \"\"\"\n    A convenience class for working with FHIR dates in Python.\n\n    http://hl7.org/fhir/R4/datatypes.html#date\n\n    Converting to a Python representation does require some compromises:\n    - This class will convert partial dates (\"reduced precision dates\") like \"2024\" into full\n      dates using the earliest possible time (in this example, \"2024-01-01\") because Python's\n      date class does not support partial dates.\n\n    If such compromise is not useful for you, avoid using the `date` or `isostring`\n    properties and just use the `as_json()` method in order to work with the original,\n    exact string.\n\n    For backwards-compatibility reasons, this class is the parent class of FHIRDateTime,\n    FHIRInstant, and FHIRTime. But they are all separate concepts and in a future major release,\n    they should be split into entirely separate classes.\n\n    Public properties:\n    - `date`: datetime.date representing the JSON value\n    - `isostring`: an ISO 8601 string version of the above Python object\n\n    Public methods:\n    - `as_json`: returns the original JSON used to construct the instance\n    \"\"\"\n\n    def __init__(self, jsonval: Union[str, None] = None):\n        self.date: Union[datetime.date, datetime.datetime, datetime.time, None] = None\n\n        if jsonval is not None:\n            if not isinstance(jsonval, str):\n                raise TypeError(\"Expecting string when initializing {}, but got {}\"\n                    .format(type(self), type(jsonval)))\n            if not self._REGEX.fullmatch(jsonval):\n                raise ValueError(\"does not match expected format\")\n            self.date = self._from_string(jsonval)\n\n        self.origval: Union[str, None] = jsonval\n\n    def __setattr__(self, prop, value):\n        if prop in {'date', self._FIELD}:\n            self.origval = None\n            # Keep these two fields in sync\n            object.__setattr__(self, self._FIELD, value)\n            object.__setattr__(self, \"date\", value)\n        else:\n            object.__setattr__(self, prop, value)\n\n    @property\n    def isostring(self) -> Union[str, None]:\n        \"\"\"\n        Returns a standardized ISO 8601 version of the Python representation of the FHIR JSON.\n\n        Note that this may not be a fully accurate version of the input JSON.\n        In particular, it will convert partial dates like \"2024\" to full dates like \"2024-01-01\".\n        It will also normalize the timezone, if present.\n        \"\"\"\n        if self.date is None:\n            return None\n        return self.date.isoformat()\n\n    @classmethod\n    def with_json(cls, jsonobj: Union[str, list]):\n        \"\"\" Initialize a date from an ISO date string.\n        \"\"\"\n        if isinstance(jsonobj, str):\n            return cls(jsonobj)\n\n        if isinstance(jsonobj, list):\n            return [cls(jsonval) for jsonval in jsonobj]\n\n        raise TypeError(\"`cls.with_json()` only takes string or list of strings, but you provided {}\"\n            .format(type(jsonobj)))\n\n    @classmethod\n    def with_json_and_owner(cls, jsonobj: Union[str, list], owner):\n        \"\"\" Added for compatibility reasons to FHIRElement; \"owner\" is\n        discarded.\n        \"\"\"\n        return cls.with_json(jsonobj)\n\n    def as_json(self) -> Union[str, None]:\n        \"\"\"Returns the original JSON string used to create this instance.\"\"\"\n        if self.origval is not None:\n            return self.origval\n        return self.isostring\n\n    ##################################\n    # Private properties and methods #\n    ##################################\n\n    # Pulled from spec for date\n    _REGEX = re.compile(r\"([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1]))?)?\")\n    _FIELD = \"date\"\n\n    @staticmethod\n    def _parse_partial(value: str, cls):\n        \"\"\"\n        Handle partial dates like 1970 or 1980-12.\n\n        FHIR allows them, but Python's datetime classes do not natively parse them.\n        \"\"\"\n        # Note that `value` has already been regex-certified by this point,\n        # so we don't have to handle really wild strings.\n        if len(value) < 10:\n            pieces = value.split(\"-\")\n            if len(pieces) == 1:\n                return cls(int(pieces[0]), 1, 1)\n            else:\n                return cls(int(pieces[0]), int(pieces[1]), 1)\n        return cls.fromisoformat(value)\n\n    @staticmethod\n    def _parse_date(value: str) -> datetime.date:\n        return FHIRDate._parse_partial(value, datetime.date)\n\n    @staticmethod\n    def _parse_datetime(value: str) -> datetime.datetime:\n        # Until we depend on Python 3.11+, manually handle Z\n        value = value.replace(\"Z\", \"+00:00\")\n        value = FHIRDate._strip_leap_seconds(value)\n        return FHIRDate._parse_partial(value, datetime.datetime)\n\n    @staticmethod\n    def _parse_time(value: str) -> datetime.time:\n        value = FHIRDate._strip_leap_seconds(value)\n        return datetime.time.fromisoformat(value)\n\n    @staticmethod\n    def _strip_leap_seconds(value: str) -> str:\n        \"\"\"\n        Manually ignore leap seconds by clamping the seconds value to 59.\n\n        Python native times don't support them (at the time of this writing, but also watch\n        https://bugs.python.org/issue23574). For example, the stdlib's datetime.fromtimestamp()\n        also clamps to 59 if the system gives it leap seconds.\n\n        But FHIR allows leap seconds and says receiving code SHOULD accept them,\n        so we should be graceful enough to at least not throw a ValueError,\n        even though we can't natively represent the most-correct time.\n        \"\"\"\n        # We can get away with such relaxed replacement because we are already regex-certified\n        # and \":60\" can't show up anywhere but seconds.\n        return value.replace(\":60\", \":59\")\n\n    @staticmethod\n    def _from_string(value: str) -> Any:\n        return FHIRDate._parse_date(value)\n",
+    "fhirclient/models/fhirdatetime.py": "\"\"\"Facilitate working with FHIR time fields.\"\"\"\n# 2024, SMART Health IT.\n\nimport datetime\nimport re\nfrom typing import Any, Union\n\nfrom .fhirdate import FHIRDate\n\n\n# This inherits from FHIRDate as a matter of backwards compatibility.\n# (in case anyone was doing isinstance(obj, FHIRDate))\n# Next time we bump the major version, we can stop that and also drop the\n# backwards-compatible 'date' alias. R4-QUIRK\n\nclass FHIRDateTime(FHIRDate):\n    \"\"\"\n    A convenience class for working with FHIR datetimes in Python.\n\n    http://hl7.org/fhir/R4/datatypes.html#datetime\n\n    Converting to a Python representation does require some compromises:\n    - This class will convert partial dates (\"reduced precision dates\") like \"2024\" into full\n      naive datetimes using the earliest possible time (in this example, \"2024-01-01T00:00:00\")\n      because Python's datetime class does not support partial dates.\n    - FHIR allows arbitrary sub-second precision, but Python only holds microseconds.\n    - Leap seconds (:60) will be changed to the 59th second (:59) because Python's time classes\n      do not support leap seconds.\n\n    If such compromise is not useful for you, avoid using the `date`, `datetime`, or `isostring`\n    properties and just use the `as_json()` method in order to work with the original,\n    exact string.\n\n    Public properties:\n    - `datetime`: datetime.datetime representing the JSON value (naive or aware)\n    - `date`: backwards-compatibility alias for `datetime`\n    - `isostring`: an ISO 8601 string version of the above Python object\n\n    Public methods:\n    - `as_json`: returns the original JSON used to construct the instance\n    \"\"\"\n\n    def __init__(self, jsonval: Union[str, None] = None):\n        self.datetime: Union[datetime.datetime, None] = None\n        super().__init__(jsonval)\n\n    ##################################\n    # Private properties and methods #\n    ##################################\n\n    # Pulled from spec for datetime\n    _REGEX = re.compile(r\"([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\\.[0-9]+)?(Z|(\\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)?\")\n    _FIELD = \"datetime\"\n\n    @staticmethod\n    def _from_string(value: str) -> Any:\n        return FHIRDate._parse_datetime(value)\n",
+    "fhirclient/models/fhirabstractresource.py": "#!/usr/bin/env python\n# -*- coding: utf-8 -*-\n#\n#  Base class for FHIR resources.\n#  2014, SMART Health IT.\n\nfrom . import fhirabstractbase\n\n\nclass FHIRAbstractResource(fhirabstractbase.FHIRAbstractBase):\n    \"\"\" Extends the FHIRAbstractBase with server talking capabilities.\n    \"\"\"\n    resource_type = 'FHIRAbstractResource'\n    \n    def __init__(self, jsondict=None, strict=True):\n        self._server = None\n        \"\"\" The server the instance was read from. \"\"\"\n        \n        # raise if \"resourceType\" does not match\n        if jsondict is not None and 'resourceType' in jsondict \\\n            and jsondict['resourceType'] != self.resource_type:\n            raise Exception(\"Attempting to instantiate {} with resource data that defines a resourceType of \\\"{}\\\"\"\n                .format(self.__class__, jsondict['resourceType']))\n        \n        super(FHIRAbstractResource, self).__init__(jsondict=jsondict, strict=strict)\n    \n    @classmethod\n    def _with_json_dict(cls, jsondict):\n        \"\"\" Overridden to use a factory if called when \"resourceType\" is\n        defined in the JSON but does not match the receiver's resource_type.\n        \"\"\"\n        if not isinstance(jsondict, dict):\n            raise Exception(\"Cannot use this method with anything but a JSON dictionary, got {}\"\n                .format(jsondict))\n        \n        res_type = jsondict.get('resourceType')\n        if res_type and res_type != cls.resource_type:\n            return fhirelementfactory.FHIRElementFactory.instantiate(res_type, jsondict)\n        return super(FHIRAbstractResource, cls)._with_json_dict(jsondict)\n    \n    def as_json(self):\n        js = super(FHIRAbstractResource, self).as_json()\n        js['resourceType'] = self.resource_type\n        return js\n    \n    \n    # MARK: Handling Paths\n    \n    def relativeBase(self):\n        return self.__class__.resource_type\n    \n    def relativePath(self):\n        if self.id is None:\n            return self.relativeBase()\n        return \"{}/{}\".format(self.relativeBase(), self.id)\n    \n    \n    # MARK: - Server Connection\n    \n    @property\n    def origin_server(self):\n        \"\"\" Walks the owner hierarchy until it finds an owner with a server.\n        \"\"\"\n        server = self._server\n        owner = self._owner\n        while server is None and owner is not None:\n            server = getattr(owner, '_server', None)\n            owner = owner._owner\n        return server\n\n    @origin_server.setter\n    def origin_server(self, server):\n        \"\"\" Sets the server on an element. \"\"\"\n        self._server = server\n    \n    @classmethod\n    def read(cls, rem_id, server):\n        \"\"\" Read the resource with the given id from the given server. The\n        passed-in server instance must support a `request_json()` method call,\n        taking a relative path as first (and only mandatory) argument.\n        \n        :param str rem_id: The id of the resource on the remote server\n        :param FHIRServer server: An instance of a FHIR server or compatible class\n        :returns: An instance of the receiving class\n        \"\"\"\n        if not rem_id:\n            raise Exception(\"Cannot read resource without remote id\")\n        \n        path = '{}/{}'.format(cls.resource_type, rem_id)\n        instance = cls.read_from(path, server)\n        instance._local_id = rem_id\n        \n        return instance\n    \n    @classmethod\n    def read_from(cls, path, server):\n        \"\"\" Requests data from the given REST path on the server and creates\n        an instance of the receiving class.\n        \n        :param str path: The REST path to read from\n        :param FHIRServer server: An instance of a FHIR server or compatible class\n        :returns: An instance of the receiving class\n        \"\"\"\n        if not path:\n            raise Exception(\"Cannot read resource without REST path\")\n        if server is None:\n            raise Exception(\"Cannot read resource without server instance\")\n        \n        ret = server.request_json(path)\n        instance = cls(jsondict=ret)\n        instance.origin_server = server\n        return instance\n\n    def createPath(self):\n        \"\"\" Get the endpoint on the server for creating the resource.\n\n        :returns: The resource endpoint or None for the root endpoint\n        \"\"\"\n        root_post_types = (\"batch\", \"transaction\")\n\n        if self.resource_type == \"Bundle\" and self.type in root_post_types:\n            return None\n\n        return self.relativeBase()\n\n    def create(self, server):\n        \"\"\" Attempt to create the receiver on the given server, using a POST\n        command.\n        \n        :param FHIRServer server: The server to create the receiver on\n        :returns: None or the response JSON on success\n        \"\"\"\n        srv = server or self.origin_server\n        if srv is None:\n            raise Exception(\"Cannot create a resource without a server\")\n        if self.id:\n            raise Exception(\"This resource already has an id, cannot create\")\n\n        ret = srv.post_json(self.createPath(), self.as_json())\n        if len(ret.text) > 0:\n            return ret.json()\n        return None\n    \n    def update(self, server=None):\n        \"\"\" Update the receiver's representation on the given server, issuing\n        a PUT command.\n        \n        :param FHIRServer server: The server to update the receiver on;\n            optional, will use the instance's `server` if needed.\n        :returns: None or the response JSON on success\n        \"\"\"\n        srv = server or self.origin_server\n        if srv is None:\n            raise Exception(\"Cannot update a resource that does not have a server\")\n        if not self.id:\n            raise Exception(\"Cannot update a resource that does not have an id\")\n        \n        ret = srv.put_json(self.relativePath(), self.as_json())\n        if len(ret.text) > 0:\n            return ret.json()\n        return None\n    \n    def delete(self, server=None):\n        \"\"\" Delete the receiver from the given server with a DELETE command.\n        \n        :param FHIRServer server: The server to update the receiver on;\n            optional, will use the instance's `server` if needed.\n        :returns: None or the response JSON on success\n        \"\"\"\n        srv = server or self.origin_server\n        if srv is None:\n            raise Exception(\"Cannot delete a resource that does not have a server\")\n        if not self.id:\n            raise Exception(\"Cannot delete a resource that does not have an id\")\n        \n        ret = srv.delete_json(self.relativePath())\n        if len(ret.text) > 0:\n            return ret.json()\n        return None\n    \n    \n    # MARK: - Search\n    \n    def search(self, struct=None):\n        \"\"\" Search can be started via a dictionary containing a search\n        construct.\n        \n        Calling this method with a search struct will return a `FHIRSearch`\n        object representing the search struct, with \"$type\" and \"id\" added.\n        \n        :param dict struct: An optional search structure\n        :returns: A FHIRSearch instance\n        \"\"\"\n        if struct is None:\n            struct = {'$type': self.__class__.resource_type}\n        if self._local_id is not None or self.id is not None:\n            struct['id'] = self._local_id or self.id\n        return self.__class__.where(struct)\n    \n    @classmethod\n    def where(cls, struct):\n        \"\"\" Search can be started via a dictionary containing a search\n        construct.\n        \n        Calling this method with a search struct will return a `FHIRSearch`\n        object representing the search struct\n        \n        :param dict struct: A search structure\n        :returns: A FHIRSearch instance\n        \"\"\"\n        return fhirsearch.FHIRSearch(cls, struct)\n\n\nfrom . import fhirsearch\nfrom . import fhirelementfactory\n"
+  },
+  "GT_src_dict": {
+    "fhirclient/models/procedure.py": {
+      "Procedure.__init__": {
+        "code": "    def __init__(self, jsondict=None, strict=True):\n        \"\"\"Initializes a Procedure instance representing a medical action performed on a patient. The constructor sets various properties of the procedure, including the individual who asserts the procedure, the body sites involved, the procedure code, complications, encounter information, performer details, and outcome data. \n\nParameters:\n- jsondict (dict, optional): A JSON dictionary containing initial values for the properties. If provided, it will be used to populate the attributes of the Procedure instance.\n- strict (bool, optional): A flag indicating whether to enforce strict validation. If True (default), invalid inputs will raise a TypeError.\n\nAttributes:\n- asserter: Person who asserts the procedure (FHIRReference).\n- basedOn: Request for the procedure (list of FHIRReference).\n- bodySite: Target body sites for the procedure (list of CodeableConcept).\n- category: Classification of the procedure (CodeableConcept).\n- code: Identification of the procedure (CodeableConcept).\n- complication: Post-procedure complications (list of CodeableConcept).\n- complicationDetail: Conditions resulting from the procedure (list of FHIRReference).\n- encounter: Encounter associated with the procedure (FHIRReference).\n- focalDevice: Devices manipulated or implanted during the procedure (list of ProcedureFocalDevice).\n- followUp: Follow-up instructions (list of CodeableConcept).\n- identifier: External identifiers for the procedure (list of Identifier).\n- instantiatesCanonical: References to FHIR protocols or definitions (list of strings).\n- instantiatesUri: References to external protocols or definitions (list of strings).\n- location: Where the procedure was performed (FHIRReference).\n- note: Additional information about the procedure (list of Annotation).\n- outcome: Result of the procedure (CodeableConcept).\n- partOf: Related events (list of FHIRReference).\n- performedAge, performedDateTime, performedPeriod, performedRange, performedString: Information on when the procedure was performed, in various formats (Age, FHIRDateTime, Period, Range, string).\n- performer: Individuals who performed the procedure (list of ProcedurePerformer).\n- reasonCode: Coded reasons for performing the procedure (list of CodeableConcept).\n- reasonReference: Justifying references for the procedure (list of FHIRReference).\n- recorder: Individual who recorded the procedure (FHIRReference).\n- report: Reports related to the procedure (list of FHIRReference).\n- status: Current status of the procedure (string).\n- statusReason: Reason for the current status (CodeableConcept).\n- subject: The patient on whom the procedure was performed (FHIRReference).\n- usedCode: Coded items used during the procedure (list of CodeableConcept).\n- usedReference: Items referenced during the procedure (list of FHIRReference).\n\nThe Procedure class extends the DomainResource class from the domainresource module, inheriting its attributes and methods.\"\"\"\n        ' Initialize all valid properties.\\n        \\n        :raises: FHIRValidationError on validation errors, unless strict is False\\n        :param dict jsondict: A JSON dictionary to use for initialization\\n        :param bool strict: If True (the default), invalid variables will raise a TypeError\\n        '\n        self.asserter = None\n        ' Person who asserts this procedure.\\n        Type `FHIRReference` (represented as `dict` in JSON). '\n        self.basedOn = None\n        ' A request for this procedure.\\n        List of `FHIRReference` items (represented as `dict` in JSON). '\n        self.bodySite = None\n        ' Target body sites.\\n        List of `CodeableConcept` items (represented as `dict` in JSON). '\n        self.category = None\n        ' Classification of the procedure.\\n        Type `CodeableConcept` (represented as `dict` in JSON). '\n        self.code = None\n        ' Identification of the procedure.\\n        Type `CodeableConcept` (represented as `dict` in JSON). '\n        self.complication = None\n        ' Complication following the procedure.\\n        List of `CodeableConcept` items (represented as `dict` in JSON). '\n        self.complicationDetail = None\n        ' A condition that is a result of the procedure.\\n        List of `FHIRReference` items (represented as `dict` in JSON). '\n        self.encounter = None\n        ' Encounter created as part of.\\n        Type `FHIRReference` (represented as `dict` in JSON). '\n        self.focalDevice = None\n        ' Manipulated, implanted, or removed device.\\n        List of `ProcedureFocalDevice` items (represented as `dict` in JSON). '\n        self.followUp = None\n        ' Instructions for follow up.\\n        List of `CodeableConcept` items (represented as `dict` in JSON). '\n        self.identifier = None\n        ' External Identifiers for this procedure.\\n        List of `Identifier` items (represented as `dict` in JSON). '\n        self.instantiatesCanonical = None\n        ' Instantiates FHIR protocol or definition.\\n        List of `str` items. '\n        self.instantiatesUri = None\n        ' Instantiates external protocol or definition.\\n        List of `str` items. '\n        self.location = None\n        ' Where the procedure happened.\\n        Type `FHIRReference` (represented as `dict` in JSON). '\n        self.note = None\n        ' Additional information about the procedure.\\n        List of `Annotation` items (represented as `dict` in JSON). '\n        self.outcome = None\n        ' The result of procedure.\\n        Type `CodeableConcept` (represented as `dict` in JSON). '\n        self.partOf = None\n        ' Part of referenced event.\\n        List of `FHIRReference` items (represented as `dict` in JSON). '\n        self.performedAge = None\n        ' When the procedure was performed.\\n        Type `Age` (represented as `dict` in JSON). '\n        self.performedDateTime = None\n        ' When the procedure was performed.\\n        Type `FHIRDateTime` (represented as `str` in JSON). '\n        self.performedPeriod = None\n        ' When the procedure was performed.\\n        Type `Period` (represented as `dict` in JSON). '\n        self.performedRange = None\n        ' When the procedure was performed.\\n        Type `Range` (represented as `dict` in JSON). '\n        self.performedString = None\n        ' When the procedure was performed.\\n        Type `str`. '\n        self.performer = None\n        ' The people who performed the procedure.\\n        List of `ProcedurePerformer` items (represented as `dict` in JSON). '\n        self.reasonCode = None\n        ' Coded reason procedure performed.\\n        List of `CodeableConcept` items (represented as `dict` in JSON). '\n        self.reasonReference = None\n        ' The justification that the procedure was performed.\\n        List of `FHIRReference` items (represented as `dict` in JSON). '\n        self.recorder = None\n        ' Who recorded the procedure.\\n        Type `FHIRReference` (represented as `dict` in JSON). '\n        self.report = None\n        ' Any report resulting from the procedure.\\n        List of `FHIRReference` items (represented as `dict` in JSON). '\n        self.status = None\n        ' preparation | in-progress | not-done | on-hold | stopped |\\n        completed | entered-in-error | unknown.\\n        Type `str`. '\n        self.statusReason = None\n        ' Reason for current status.\\n        Type `CodeableConcept` (represented as `dict` in JSON). '\n        self.subject = None\n        ' Who the procedure was performed on.\\n        Type `FHIRReference` (represented as `dict` in JSON). '\n        self.usedCode = None\n        ' Coded items used during the procedure.\\n        List of `CodeableConcept` items (represented as `dict` in JSON). '\n        self.usedReference = None\n        ' Items used during procedure.\\n        List of `FHIRReference` items (represented as `dict` in JSON). '\n        super(Procedure, self).__init__(jsondict=jsondict, strict=strict)",
+        "docstring": "Initializes a Procedure instance representing a medical action performed on a patient. The constructor sets various properties of the procedure, including the individual who asserts the procedure, the body sites involved, the procedure code, complications, encounter information, performer details, and outcome data. \n\nParameters:\n- jsondict (dict, optional): A JSON dictionary containing initial values for the properties. If provided, it will be used to populate the attributes of the Procedure instance.\n- strict (bool, optional): A flag indicating whether to enforce strict validation. If True (default), invalid inputs will raise a TypeError.\n\nAttributes:\n- asserter: Person who asserts the procedure (FHIRReference).\n- basedOn: Request for the procedure (list of FHIRReference).\n- bodySite: Target body sites for the procedure (list of CodeableConcept).\n- category: Classification of the procedure (CodeableConcept).\n- code: Identification of the procedure (CodeableConcept).\n- complication: Post-procedure complications (list of CodeableConcept).\n- complicationDetail: Conditions resulting from the procedure (list of FHIRReference).\n- encounter: Encounter associated with the procedure (FHIRReference).\n- focalDevice: Devices manipulated or implanted during the procedure (list of ProcedureFocalDevice).\n- followUp: Follow-up instructions (list of CodeableConcept).\n- identifier: External identifiers for the procedure (list of Identifier).\n- instantiatesCanonical: References to FHIR protocols or definitions (list of strings).\n- instantiatesUri: References to external protocols or definitions (list of strings).\n- location: Where the procedure was performed (FHIRReference).\n- note: Additional information about the procedure (list of Annotation).\n- outcome: Result of the procedure (CodeableConcept).\n- partOf: Related events (list of FHIRReference).\n- performedAge, performedDateTime, performedPeriod, performedRange, performedString: Information on when the procedure was performed, in various formats (Age, FHIRDateTime, Period, Range, string).\n- performer: Individuals who performed the procedure (list of ProcedurePerformer).\n- reasonCode: Coded reasons for performing the procedure (list of CodeableConcept).\n- reasonReference: Justifying references for the procedure (list of FHIRReference).\n- recorder: Individual who recorded the procedure (FHIRReference).\n- report: Reports related to the procedure (list of FHIRReference).\n- status: Current status of the procedure (string).\n- statusReason: Reason for the current status (CodeableConcept).\n- subject: The patient on whom the procedure was performed (FHIRReference).\n- usedCode: Coded items used during the procedure (list of CodeableConcept).\n- usedReference: Items referenced during the procedure (list of FHIRReference).\n\nThe Procedure class extends the DomainResource class from the domainresource module, inheriting its attributes and methods.",
+        "signature": "def __init__(self, jsondict=None, strict=True):",
+        "type": "Method",
+        "class_signature": "class Procedure(domainresource.DomainResource):"
+      }
+    },
+    "fhirclient/models/fhirdate.py": {
+      "FHIRDate.as_json": {
+        "code": "    def as_json(self) -> Union[str, None]:\n        \"\"\"Returns the original JSON string used to create the FHIRDate instance, if available. If the original JSON string is not set, it will return the ISO 8601 formatted string representation of the date, which is accessible via the `isostring` property. The method checks the `origval` attribute, which holds the initial JSON value provided during initialization. If `origval` is `None`, it defaults to returning the ISO string representation, thereby ensuring that a valid string representation is always returned. This method interacts closely with the `isostring` property and the `origval` attribute of the class.\"\"\"\n        'Returns the original JSON string used to create this instance.'\n        if self.origval is not None:\n            return self.origval\n        return self.isostring",
+        "docstring": "Returns the original JSON string used to create the FHIRDate instance, if available. If the original JSON string is not set, it will return the ISO 8601 formatted string representation of the date, which is accessible via the `isostring` property. The method checks the `origval` attribute, which holds the initial JSON value provided during initialization. If `origval` is `None`, it defaults to returning the ISO string representation, thereby ensuring that a valid string representation is always returned. This method interacts closely with the `isostring` property and the `origval` attribute of the class.",
+        "signature": "def as_json(self) -> Union[str, None]:",
+        "type": "Method",
+        "class_signature": "class FHIRDate:"
+      }
+    },
+    "fhirclient/models/fhirdatetime.py": {
+      "FHIRDateTime.__init__": {
+        "code": "    def __init__(self, jsonval: Union[str, None]=None):\n        \"\"\"Initialize a FHIRDateTime instance.\n\nParameters:\n- jsonval (Union[str, None]): A string representation of a FHIR datetime or None. This value is passed to the superclass (FHIRDate) for initialization.\n\nAttributes:\n- datetime (Union[datetime.datetime, None]): A placeholder for storing a Python datetime representation of the provided JSON value, initialized as None.\n\nThis constructor sets up the instance by initializing the datetime attribute and calling the superclass constructor to handle any JSON value parsing as defined in the FHIRDate class.\"\"\"\n        self.datetime: Union[datetime.datetime, None] = None\n        super().__init__(jsonval)",
+        "docstring": "Initialize a FHIRDateTime instance.\n\nParameters:\n- jsonval (Union[str, None]): A string representation of a FHIR datetime or None. This value is passed to the superclass (FHIRDate) for initialization.\n\nAttributes:\n- datetime (Union[datetime.datetime, None]): A placeholder for storing a Python datetime representation of the provided JSON value, initialized as None.\n\nThis constructor sets up the instance by initializing the datetime attribute and calling the superclass constructor to handle any JSON value parsing as defined in the FHIRDate class.",
+        "signature": "def __init__(self, jsonval: Union[str, None]=None):",
+        "type": "Method",
+        "class_signature": "class FHIRDateTime(FHIRDate):"
+      }
+    },
+    "fhirclient/models/fhirabstractresource.py": {
+      "FHIRAbstractResource.as_json": {
+        "code": "    def as_json(self):\n        \"\"\"Converts the instance of FHIRAbstractResource to a JSON-compatible dictionary.\n\nThis method overrides the `as_json` method from the superclass, adding the `resourceType`\nattribute to the resulting dictionary representation of the resource. The `resourceType`\nis defined as a class attribute, indicating the type of FHIR resource this instance represents.\n\nReturns:\n    dict: A JSON-compatible dictionary containing all attributes of the resource, including \n    the `resourceType`.\n\nDependencies:\n- This method relies on the superclass method `as_json()` from `FHIRAbstractBase` to \n  obtain the base attributes for conversion.\n- The `resource_type` class attribute is crucial as it provides context for the type of resource \n  being represented in JSON format.\"\"\"\n        js = super(FHIRAbstractResource, self).as_json()\n        js['resourceType'] = self.resource_type\n        return js",
+        "docstring": "Converts the instance of FHIRAbstractResource to a JSON-compatible dictionary.\n\nThis method overrides the `as_json` method from the superclass, adding the `resourceType`\nattribute to the resulting dictionary representation of the resource. The `resourceType`\nis defined as a class attribute, indicating the type of FHIR resource this instance represents.\n\nReturns:\n    dict: A JSON-compatible dictionary containing all attributes of the resource, including \n    the `resourceType`.\n\nDependencies:\n- This method relies on the superclass method `as_json()` from `FHIRAbstractBase` to \n  obtain the base attributes for conversion.\n- The `resource_type` class attribute is crucial as it provides context for the type of resource \n  being represented in JSON format.",
+        "signature": "def as_json(self):",
+        "type": "Method",
+        "class_signature": "class FHIRAbstractResource(fhirabstractbase.FHIRAbstractBase):"
+      }
+    }
+  },
+  "dependency_dict": {
+    "fhirclient/models/procedure.py:Procedure:__init__": {
+      "fhirclient/models/domainresource.py": {
+        "DomainResource.__init__": {
+          "code": "    def __init__(self, jsondict=None, strict=True):\n        \"\"\" Initialize all valid properties.\n        \n        :raises: FHIRValidationError on validation errors, unless strict is False\n        :param dict jsondict: A JSON dictionary to use for initialization\n        :param bool strict: If True (the default), invalid variables will raise a TypeError\n        \"\"\"\n        \n        self.contained = None\n        \"\"\" Contained, inline Resources.\n        List of `Resource` items (represented as `dict` in JSON). \"\"\"\n        \n        self.extension = None\n        \"\"\" Additional content defined by implementations.\n        List of `Extension` items (represented as `dict` in JSON). \"\"\"\n        \n        self.modifierExtension = None\n        \"\"\" Extensions that cannot be ignored.\n        List of `Extension` items (represented as `dict` in JSON). \"\"\"\n        \n        self.text = None\n        \"\"\" Text summary of the resource, for human interpretation.\n        Type `Narrative` (represented as `dict` in JSON). \"\"\"\n        \n        super(DomainResource, self).__init__(jsondict=jsondict, strict=strict)",
+          "docstring": "Initialize all valid properties.\n\n:raises: FHIRValidationError on validation errors, unless strict is False\n:param dict jsondict: A JSON dictionary to use for initialization\n:param bool strict: If True (the default), invalid variables will raise a TypeError",
+          "signature": "def __init__(self, jsondict=None, strict=True):",
+          "type": "Method",
+          "class_signature": "class DomainResource(resource.Resource):"
+        }
+      }
+    },
+    "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:as_json": {
+      "fhirclient/models/fhirabstractbase.py": {
+        "FHIRAbstractBase.as_json": {
+          "code": "    def as_json(self):\n        \"\"\" Serializes to JSON by inspecting `elementProperties()` and creating\n        a JSON dictionary of all registered properties. Checks:\n        \n        - whether required properties are not None (and lists not empty)\n        - whether not-None properties are of the correct type\n        \n        :raises: FHIRValidationError if properties have the wrong type or if\n            required properties are empty\n        :returns: A validated dict object that can be JSON serialized\n        \"\"\"\n        js = {}\n        errs = []\n        \n        # JSONify all registered properties\n        found = set()\n        nonoptionals = set()\n        for name, jsname, typ, is_list, of_many, not_optional in self.elementProperties():\n            if not_optional:\n                nonoptionals.add(of_many or jsname)\n            \n            err = None\n            value = getattr(self, name)\n            if value is None:\n                continue\n            \n            if is_list:\n                if not isinstance(value, list):\n                   err = TypeError(\"Expecting property \\\"{}\\\" on {} to be list, but is {}\"\n                       .format(name, type(self), type(value)))\n                elif len(value) > 0:\n                    if not self._matches_type(value[0], typ):\n                        err = TypeError(\"Expecting property \\\"{}\\\" on {} to be {}, but is {}\"\n                            .format(name, type(self), typ, type(value[0])))\n                    else:\n                        lst = []\n                        for v in value:\n                            try:\n                                lst.append(v.as_json() if hasattr(v, 'as_json') else v)\n                            except FHIRValidationError as e:\n                                err = e.prefixed(str(len(lst))).prefixed(name)\n                        found.add(of_many or jsname)\n                        js[jsname] = lst\n            else:\n                if not self._matches_type(value, typ):\n                    err = TypeError(\"Expecting property \\\"{}\\\" on {} to be {}, but is {}\"\n                        .format(name, type(self), typ, type(value)))\n                else:\n                    try:\n                        found.add(of_many or jsname)\n                        js[jsname] = value.as_json() if hasattr(value, 'as_json') else value\n                    except FHIRValidationError as e:\n                        err = e.prefixed(name)\n            \n            if err is not None:\n                errs.append(err if isinstance(err, FHIRValidationError) else FHIRValidationError([err], name))\n        \n        # any missing non-optionals?\n        if len(nonoptionals - found) > 0:\n            for nonop in nonoptionals - found:\n                errs.append(KeyError(\"Property \\\"{}\\\" on {} is not optional, you must provide a value for it\"\n                    .format(nonop, self)))\n        \n        if len(errs) > 0:\n            raise FHIRValidationError(errs)\n        return js",
+          "docstring": "Serializes to JSON by inspecting `elementProperties()` and creating\na JSON dictionary of all registered properties. Checks:\n\n- whether required properties are not None (and lists not empty)\n- whether not-None properties are of the correct type\n\n:raises: FHIRValidationError if properties have the wrong type or if\n    required properties are empty\n:returns: A validated dict object that can be JSON serialized",
+          "signature": "def as_json(self):",
+          "type": "Method",
+          "class_signature": "class FHIRAbstractBase(object):"
+        }
+      }
+    },
+    "fhirclient/models/fhirdatetime.py:FHIRDateTime:__init__": {
+      "fhirclient/models/fhirdate.py": {
+        "FHIRDate.__init__": {
+          "code": "    def __init__(self, jsonval: Union[str, None]=None):\n        self.date: Union[datetime.date, datetime.datetime, datetime.time, None] = None\n        if jsonval is not None:\n            if not isinstance(jsonval, str):\n                raise TypeError('Expecting string when initializing {}, but got {}'.format(type(self), type(jsonval)))\n            if not self._REGEX.fullmatch(jsonval):\n                raise ValueError('does not match expected format')\n            self.date = self._from_string(jsonval)\n        self.origval: Union[str, None] = jsonval",
+          "docstring": "",
+          "signature": "def __init__(self, jsonval: Union[str, None]=None):",
+          "type": "Method",
+          "class_signature": "class FHIRDate:"
+        },
+        "FHIRDate.__setattr__": {
+          "code": "    def __setattr__(self, prop, value):\n        if prop in {'date', self._FIELD}:\n            self.origval = None\n            object.__setattr__(self, self._FIELD, value)\n            object.__setattr__(self, 'date', value)\n        else:\n            object.__setattr__(self, prop, value)",
+          "docstring": "",
+          "signature": "def __setattr__(self, prop, value):",
+          "type": "Method",
+          "class_signature": "class FHIRDate:"
+        }
+      }
+    }
+  },
+  "call_tree": {
+    "tests/models/procedure_test.py:ProcedureTests:testProcedure1": {
+      "tests/models/procedure_test.py:ProcedureTests:instantiate_from": {
+        "fhirclient/models/procedure.py:Procedure:__init__": {
+          "fhirclient/models/domainresource.py:DomainResource:__init__": {
+            "fhirclient/models/resource.py:Resource:__init__": {
+              "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRValidationError:FHIRValidationError": {},
+                    "fhirclient/models/procedure.py:Procedure:elementProperties": {
+                      "fhirclient/models/domainresource.py:DomainResource:elementProperties": {}
+                    },
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "tests/models/procedure_test.py:ProcedureTests:implProcedure1": {},
+      "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:as_json": {
+        "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+          "fhirclient/models/fhirabstractbase.py:FHIRValidationError:FHIRValidationError": {},
+          "fhirclient/models/procedure.py:Procedure:elementProperties": {
+            "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+              "fhirclient/models/resource.py:Resource:elementProperties": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:elementProperties": {}
+              }
+            }
+          },
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+            "[ignored_or_cut_off]": "..."
+          }
+        }
+      },
+      "fhirclient/models/procedure.py:Procedure:__init__": {
+        "fhirclient/models/domainresource.py:DomainResource:__init__": {
+          "fhirclient/models/resource.py:Resource:__init__": {
+            "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+              "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                  "fhirclient/models/procedure.py:Procedure:elementProperties": {
+                    "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+                      "fhirclient/models/resource.py:Resource:elementProperties": {}
+                    }
+                  },
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_with_json_dict": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tests/models/procedure_test.py:ProcedureTests:instantiate_from": {
+      "fhirclient/models/procedure.py:Procedure:__init__": {
+        "fhirclient/models/domainresource.py:DomainResource:__init__": {
+          "fhirclient/models/resource.py:Resource:__init__": {
+            "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+              "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                  "fhirclient/models/procedure.py:Procedure:elementProperties": {
+                    "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+                      "fhirclient/models/resource.py:Resource:elementProperties": {}
+                    }
+                  },
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_with_json_dict": {}
+                    }
+                  },
+                  "fhirclient/models/fhirdate.py:FHIRDate:with_json_and_owner": {
+                    "fhirclient/models/fhirdate.py:FHIRDate:with_json": {
+                      "fhirclient/models/fhirdatetime.py:FHIRDateTime:__init__": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tests/models/procedure_test.py:ProcedureTests:testProcedure10": {
+      "tests/models/procedure_test.py:ProcedureTests:instantiate_from": {
+        "fhirclient/models/procedure.py:Procedure:__init__": {
+          "fhirclient/models/domainresource.py:DomainResource:__init__": {
+            "fhirclient/models/resource.py:Resource:__init__": {
+              "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                    "fhirclient/models/procedure.py:Procedure:elementProperties": {
+                      "fhirclient/models/domainresource.py:DomainResource:elementProperties": {}
+                    },
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {}
+                    },
+                    "fhirclient/models/fhirdate.py:FHIRDate:with_json_and_owner": {
+                      "fhirclient/models/fhirdate.py:FHIRDate:with_json": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "tests/models/procedure_test.py:ProcedureTests:implProcedure10": {
+        "fhirclient/models/fhirdatetime.py:FHIRDateTime:__init__": {
+          "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "[ignored_or_cut_off]": "..."
+            }
+          },
+          "fhirclient/models/fhirdate.py:FHIRDate:__init__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+                "[ignored_or_cut_off]": "..."
+              }
+            },
+            "fhirclient/models/fhirdatetime.py:FHIRDateTime:_from_string": {
+              "fhirclient/models/fhirdate.py:FHIRDate:_parse_datetime": {
+                "fhirclient/models/fhirdate.py:FHIRDate:_strip_leap_seconds": {},
+                "fhirclient/models/fhirdate.py:FHIRDate:_parse_partial": {}
+              }
+            }
+          }
+        },
+        "fhirclient/models/fhirdate.py:FHIRDate:as_json": {}
+      },
+      "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:as_json": {
+        "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+          "fhirclient/models/procedure.py:Procedure:elementProperties": {
+            "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+              "fhirclient/models/resource.py:Resource:elementProperties": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:elementProperties": {}
+              }
+            }
+          },
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+            "[ignored_or_cut_off]": "..."
+          },
+          "fhirclient/models/fhirdate.py:FHIRDate:as_json": {}
+        }
+      },
+      "fhirclient/models/procedure.py:Procedure:__init__": {
+        "fhirclient/models/domainresource.py:DomainResource:__init__": {
+          "fhirclient/models/resource.py:Resource:__init__": {
+            "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+              "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                  "fhirclient/models/procedure.py:Procedure:elementProperties": {
+                    "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+                      "fhirclient/models/resource.py:Resource:elementProperties": {}
+                    }
+                  },
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_with_json_dict": {}
+                    }
+                  },
+                  "fhirclient/models/fhirdate.py:FHIRDate:with_json_and_owner": {
+                    "fhirclient/models/fhirdate.py:FHIRDate:with_json": {
+                      "fhirclient/models/fhirdatetime.py:FHIRDateTime:__init__": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tests/models/procedure_test.py:ProcedureTests:testProcedure2": {
+      "tests/models/procedure_test.py:ProcedureTests:instantiate_from": {
+        "fhirclient/models/procedure.py:Procedure:__init__": {
+          "fhirclient/models/domainresource.py:DomainResource:__init__": {
+            "fhirclient/models/resource.py:Resource:__init__": {
+              "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                    "fhirclient/models/procedure.py:Procedure:elementProperties": {
+                      "fhirclient/models/domainresource.py:DomainResource:elementProperties": {}
+                    },
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {}
+                    },
+                    "fhirclient/models/fhirdate.py:FHIRDate:with_json_and_owner": {
+                      "fhirclient/models/fhirdate.py:FHIRDate:with_json": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "tests/models/procedure_test.py:ProcedureTests:implProcedure2": {
+        "fhirclient/models/fhirdatetime.py:FHIRDateTime:__init__": {
+          "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "[ignored_or_cut_off]": "..."
+            }
+          },
+          "fhirclient/models/fhirdate.py:FHIRDate:__init__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+                "[ignored_or_cut_off]": "..."
+              }
+            },
+            "fhirclient/models/fhirdatetime.py:FHIRDateTime:_from_string": {
+              "fhirclient/models/fhirdate.py:FHIRDate:_parse_datetime": {
+                "fhirclient/models/fhirdate.py:FHIRDate:_strip_leap_seconds": {},
+                "fhirclient/models/fhirdate.py:FHIRDate:_parse_partial": {}
+              }
+            }
+          }
+        },
+        "fhirclient/models/fhirdate.py:FHIRDate:as_json": {}
+      },
+      "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:as_json": {
+        "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+          "fhirclient/models/procedure.py:Procedure:elementProperties": {
+            "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+              "fhirclient/models/resource.py:Resource:elementProperties": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:elementProperties": {}
+              }
+            }
+          },
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+            "[ignored_or_cut_off]": "..."
+          },
+          "fhirclient/models/fhirdate.py:FHIRDate:as_json": {}
+        }
+      },
+      "fhirclient/models/procedure.py:Procedure:__init__": {
+        "fhirclient/models/domainresource.py:DomainResource:__init__": {
+          "fhirclient/models/resource.py:Resource:__init__": {
+            "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+              "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                  "fhirclient/models/procedure.py:Procedure:elementProperties": {
+                    "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+                      "fhirclient/models/resource.py:Resource:elementProperties": {}
+                    }
+                  },
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_with_json_dict": {}
+                    }
+                  },
+                  "fhirclient/models/fhirdate.py:FHIRDate:with_json_and_owner": {
+                    "fhirclient/models/fhirdate.py:FHIRDate:with_json": {
+                      "fhirclient/models/fhirdatetime.py:FHIRDateTime:__init__": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tests/models/procedure_test.py:ProcedureTests:testProcedure3": {
+      "tests/models/procedure_test.py:ProcedureTests:instantiate_from": {
+        "fhirclient/models/procedure.py:Procedure:__init__": {
+          "fhirclient/models/domainresource.py:DomainResource:__init__": {
+            "fhirclient/models/resource.py:Resource:__init__": {
+              "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                    "fhirclient/models/procedure.py:Procedure:elementProperties": {
+                      "fhirclient/models/domainresource.py:DomainResource:elementProperties": {}
+                    },
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "tests/models/procedure_test.py:ProcedureTests:implProcedure3": {},
+      "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:as_json": {
+        "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+          "fhirclient/models/procedure.py:Procedure:elementProperties": {
+            "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+              "fhirclient/models/resource.py:Resource:elementProperties": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:elementProperties": {}
+              }
+            }
+          },
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+            "[ignored_or_cut_off]": "..."
+          }
+        }
+      },
+      "fhirclient/models/procedure.py:Procedure:__init__": {
+        "fhirclient/models/domainresource.py:DomainResource:__init__": {
+          "fhirclient/models/resource.py:Resource:__init__": {
+            "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+              "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                  "fhirclient/models/procedure.py:Procedure:elementProperties": {
+                    "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+                      "fhirclient/models/resource.py:Resource:elementProperties": {}
+                    }
+                  },
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_with_json_dict": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tests/models/procedure_test.py:ProcedureTests:testProcedure4": {
+      "tests/models/procedure_test.py:ProcedureTests:instantiate_from": {
+        "fhirclient/models/procedure.py:Procedure:__init__": {
+          "fhirclient/models/domainresource.py:DomainResource:__init__": {
+            "fhirclient/models/resource.py:Resource:__init__": {
+              "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                    "fhirclient/models/procedure.py:Procedure:elementProperties": {
+                      "fhirclient/models/domainresource.py:DomainResource:elementProperties": {}
+                    },
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "tests/models/procedure_test.py:ProcedureTests:implProcedure4": {
+        "fhirclient/models/fhirdatetime.py:FHIRDateTime:__init__": {
+          "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "[ignored_or_cut_off]": "..."
+            }
+          },
+          "fhirclient/models/fhirdate.py:FHIRDate:__init__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+                "[ignored_or_cut_off]": "..."
+              }
+            },
+            "fhirclient/models/fhirdatetime.py:FHIRDateTime:_from_string": {
+              "fhirclient/models/fhirdate.py:FHIRDate:_parse_datetime": {
+                "fhirclient/models/fhirdate.py:FHIRDate:_strip_leap_seconds": {},
+                "fhirclient/models/fhirdate.py:FHIRDate:_parse_partial": {}
+              }
+            }
+          }
+        },
+        "fhirclient/models/fhirdate.py:FHIRDate:as_json": {}
+      },
+      "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:as_json": {
+        "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+          "fhirclient/models/procedure.py:Procedure:elementProperties": {
+            "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+              "fhirclient/models/resource.py:Resource:elementProperties": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:elementProperties": {}
+              }
+            }
+          },
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+            "[ignored_or_cut_off]": "..."
+          }
+        }
+      },
+      "fhirclient/models/procedure.py:Procedure:__init__": {
+        "fhirclient/models/domainresource.py:DomainResource:__init__": {
+          "fhirclient/models/resource.py:Resource:__init__": {
+            "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+              "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                  "fhirclient/models/procedure.py:Procedure:elementProperties": {
+                    "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+                      "fhirclient/models/resource.py:Resource:elementProperties": {}
+                    }
+                  },
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_with_json_dict": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tests/models/procedure_test.py:ProcedureTests:testProcedure5": {
+      "tests/models/procedure_test.py:ProcedureTests:instantiate_from": {
+        "fhirclient/models/procedure.py:Procedure:__init__": {
+          "fhirclient/models/domainresource.py:DomainResource:__init__": {
+            "fhirclient/models/resource.py:Resource:__init__": {
+              "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                    "fhirclient/models/procedure.py:Procedure:elementProperties": {
+                      "fhirclient/models/domainresource.py:DomainResource:elementProperties": {}
+                    },
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {}
+                    },
+                    "fhirclient/models/fhirdate.py:FHIRDate:with_json_and_owner": {
+                      "fhirclient/models/fhirdate.py:FHIRDate:with_json": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "tests/models/procedure_test.py:ProcedureTests:implProcedure5": {
+        "fhirclient/models/fhirdatetime.py:FHIRDateTime:__init__": {
+          "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "[ignored_or_cut_off]": "..."
+            }
+          },
+          "fhirclient/models/fhirdate.py:FHIRDate:__init__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+                "[ignored_or_cut_off]": "..."
+              }
+            },
+            "fhirclient/models/fhirdatetime.py:FHIRDateTime:_from_string": {
+              "fhirclient/models/fhirdate.py:FHIRDate:_parse_datetime": {
+                "fhirclient/models/fhirdate.py:FHIRDate:_strip_leap_seconds": {},
+                "fhirclient/models/fhirdate.py:FHIRDate:_parse_partial": {}
+              }
+            }
+          }
+        },
+        "fhirclient/models/fhirdate.py:FHIRDate:as_json": {}
+      },
+      "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:as_json": {
+        "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+          "fhirclient/models/procedure.py:Procedure:elementProperties": {
+            "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+              "fhirclient/models/resource.py:Resource:elementProperties": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:elementProperties": {}
+              }
+            }
+          },
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+            "[ignored_or_cut_off]": "..."
+          },
+          "fhirclient/models/fhirdate.py:FHIRDate:as_json": {}
+        }
+      },
+      "fhirclient/models/procedure.py:Procedure:__init__": {
+        "fhirclient/models/domainresource.py:DomainResource:__init__": {
+          "fhirclient/models/resource.py:Resource:__init__": {
+            "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+              "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                  "fhirclient/models/procedure.py:Procedure:elementProperties": {
+                    "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+                      "fhirclient/models/resource.py:Resource:elementProperties": {}
+                    }
+                  },
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_with_json_dict": {}
+                    }
+                  },
+                  "fhirclient/models/fhirdate.py:FHIRDate:with_json_and_owner": {
+                    "fhirclient/models/fhirdate.py:FHIRDate:with_json": {
+                      "fhirclient/models/fhirdatetime.py:FHIRDateTime:__init__": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tests/models/procedure_test.py:ProcedureTests:testProcedure6": {
+      "tests/models/procedure_test.py:ProcedureTests:instantiate_from": {
+        "fhirclient/models/procedure.py:Procedure:__init__": {
+          "fhirclient/models/domainresource.py:DomainResource:__init__": {
+            "fhirclient/models/resource.py:Resource:__init__": {
+              "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                    "fhirclient/models/procedure.py:Procedure:elementProperties": {
+                      "fhirclient/models/domainresource.py:DomainResource:elementProperties": {}
+                    },
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "tests/models/procedure_test.py:ProcedureTests:implProcedure6": {},
+      "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:as_json": {
+        "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+          "fhirclient/models/procedure.py:Procedure:elementProperties": {
+            "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+              "fhirclient/models/resource.py:Resource:elementProperties": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:elementProperties": {}
+              }
+            }
+          },
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+            "[ignored_or_cut_off]": "..."
+          }
+        }
+      },
+      "fhirclient/models/procedure.py:Procedure:__init__": {
+        "fhirclient/models/domainresource.py:DomainResource:__init__": {
+          "fhirclient/models/resource.py:Resource:__init__": {
+            "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+              "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                  "fhirclient/models/procedure.py:Procedure:elementProperties": {
+                    "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+                      "fhirclient/models/resource.py:Resource:elementProperties": {}
+                    }
+                  },
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_with_json_dict": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tests/models/procedure_test.py:ProcedureTests:testProcedure7": {
+      "tests/models/procedure_test.py:ProcedureTests:instantiate_from": {
+        "fhirclient/models/procedure.py:Procedure:__init__": {
+          "fhirclient/models/domainresource.py:DomainResource:__init__": {
+            "fhirclient/models/resource.py:Resource:__init__": {
+              "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                    "fhirclient/models/procedure.py:Procedure:elementProperties": {
+                      "fhirclient/models/domainresource.py:DomainResource:elementProperties": {}
+                    },
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {}
+                    },
+                    "fhirclient/models/fhirdate.py:FHIRDate:with_json_and_owner": {
+                      "fhirclient/models/fhirdate.py:FHIRDate:with_json": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "tests/models/procedure_test.py:ProcedureTests:implProcedure7": {
+        "fhirclient/models/fhirdatetime.py:FHIRDateTime:__init__": {
+          "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "[ignored_or_cut_off]": "..."
+            }
+          },
+          "fhirclient/models/fhirdate.py:FHIRDate:__init__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+                "[ignored_or_cut_off]": "..."
+              }
+            },
+            "fhirclient/models/fhirdatetime.py:FHIRDateTime:_from_string": {
+              "fhirclient/models/fhirdate.py:FHIRDate:_parse_datetime": {
+                "fhirclient/models/fhirdate.py:FHIRDate:_strip_leap_seconds": {},
+                "fhirclient/models/fhirdate.py:FHIRDate:_parse_partial": {}
+              }
+            }
+          }
+        },
+        "fhirclient/models/fhirdate.py:FHIRDate:as_json": {}
+      },
+      "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:as_json": {
+        "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+          "fhirclient/models/procedure.py:Procedure:elementProperties": {
+            "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+              "fhirclient/models/resource.py:Resource:elementProperties": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:elementProperties": {}
+              }
+            }
+          },
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+            "[ignored_or_cut_off]": "..."
+          },
+          "fhirclient/models/fhirdate.py:FHIRDate:as_json": {}
+        }
+      },
+      "fhirclient/models/procedure.py:Procedure:__init__": {
+        "fhirclient/models/domainresource.py:DomainResource:__init__": {
+          "fhirclient/models/resource.py:Resource:__init__": {
+            "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+              "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                  "fhirclient/models/procedure.py:Procedure:elementProperties": {
+                    "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+                      "fhirclient/models/resource.py:Resource:elementProperties": {}
+                    }
+                  },
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_with_json_dict": {}
+                    }
+                  },
+                  "fhirclient/models/fhirdate.py:FHIRDate:with_json_and_owner": {
+                    "fhirclient/models/fhirdate.py:FHIRDate:with_json": {
+                      "fhirclient/models/fhirdatetime.py:FHIRDateTime:__init__": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tests/models/procedure_test.py:ProcedureTests:testProcedure8": {
+      "tests/models/procedure_test.py:ProcedureTests:instantiate_from": {
+        "fhirclient/models/procedure.py:Procedure:__init__": {
+          "fhirclient/models/domainresource.py:DomainResource:__init__": {
+            "fhirclient/models/resource.py:Resource:__init__": {
+              "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                    "fhirclient/models/procedure.py:Procedure:elementProperties": {
+                      "fhirclient/models/domainresource.py:DomainResource:elementProperties": {}
+                    },
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "tests/models/procedure_test.py:ProcedureTests:implProcedure8": {
+        "fhirclient/models/fhirdatetime.py:FHIRDateTime:__init__": {
+          "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "[ignored_or_cut_off]": "..."
+            }
+          },
+          "fhirclient/models/fhirdate.py:FHIRDate:__init__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+                "[ignored_or_cut_off]": "..."
+              }
+            },
+            "fhirclient/models/fhirdatetime.py:FHIRDateTime:_from_string": {
+              "fhirclient/models/fhirdate.py:FHIRDate:_parse_datetime": {
+                "fhirclient/models/fhirdate.py:FHIRDate:_strip_leap_seconds": {},
+                "fhirclient/models/fhirdate.py:FHIRDate:_parse_partial": {}
+              }
+            }
+          }
+        },
+        "fhirclient/models/fhirdate.py:FHIRDate:as_json": {}
+      },
+      "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:as_json": {
+        "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+          "fhirclient/models/procedure.py:Procedure:elementProperties": {
+            "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+              "fhirclient/models/resource.py:Resource:elementProperties": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:elementProperties": {}
+              }
+            }
+          },
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+            "[ignored_or_cut_off]": "..."
+          }
+        }
+      },
+      "fhirclient/models/procedure.py:Procedure:__init__": {
+        "fhirclient/models/domainresource.py:DomainResource:__init__": {
+          "fhirclient/models/resource.py:Resource:__init__": {
+            "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+              "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                  "fhirclient/models/procedure.py:Procedure:elementProperties": {
+                    "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+                      "fhirclient/models/resource.py:Resource:elementProperties": {}
+                    }
+                  },
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_with_json_dict": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tests/models/procedure_test.py:ProcedureTests:testProcedure9": {
+      "tests/models/procedure_test.py:ProcedureTests:instantiate_from": {
+        "fhirclient/models/procedure.py:Procedure:__init__": {
+          "fhirclient/models/domainresource.py:DomainResource:__init__": {
+            "fhirclient/models/resource.py:Resource:__init__": {
+              "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                    "fhirclient/models/procedure.py:Procedure:elementProperties": {
+                      "fhirclient/models/domainresource.py:DomainResource:elementProperties": {}
+                    },
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "tests/models/procedure_test.py:ProcedureTests:implProcedure9": {
+        "fhirclient/models/fhirdatetime.py:FHIRDateTime:__init__": {
+          "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "[ignored_or_cut_off]": "..."
+            }
+          },
+          "fhirclient/models/fhirdate.py:FHIRDate:__init__": {
+            "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+              "fhirclient/models/fhirdate.py:FHIRDate:__setattr__": {
+                "[ignored_or_cut_off]": "..."
+              }
+            },
+            "fhirclient/models/fhirdatetime.py:FHIRDateTime:_from_string": {
+              "fhirclient/models/fhirdate.py:FHIRDate:_parse_datetime": {
+                "fhirclient/models/fhirdate.py:FHIRDate:_strip_leap_seconds": {},
+                "fhirclient/models/fhirdate.py:FHIRDate:_parse_partial": {}
+              }
+            }
+          }
+        },
+        "fhirclient/models/fhirdate.py:FHIRDate:as_json": {}
+      },
+      "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:as_json": {
+        "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+          "fhirclient/models/procedure.py:Procedure:elementProperties": {
+            "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+              "fhirclient/models/resource.py:Resource:elementProperties": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:elementProperties": {}
+              }
+            }
+          },
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+          "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:as_json": {
+            "[ignored_or_cut_off]": "..."
+          }
+        }
+      },
+      "fhirclient/models/procedure.py:Procedure:__init__": {
+        "fhirclient/models/domainresource.py:DomainResource:__init__": {
+          "fhirclient/models/resource.py:Resource:__init__": {
+            "fhirclient/models/fhirabstractresource.py:FHIRAbstractResource:__init__": {
+              "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:__init__": {
+                "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:update_with_json": {
+                  "fhirclient/models/procedure.py:Procedure:elementProperties": {
+                    "fhirclient/models/domainresource.py:DomainResource:elementProperties": {
+                      "fhirclient/models/resource.py:Resource:elementProperties": {}
+                    }
+                  },
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_matches_type": {},
+                  "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json_and_owner": {
+                    "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:with_json": {
+                      "fhirclient/models/fhirabstractbase.py:FHIRAbstractBase:_with_json_dict": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "PRD": "# PROJECT NAME: fhirclient-procedure_test\n\n# FOLDER STRUCTURE:\n```\n..\n\u2514\u2500\u2500 fhirclient/\n    \u2514\u2500\u2500 models/\n        \u251c\u2500\u2500 fhirabstractresource.py\n        \u2502   \u2514\u2500\u2500 FHIRAbstractResource.as_json\n        \u251c\u2500\u2500 fhirdate.py\n        \u2502   \u2514\u2500\u2500 FHIRDate.as_json\n        \u251c\u2500\u2500 fhirdatetime.py\n        \u2502   \u2514\u2500\u2500 FHIRDateTime.__init__\n        \u2514\u2500\u2500 procedure.py\n            \u2514\u2500\u2500 Procedure.__init__\n```\n\n# IMPLEMENTATION REQUIREMENTS:\n## MODULE DESCRIPTION:\nThe module is designed to validate and interact with resources compliant with the FHIR (Fast Healthcare Interoperability Resources) specification, specifically focusing on the \"Procedure\" resource type. Its primary purpose is to ensure the integrity, correctness, and completeness of FHIR Procedure data by parsing, instantiating, and verifying resources against expected structures and values. The module supports various capabilities, including resource instantiation, validation of key attributes (e.g., codes, identifiers, status, and textual representation), and handling examples that represent different medical procedures. By providing a framework to test FHIR Procedure resources, this module facilitates the development and verification of healthcare applications, reducing implementation errors and ensuring adherence to standardized interoperability protocols.\n\n## FILE 1: fhirclient/models/procedure.py\n\n- CLASS METHOD: Procedure.__init__\n  - CLASS SIGNATURE: class Procedure(domainresource.DomainResource):\n  - SIGNATURE: def __init__(self, jsondict=None, strict=True):\n  - DOCSTRING: \n```python\n\"\"\"\nInitializes a Procedure instance representing a medical action performed on a patient. The constructor sets various properties of the procedure, including the individual who asserts the procedure, the body sites involved, the procedure code, complications, encounter information, performer details, and outcome data. \n\nParameters:\n- jsondict (dict, optional): A JSON dictionary containing initial values for the properties. If provided, it will be used to populate the attributes of the Procedure instance.\n- strict (bool, optional): A flag indicating whether to enforce strict validation. If True (default), invalid inputs will raise a TypeError.\n\nAttributes:\n- asserter: Person who asserts the procedure (FHIRReference).\n- basedOn: Request for the procedure (list of FHIRReference).\n- bodySite: Target body sites for the procedure (list of CodeableConcept).\n- category: Classification of the procedure (CodeableConcept).\n- code: Identification of the procedure (CodeableConcept).\n- complication: Post-procedure complications (list of CodeableConcept).\n- complicationDetail: Conditions resulting from the procedure (list of FHIRReference).\n- encounter: Encounter associated with the procedure (FHIRReference).\n- focalDevice: Devices manipulated or implanted during the procedure (list of ProcedureFocalDevice).\n- followUp: Follow-up instructions (list of CodeableConcept).\n- identifier: External identifiers for the procedure (list of Identifier).\n- instantiatesCanonical: References to FHIR protocols or definitions (list of strings).\n- instantiatesUri: References to external protocols or definitions (list of strings).\n- location: Where the procedure was performed (FHIRReference).\n- note: Additional information about the procedure (list of Annotation).\n- outcome: Result of the procedure (CodeableConcept).\n- partOf: Related events (list of FHIRReference).\n- performedAge, performedDateTime, performedPeriod, performedRange, performedString: Information on when the procedure was performed, in various formats (Age, FHIRDateTime, Period, Range, string).\n- performer: Individuals who performed the procedure (list of ProcedurePerformer).\n- reasonCode: Coded reasons for performing the procedure (list of CodeableConcept).\n- reasonReference: Justifying references for the procedure (list of FHIRReference).\n- recorder: Individual who recorded the procedure (FHIRReference).\n- report: Reports related to the procedure (list of FHIRReference).\n- status: Current status of the procedure (string).\n- statusReason: Reason for the current status (CodeableConcept).\n- subject: The patient on whom the procedure was performed (FHIRReference).\n- usedCode: Coded items used during the procedure (list of CodeableConcept).\n- usedReference: Items referenced during the procedure (list of FHIRReference).\n\nThe Procedure class extends the DomainResource class from the domainresource module, inheriting its attributes and methods.\n\"\"\"\n```\n\n## FILE 2: fhirclient/models/fhirdate.py\n\n- CLASS METHOD: FHIRDate.as_json\n  - CLASS SIGNATURE: class FHIRDate:\n  - SIGNATURE: def as_json(self) -> Union[str, None]:\n  - DOCSTRING: \n```python\n\"\"\"\nReturns the original JSON string used to create the FHIRDate instance, if available. If the original JSON string is not set, it will return the ISO 8601 formatted string representation of the date, which is accessible via the `isostring` property. The method checks the `origval` attribute, which holds the initial JSON value provided during initialization. If `origval` is `None`, it defaults to returning the ISO string representation, thereby ensuring that a valid string representation is always returned. This method interacts closely with the `isostring` property and the `origval` attribute of the class.\n\"\"\"\n```\n\n## FILE 3: fhirclient/models/fhirdatetime.py\n\n- CLASS METHOD: FHIRDateTime.__init__\n  - CLASS SIGNATURE: class FHIRDateTime(FHIRDate):\n  - SIGNATURE: def __init__(self, jsonval: Union[str, None]=None):\n  - DOCSTRING: \n```python\n\"\"\"\nInitialize a FHIRDateTime instance.\n\nParameters:\n- jsonval (Union[str, None]): A string representation of a FHIR datetime or None. This value is passed to the superclass (FHIRDate) for initialization.\n\nAttributes:\n- datetime (Union[datetime.datetime, None]): A placeholder for storing a Python datetime representation of the provided JSON value, initialized as None.\n\nThis constructor sets up the instance by initializing the datetime attribute and calling the superclass constructor to handle any JSON value parsing as defined in the FHIRDate class.\n\"\"\"\n```\n\n## FILE 4: fhirclient/models/fhirabstractresource.py\n\n- CLASS METHOD: FHIRAbstractResource.as_json\n  - CLASS SIGNATURE: class FHIRAbstractResource(fhirabstractbase.FHIRAbstractBase):\n  - SIGNATURE: def as_json(self):\n  - DOCSTRING: \n```python\n\"\"\"\nConverts the instance of FHIRAbstractResource to a JSON-compatible dictionary.\n\nThis method overrides the `as_json` method from the superclass, adding the `resourceType`\nattribute to the resulting dictionary representation of the resource. The `resourceType`\nis defined as a class attribute, indicating the type of FHIR resource this instance represents.\n\nReturns:\n    dict: A JSON-compatible dictionary containing all attributes of the resource, including \n    the `resourceType`.\n\nDependencies:\n- This method relies on the superclass method `as_json()` from `FHIRAbstractBase` to \n  obtain the base attributes for conversion.\n- The `resource_type` class attribute is crucial as it provides context for the type of resource \n  being represented in JSON format.\n\"\"\"\n```\n\n# TASK DESCRIPTION:\nIn this project, you need to implement the functions and methods listed above. The functions have been removed from the code but their docstrings remain.\nYour task is to:\n1. Read and understand the docstrings of each function/method\n2. Understand the dependencies and how they interact with the target functions\n3. Implement the functions/methods according to their docstrings and signatures\n4. Ensure your implementations work correctly with the rest of the codebase\n",
+  "file_code": {
+    "fhirclient/models/procedure.py": "from . import domainresource\n\nclass Procedure(domainresource.DomainResource):\n    \"\"\" An action that is being or was performed on a patient.\n    \n    An action that is or was performed on or for a patient. This can be a\n    physical intervention like an operation, or less invasive like long term\n    services, counseling, or hypnotherapy.\n    \"\"\"\n    resource_type = 'Procedure'\n\n    def elementProperties(self):\n        js = super(Procedure, self).elementProperties()\n        js.extend([('asserter', 'asserter', fhirreference.FHIRReference, False, None, False), ('basedOn', 'basedOn', fhirreference.FHIRReference, True, None, False), ('bodySite', 'bodySite', codeableconcept.CodeableConcept, True, None, False), ('category', 'category', codeableconcept.CodeableConcept, False, None, False), ('code', 'code', codeableconcept.CodeableConcept, False, None, False), ('complication', 'complication', codeableconcept.CodeableConcept, True, None, False), ('complicationDetail', 'complicationDetail', fhirreference.FHIRReference, True, None, False), ('encounter', 'encounter', fhirreference.FHIRReference, False, None, False), ('focalDevice', 'focalDevice', ProcedureFocalDevice, True, None, False), ('followUp', 'followUp', codeableconcept.CodeableConcept, True, None, False), ('identifier', 'identifier', identifier.Identifier, True, None, False), ('instantiatesCanonical', 'instantiatesCanonical', str, True, None, False), ('instantiatesUri', 'instantiatesUri', str, True, None, False), ('location', 'location', fhirreference.FHIRReference, False, None, False), ('note', 'note', annotation.Annotation, True, None, False), ('outcome', 'outcome', codeableconcept.CodeableConcept, False, None, False), ('partOf', 'partOf', fhirreference.FHIRReference, True, None, False), ('performedAge', 'performedAge', age.Age, False, 'performed', False), ('performedDateTime', 'performedDateTime', fhirdatetime.FHIRDateTime, False, 'performed', False), ('performedPeriod', 'performedPeriod', period.Period, False, 'performed', False), ('performedRange', 'performedRange', range.Range, False, 'performed', False), ('performedString', 'performedString', str, False, 'performed', False), ('performer', 'performer', ProcedurePerformer, True, None, False), ('reasonCode', 'reasonCode', codeableconcept.CodeableConcept, True, None, False), ('reasonReference', 'reasonReference', fhirreference.FHIRReference, True, None, False), ('recorder', 'recorder', fhirreference.FHIRReference, False, None, False), ('report', 'report', fhirreference.FHIRReference, True, None, False), ('status', 'status', str, False, None, True), ('statusReason', 'statusReason', codeableconcept.CodeableConcept, False, None, False), ('subject', 'subject', fhirreference.FHIRReference, False, None, True), ('usedCode', 'usedCode', codeableconcept.CodeableConcept, True, None, False), ('usedReference', 'usedReference', fhirreference.FHIRReference, True, None, False)])\n        return js\nfrom . import backboneelement\n\nclass ProcedureFocalDevice(backboneelement.BackboneElement):\n    \"\"\" Manipulated, implanted, or removed device.\n    \n    A device that is implanted, removed or otherwise manipulated (calibration,\n    battery replacement, fitting a prosthesis, attaching a wound-vac, etc.) as\n    a focal portion of the Procedure.\n    \"\"\"\n    resource_type = 'ProcedureFocalDevice'\n\n    def __init__(self, jsondict=None, strict=True):\n        \"\"\" Initialize all valid properties.\n        \n        :raises: FHIRValidationError on validation errors, unless strict is False\n        :param dict jsondict: A JSON dictionary to use for initialization\n        :param bool strict: If True (the default), invalid variables will raise a TypeError\n        \"\"\"\n        self.action = None\n        ' Kind of change to device.\\n        Type `CodeableConcept` (represented as `dict` in JSON). '\n        self.manipulated = None\n        ' Device that was changed.\\n        Type `FHIRReference` (represented as `dict` in JSON). '\n        super(ProcedureFocalDevice, self).__init__(jsondict=jsondict, strict=strict)\n\n    def elementProperties(self):\n        js = super(ProcedureFocalDevice, self).elementProperties()\n        js.extend([('action', 'action', codeableconcept.CodeableConcept, False, None, False), ('manipulated', 'manipulated', fhirreference.FHIRReference, False, None, True)])\n        return js\n\nclass ProcedurePerformer(backboneelement.BackboneElement):\n    \"\"\" The people who performed the procedure.\n    \n    Limited to \"real\" people rather than equipment.\n    \"\"\"\n    resource_type = 'ProcedurePerformer'\n\n    def __init__(self, jsondict=None, strict=True):\n        \"\"\" Initialize all valid properties.\n        \n        :raises: FHIRValidationError on validation errors, unless strict is False\n        :param dict jsondict: A JSON dictionary to use for initialization\n        :param bool strict: If True (the default), invalid variables will raise a TypeError\n        \"\"\"\n        self.actor = None\n        ' The reference to the practitioner.\\n        Type `FHIRReference` (represented as `dict` in JSON). '\n        self.function = None\n        ' Type of performance.\\n        Type `CodeableConcept` (represented as `dict` in JSON). '\n        self.onBehalfOf = None\n        ' Organization the device or practitioner was acting for.\\n        Type `FHIRReference` (represented as `dict` in JSON). '\n        super(ProcedurePerformer, self).__init__(jsondict=jsondict, strict=strict)\n\n    def elementProperties(self):\n        js = super(ProcedurePerformer, self).elementProperties()\n        js.extend([('actor', 'actor', fhirreference.FHIRReference, False, None, True), ('function', 'function', codeableconcept.CodeableConcept, False, None, False), ('onBehalfOf', 'onBehalfOf', fhirreference.FHIRReference, False, None, False)])\n        return js\nfrom . import age\nfrom . import annotation\nfrom . import codeableconcept\nfrom . import fhirdatetime\nfrom . import fhirreference\nfrom . import identifier\nfrom . import period\nfrom . import range",
+    "fhirclient/models/fhirdate.py": "\"\"\"Facilitate working with FHIR dates and times.\"\"\"\nimport datetime\nimport re\nfrom typing import Any, Union\n\nclass FHIRDate:\n    \"\"\"\n    A convenience class for working with FHIR dates in Python.\n\n    http://hl7.org/fhir/R4/datatypes.html#date\n\n    Converting to a Python representation does require some compromises:\n    - This class will convert partial dates (\"reduced precision dates\") like \"2024\" into full\n      dates using the earliest possible time (in this example, \"2024-01-01\") because Python's\n      date class does not support partial dates.\n\n    If such compromise is not useful for you, avoid using the `date` or `isostring`\n    properties and just use the `as_json()` method in order to work with the original,\n    exact string.\n\n    For backwards-compatibility reasons, this class is the parent class of FHIRDateTime,\n    FHIRInstant, and FHIRTime. But they are all separate concepts and in a future major release,\n    they should be split into entirely separate classes.\n\n    Public properties:\n    - `date`: datetime.date representing the JSON value\n    - `isostring`: an ISO 8601 string version of the above Python object\n\n    Public methods:\n    - `as_json`: returns the original JSON used to construct the instance\n    \"\"\"\n\n    def __init__(self, jsonval: Union[str, None]=None):\n        self.date: Union[datetime.date, datetime.datetime, datetime.time, None] = None\n        if jsonval is not None:\n            if not isinstance(jsonval, str):\n                raise TypeError('Expecting string when initializing {}, but got {}'.format(type(self), type(jsonval)))\n            if not self._REGEX.fullmatch(jsonval):\n                raise ValueError('does not match expected format')\n            self.date = self._from_string(jsonval)\n        self.origval: Union[str, None] = jsonval\n\n    def __setattr__(self, prop, value):\n        if prop in {'date', self._FIELD}:\n            self.origval = None\n            object.__setattr__(self, self._FIELD, value)\n            object.__setattr__(self, 'date', value)\n        else:\n            object.__setattr__(self, prop, value)\n\n    @property\n    def isostring(self) -> Union[str, None]:\n        \"\"\"\n        Returns a standardized ISO 8601 version of the Python representation of the FHIR JSON.\n\n        Note that this may not be a fully accurate version of the input JSON.\n        In particular, it will convert partial dates like \"2024\" to full dates like \"2024-01-01\".\n        It will also normalize the timezone, if present.\n        \"\"\"\n        if self.date is None:\n            return None\n        return self.date.isoformat()\n\n    @classmethod\n    def with_json(cls, jsonobj: Union[str, list]):\n        \"\"\" Initialize a date from an ISO date string.\n        \"\"\"\n        if isinstance(jsonobj, str):\n            return cls(jsonobj)\n        if isinstance(jsonobj, list):\n            return [cls(jsonval) for jsonval in jsonobj]\n        raise TypeError('`cls.with_json()` only takes string or list of strings, but you provided {}'.format(type(jsonobj)))\n\n    @classmethod\n    def with_json_and_owner(cls, jsonobj: Union[str, list], owner):\n        \"\"\" Added for compatibility reasons to FHIRElement; \"owner\" is\n        discarded.\n        \"\"\"\n        return cls.with_json(jsonobj)\n    _REGEX = re.compile('([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1]))?)?')\n    _FIELD = 'date'\n\n    @staticmethod\n    def _parse_partial(value: str, cls):\n        \"\"\"\n        Handle partial dates like 1970 or 1980-12.\n\n        FHIR allows them, but Python's datetime classes do not natively parse them.\n        \"\"\"\n        if len(value) < 10:\n            pieces = value.split('-')\n            if len(pieces) == 1:\n                return cls(int(pieces[0]), 1, 1)\n            else:\n                return cls(int(pieces[0]), int(pieces[1]), 1)\n        return cls.fromisoformat(value)\n\n    @staticmethod\n    def _parse_date(value: str) -> datetime.date:\n        return FHIRDate._parse_partial(value, datetime.date)\n\n    @staticmethod\n    def _parse_datetime(value: str) -> datetime.datetime:\n        value = value.replace('Z', '+00:00')\n        value = FHIRDate._strip_leap_seconds(value)\n        return FHIRDate._parse_partial(value, datetime.datetime)\n\n    @staticmethod\n    def _parse_time(value: str) -> datetime.time:\n        value = FHIRDate._strip_leap_seconds(value)\n        return datetime.time.fromisoformat(value)\n\n    @staticmethod\n    def _strip_leap_seconds(value: str) -> str:\n        \"\"\"\n        Manually ignore leap seconds by clamping the seconds value to 59.\n\n        Python native times don't support them (at the time of this writing, but also watch\n        https://bugs.python.org/issue23574). For example, the stdlib's datetime.fromtimestamp()\n        also clamps to 59 if the system gives it leap seconds.\n\n        But FHIR allows leap seconds and says receiving code SHOULD accept them,\n        so we should be graceful enough to at least not throw a ValueError,\n        even though we can't natively represent the most-correct time.\n        \"\"\"\n        return value.replace(':60', ':59')\n\n    @staticmethod\n    def _from_string(value: str) -> Any:\n        return FHIRDate._parse_date(value)",
+    "fhirclient/models/fhirdatetime.py": "\"\"\"Facilitate working with FHIR time fields.\"\"\"\nimport datetime\nimport re\nfrom typing import Any, Union\nfrom .fhirdate import FHIRDate\n\nclass FHIRDateTime(FHIRDate):\n    \"\"\"\n    A convenience class for working with FHIR datetimes in Python.\n\n    http://hl7.org/fhir/R4/datatypes.html#datetime\n\n    Converting to a Python representation does require some compromises:\n    - This class will convert partial dates (\"reduced precision dates\") like \"2024\" into full\n      naive datetimes using the earliest possible time (in this example, \"2024-01-01T00:00:00\")\n      because Python's datetime class does not support partial dates.\n    - FHIR allows arbitrary sub-second precision, but Python only holds microseconds.\n    - Leap seconds (:60) will be changed to the 59th second (:59) because Python's time classes\n      do not support leap seconds.\n\n    If such compromise is not useful for you, avoid using the `date`, `datetime`, or `isostring`\n    properties and just use the `as_json()` method in order to work with the original,\n    exact string.\n\n    Public properties:\n    - `datetime`: datetime.datetime representing the JSON value (naive or aware)\n    - `date`: backwards-compatibility alias for `datetime`\n    - `isostring`: an ISO 8601 string version of the above Python object\n\n    Public methods:\n    - `as_json`: returns the original JSON used to construct the instance\n    \"\"\"\n    _REGEX = re.compile('([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\\\\.[0-9]+)?(Z|(\\\\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)?')\n    _FIELD = 'datetime'\n\n    @staticmethod\n    def _from_string(value: str) -> Any:\n        return FHIRDate._parse_datetime(value)",
+    "fhirclient/models/fhirabstractresource.py": "from . import fhirabstractbase\n\nclass FHIRAbstractResource(fhirabstractbase.FHIRAbstractBase):\n    \"\"\" Extends the FHIRAbstractBase with server talking capabilities.\n    \"\"\"\n    resource_type = 'FHIRAbstractResource'\n\n    def __init__(self, jsondict=None, strict=True):\n        self._server = None\n        ' The server the instance was read from. '\n        if jsondict is not None and 'resourceType' in jsondict and (jsondict['resourceType'] != self.resource_type):\n            raise Exception('Attempting to instantiate {} with resource data that defines a resourceType of \"{}\"'.format(self.__class__, jsondict['resourceType']))\n        super(FHIRAbstractResource, self).__init__(jsondict=jsondict, strict=strict)\n\n    @classmethod\n    def _with_json_dict(cls, jsondict):\n        \"\"\" Overridden to use a factory if called when \"resourceType\" is\n        defined in the JSON but does not match the receiver's resource_type.\n        \"\"\"\n        if not isinstance(jsondict, dict):\n            raise Exception('Cannot use this method with anything but a JSON dictionary, got {}'.format(jsondict))\n        res_type = jsondict.get('resourceType')\n        if res_type and res_type != cls.resource_type:\n            return fhirelementfactory.FHIRElementFactory.instantiate(res_type, jsondict)\n        return super(FHIRAbstractResource, cls)._with_json_dict(jsondict)\n\n    def relativeBase(self):\n        return self.__class__.resource_type\n\n    def relativePath(self):\n        if self.id is None:\n            return self.relativeBase()\n        return '{}/{}'.format(self.relativeBase(), self.id)\n\n    @property\n    def origin_server(self):\n        \"\"\" Walks the owner hierarchy until it finds an owner with a server.\n        \"\"\"\n        server = self._server\n        owner = self._owner\n        while server is None and owner is not None:\n            server = getattr(owner, '_server', None)\n            owner = owner._owner\n        return server\n\n    @origin_server.setter\n    def origin_server(self, server):\n        \"\"\" Sets the server on an element. \"\"\"\n        self._server = server\n\n    @classmethod\n    def read(cls, rem_id, server):\n        \"\"\" Read the resource with the given id from the given server. The\n        passed-in server instance must support a `request_json()` method call,\n        taking a relative path as first (and only mandatory) argument.\n        \n        :param str rem_id: The id of the resource on the remote server\n        :param FHIRServer server: An instance of a FHIR server or compatible class\n        :returns: An instance of the receiving class\n        \"\"\"\n        if not rem_id:\n            raise Exception('Cannot read resource without remote id')\n        path = '{}/{}'.format(cls.resource_type, rem_id)\n        instance = cls.read_from(path, server)\n        instance._local_id = rem_id\n        return instance\n\n    @classmethod\n    def read_from(cls, path, server):\n        \"\"\" Requests data from the given REST path on the server and creates\n        an instance of the receiving class.\n        \n        :param str path: The REST path to read from\n        :param FHIRServer server: An instance of a FHIR server or compatible class\n        :returns: An instance of the receiving class\n        \"\"\"\n        if not path:\n            raise Exception('Cannot read resource without REST path')\n        if server is None:\n            raise Exception('Cannot read resource without server instance')\n        ret = server.request_json(path)\n        instance = cls(jsondict=ret)\n        instance.origin_server = server\n        return instance\n\n    def createPath(self):\n        \"\"\" Get the endpoint on the server for creating the resource.\n\n        :returns: The resource endpoint or None for the root endpoint\n        \"\"\"\n        root_post_types = ('batch', 'transaction')\n        if self.resource_type == 'Bundle' and self.type in root_post_types:\n            return None\n        return self.relativeBase()\n\n    def create(self, server):\n        \"\"\" Attempt to create the receiver on the given server, using a POST\n        command.\n        \n        :param FHIRServer server: The server to create the receiver on\n        :returns: None or the response JSON on success\n        \"\"\"\n        srv = server or self.origin_server\n        if srv is None:\n            raise Exception('Cannot create a resource without a server')\n        if self.id:\n            raise Exception('This resource already has an id, cannot create')\n        ret = srv.post_json(self.createPath(), self.as_json())\n        if len(ret.text) > 0:\n            return ret.json()\n        return None\n\n    def update(self, server=None):\n        \"\"\" Update the receiver's representation on the given server, issuing\n        a PUT command.\n        \n        :param FHIRServer server: The server to update the receiver on;\n            optional, will use the instance's `server` if needed.\n        :returns: None or the response JSON on success\n        \"\"\"\n        srv = server or self.origin_server\n        if srv is None:\n            raise Exception('Cannot update a resource that does not have a server')\n        if not self.id:\n            raise Exception('Cannot update a resource that does not have an id')\n        ret = srv.put_json(self.relativePath(), self.as_json())\n        if len(ret.text) > 0:\n            return ret.json()\n        return None\n\n    def delete(self, server=None):\n        \"\"\" Delete the receiver from the given server with a DELETE command.\n        \n        :param FHIRServer server: The server to update the receiver on;\n            optional, will use the instance's `server` if needed.\n        :returns: None or the response JSON on success\n        \"\"\"\n        srv = server or self.origin_server\n        if srv is None:\n            raise Exception('Cannot delete a resource that does not have a server')\n        if not self.id:\n            raise Exception('Cannot delete a resource that does not have an id')\n        ret = srv.delete_json(self.relativePath())\n        if len(ret.text) > 0:\n            return ret.json()\n        return None\n\n    def search(self, struct=None):\n        \"\"\" Search can be started via a dictionary containing a search\n        construct.\n        \n        Calling this method with a search struct will return a `FHIRSearch`\n        object representing the search struct, with \"$type\" and \"id\" added.\n        \n        :param dict struct: An optional search structure\n        :returns: A FHIRSearch instance\n        \"\"\"\n        if struct is None:\n            struct = {'$type': self.__class__.resource_type}\n        if self._local_id is not None or self.id is not None:\n            struct['id'] = self._local_id or self.id\n        return self.__class__.where(struct)\n\n    @classmethod\n    def where(cls, struct):\n        \"\"\" Search can be started via a dictionary containing a search\n        construct.\n        \n        Calling this method with a search struct will return a `FHIRSearch`\n        object representing the search struct\n        \n        :param dict struct: A search structure\n        :returns: A FHIRSearch instance\n        \"\"\"\n        return fhirsearch.FHIRSearch(cls, struct)\nfrom . import fhirsearch\nfrom . import fhirelementfactory"
+  }
+}

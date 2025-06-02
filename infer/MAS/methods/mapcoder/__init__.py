@@ -1,0 +1,3 @@
+from methods.mapcoder.mapcoder_humaneval import MapCoder_HumanEval
+from methods.mapcoder.mapcoder_mbpp import MapCoder_MBPP
+from methods.mapcoder.mapcoder_package import MapCoder_Package

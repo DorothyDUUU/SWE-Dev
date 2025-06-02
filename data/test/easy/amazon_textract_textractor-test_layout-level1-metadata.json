@@ -1,0 +1,536 @@
+{
+  "dir_path": "/app/amazon_textract_textractor",
+  "package_name": "amazon_textract_textractor",
+  "sample_name": "amazon_textract_textractor-test_layout",
+  "src_dir": "textractor/",
+  "test_dir": "tests/",
+  "test_file": "tests/test_layout.py",
+  "test_code": "import json\nimport os\nimport unittest\nimport PIL\nfrom tests.utils import get_fixture_path\nfrom textractor import Textractor\nfrom textractor.entities.document import Document\nfrom textractor.entities.word import Word\nfrom textractor.entities.line import Line\nfrom textractor.entities.page import Page\nfrom textractor.entities.table import Table\nfrom textractor.entities.value import Value\nfrom textractor.data.constants import TableFormat\nfrom textractor.entities.key_value import KeyValue\nfrom textractor.visualizers.entitylist import EntityList\nfrom textractor.exceptions import InvalidProfileNameError\nfrom textractor.entities.selection_element import SelectionElement\nfrom textractor.data.constants import TextTypes, SimilarityMetric, TextractFeatures, Direction, DirectionalFinderType\n\nfrom .utils import save_document_to_fixture_path\n\nclass TestLayout(unittest.TestCase):\n    def test_layout(self):\n        profile_name = \"default\"\n        current_directory = os.path.abspath(os.path.dirname(__file__))\n\n        if profile_name is None:\n            raise InvalidProfileNameError(\n                \"Textractor could not be initialized. Populate profile_name with a valid input in tests/test_table.py.\"\n            )\n\n        if os.environ.get(\"CALL_TEXTRACT\"):\n            extractor = Textractor(profile_name=profile_name, kms_key_id=\"\")\n            document = extractor.analyze_document(\n                file_source=os.path.join(current_directory, \"fixtures/paystub.jpg\"),\n                features=[TextractFeatures.LAYOUT, TextractFeatures.TABLES, TextractFeatures.FORMS],\n            )\n            with open(get_fixture_path(), \"w\") as f:\n                json.dump(document.response, f)\n        else:\n            document = Document.open(get_fixture_path())\n\n        print(document.text)\n",
+  "GT_file_code": {
+    "textractor/entities/document.py": "\"\"\"The Document class is defined to host all the various DocumentEntity objects within it. :class:`DocumentEntity` objects can be \naccessed, searched and exported the functions given below.\"\"\"\n\nimport boto3\nimport json\nimport os\nimport string\nimport logging\nimport xlsxwriter\nimport io\nfrom pathlib import Path\nfrom typing import List, IO, Union, AnyStr, Tuple\nfrom copy import deepcopy\nfrom collections import defaultdict\nfrom PIL import Image\n\nfrom textractor.entities.expense_document import ExpenseDocument\nfrom textractor.entities.identity_document import IdentityDocument\nfrom textractor.entities.word import Word\nfrom textractor.entities.line import Line\nfrom textractor.entities.page import Page\nfrom textractor.entities.table import Table\nfrom textractor.entities.query import Query\nfrom textractor.entities.signature import Signature\nfrom textractor.entities.layout import Layout\nfrom textractor.exceptions import InputError\nfrom textractor.entities.key_value import KeyValue\nfrom textractor.entities.bbox import SpatialObject\nfrom textractor.utils.s3_utils import download_from_s3\nfrom textractor.visualizers.entitylist import EntityList\nfrom textractor.data.constants import (\n    TextTypes,\n    SimilarityMetric,\n    Direction,\n    DirectionalFinderType,\n)\nfrom textractor.utils.search_utils import SearchUtils\nfrom textractor.data.text_linearization_config import TextLinearizationConfig\nfrom textractor.data.html_linearization_config import HTMLLinearizationConfig\nfrom textractor.entities.linearizable import Linearizable\n\n\nclass Document(SpatialObject, Linearizable):\n    \"\"\"\n    Represents the description of a single document, as it would appear in the input to the Textract API.\n    Document serves as the root node of the object model hierarchy,\n    which should be used as an intermediate form for most analytic purposes.\n    The Document node also contains the metadata of the document.\n    \"\"\"\n\n    @classmethod\n    def open(cls, fp: Union[dict, str, Path, IO[AnyStr]]):\n        \"\"\"Create a Document object from a JSON file path, file handle or response dictionary\n\n        :param fp: _description_\n        :type fp: Union[dict, str, Path, IO[AnyStr]]\n        :raises InputError: Raised on input not being of type Union[dict, str, Path, IO[AnyStr]]\n        :return: Document object\n        :rtype: Document\n        \"\"\"\n        from textractor.parsers import response_parser\n\n        if isinstance(fp, dict):\n            return response_parser.parse(fp)\n        elif isinstance(fp, str):\n            if fp.startswith(\"s3://\"):\n                # FIXME: Opening s3 clients for everything should be avoided\n                client = boto3.client(\"s3\")\n                return response_parser.parse(json.load(download_from_s3(client, fp)))\n            with open(fp, \"r\") as f:\n                return response_parser.parse(json.load(f))\n        elif isinstance(fp, Path):\n            with open(fp, \"r\") as f:\n                return response_parser.parse(json.load(f))\n        elif isinstance(fp, io.IOBase):\n            return response_parser.parse(json.load(fp))\n        else:\n            raise InputError(\n                f\"Document.open() input must be of type dict, str, Path or a file handle, not {type(fp)}\"\n            )\n\n    def __init__(self, num_pages: int = 1):\n        \"\"\"\n        Creates a new document, ideally containing entity objects pertaining to each page.\n\n        :param num_pages: Number of pages in the input Document.\n        \"\"\"\n        super().__init__(width=0, height=0)\n        self.num_pages: int = num_pages\n        self._pages: List[Page] = []\n        self._identity_documents: List[IdentityDocument] = []\n        self._trp2_document = None\n        self.response = None\n\n    @property\n    def words(self) -> EntityList[Word]:\n        \"\"\"\n        Returns all the :class:`Word` objects present in the Document.\n\n        :return: List of Word objects, each representing a word within the Document.\n        :rtype: EntityList[Word]\n        \"\"\"\n        return EntityList(sum([page.words for page in self.pages], []))\n\n    @property\n    def text(self) -> str:\n        \"\"\"Returns the document text as one string\n\n        :return: Page text seperated by line return\n        :rtype: str\n        \"\"\"\n        return os.linesep.join([page.text for page in self.pages])\n\n    @property\n    def identity_documents(self) -> EntityList[IdentityDocument]:\n        \"\"\"\n        Returns all the :class:`IdentityDocument` objects present in the Document.\n\n        :return: List of IdentityDocument objects, each representing an identity document within the Document.\n        :rtype: EntityList[IdentityDocument]\n        \"\"\"\n        return EntityList(self._identity_documents)\n\n    @identity_documents.setter\n    def identity_documents(self, identity_documents: List[IdentityDocument]):\n        \"\"\"\n        Set all the identity documents detected inside the Document\n        \"\"\"\n        self._identity_documents = identity_documents\n\n    @property\n    def expense_documents(self) -> EntityList[ExpenseDocument]:\n        \"\"\"\n        Returns all the :class:`ExpenseDocument` objects present in the Document.\n\n        :return: List of ExpenseDocument objects, each representing an expense document within the Document.\n        :rtype: EntityList[ExpenseDocument]\n        \"\"\"\n        return EntityList(sum([page.expense_documents for page in self.pages], []))\n\n    @property\n    def lines(self) -> EntityList[Line]:\n        \"\"\"\n        Returns all the :class:`Line` objects present in the Document.\n\n        :return: List of Line objects, each representing a line within the Document.\n        :rtype: EntityList[Line]\n        \"\"\"\n        return EntityList(sum([page.lines for page in self.pages], []))\n\n    @property\n    def key_values(self) -> EntityList[KeyValue]:\n        \"\"\"\n        Returns all the :class:`KeyValue` objects present in the Document.\n\n        :return: List of KeyValue objects, each representing a key-value pair within the Document.\n        :rtype: EntityList[KeyValue]\n        \"\"\"\n        return EntityList(sum([page.key_values for page in self.pages], []))\n\n    @property\n    def checkboxes(self) -> EntityList[KeyValue]:\n        \"\"\"\n        Returns all the :class:`KeyValue` objects with SelectionElements present in the Document.\n\n        :return: List of KeyValue objects, each representing a checkbox within the Document.\n        :rtype: EntityList[KeyValue]\n        \"\"\"\n        return EntityList(sum([page.checkboxes for page in self.pages], []))\n\n    @property\n    def tables(self) -> EntityList[Table]:\n        \"\"\"\n        Returns all the :class:`Table` objects present in the Document.\n\n        :return: List of Table objects, each representing a table within the Document.\n        :rtype: EntityList[Table]\n        \"\"\"\n        return EntityList(sum([page.tables for page in self.pages], []))\n\n    @property\n    def queries(self) -> EntityList[Query]:\n        \"\"\"\n        Returns all the :class:`Query` objects present in the Document.\n\n        :return: List of Query objects.\n        :rtype: EntityList[Query]\n        \"\"\"\n        return EntityList(sum([page.queries for page in self.pages], []))\n\n    @property\n    def signatures(self) -> EntityList[Signature]:\n        \"\"\"\n        Returns all the :class:`Signature` objects present in the Document.\n\n        :return: List of Signature objects.\n        :rtype: EntityList[Signature]\n        \"\"\"\n        return EntityList(sum([page.signatures for page in self.pages], []))\n\n    @property\n    def layouts(self) -> EntityList[Layout]:\n        \"\"\"\n        Returns all the :class:`Layout` objects present in the Document\n\n        :return: List of Layout objects\n        :rtype: EntityList[Layout]\n        \"\"\"\n        return EntityList(sum([page.layouts for page in self.pages], []))\n\n    @property\n    def identity_document(self) -> EntityList[IdentityDocument]:\n        \"\"\"\n        Returns all the :class:`IdentityDocument` objects present in the Page.\n\n        :return: List of IdentityDocument objects.\n        :rtype: EntityList\n        \"\"\"\n        return EntityList(self._identity_documents)\n\n    @identity_document.setter\n    def identity_document(self, identity_documents: List[IdentityDocument]):\n        \"\"\"\n        Add IdentityDocument objects to the Page.\n\n        :param tables: List of IdentityDocument objects.\n        :type identity_documents: list\n        \"\"\"\n        self._identity_document = identity_documents\n\n    @property\n    def images(self) -> List[Image.Image]:\n        \"\"\"\n        Returns all the page images in the Document.\n\n        :return: List of PIL Image objects.\n        :rtype: PIL.Image\n        \"\"\"\n        return [page.image for page in self._pages]\n\n    @property\n    def pages(self) -> List[Page]:\n        \"\"\"\n        Returns all the :class:`Page` objects present in the Document.\n\n        :return: List of Page objects, each representing a Page within the Document.\n        :rtype: List\n        \"\"\"\n        return self._pages\n\n    @pages.setter\n    def pages(self, pages: List[Page]):\n        \"\"\"\n        Add Page objects to the Document.\n\n        :param pages: List of Page objects, each representing a page within the document.\n        No specific ordering is assumed with input.\n        :type pages: List[Page]\n        \"\"\"\n        self._pages = sorted(pages, key=lambda x: x.page_num)\n\n    def get_text_and_words(\n        self, config: TextLinearizationConfig = TextLinearizationConfig()\n    ) -> Tuple[str, List]:\n        text, words_lists = zip(*[p.get_text_and_words(config) for p in self.pages])\n        flattened_words = []\n        for words in words_lists:\n            flattened_words.extend(words)\n        return config.layout_element_separator.join(text), flattened_words\n\n    def page(self, page_no: int = 0):\n        \"\"\"\n        Returns :class:`Page` object/s depending on the input page_no. Follows zero-indexing.\n\n        :param page_no: if int, returns single Page Object, else if list, it returns a list of\n                        Page objects.\n        :type page_no: int if single page, list of int if multiple pages\n\n        :return: Filters and returns Page objects depending on the input page_no\n        :rtype: Page or List[Page]\n        \"\"\"\n        if isinstance(page_no, int):\n            return self.pages[page_no]\n        elif isinstance(page_no, list):\n            return [self.pages[num] for num in page_no]\n        else:\n            raise InputError(\"page_no parameter doesn't match required data type.\")\n\n    def to_html(self, config: HTMLLinearizationConfig = HTMLLinearizationConfig()):\n        \"\"\"\n        Returns the HTML representation of the document, effectively calls Linearizable.to_html()\n        but add <html><body></body></html> around the result and put each page in a <div>. \n\n        :return: HTML text of the entity\n        :rtype: str\n        \"\"\"\n        \n        html = \"<html><body>\"\n        for page in self.pages:\n            html += f\"<div>{page.to_html(config=config)}</div>\"\n        html += \"</body></html>\"\n        \n        return html\n\n    def __repr__(self):\n        return os.linesep.join(\n            [\n                \"This document holds the following data:\",\n                f\"Pages - {len(self.pages)}\",\n                f\"Words - {len(self.words)}\",\n                f\"Lines - {len(self.lines)}\",\n                f\"Key-values - {len(self.key_values)}\",\n                f\"Checkboxes - {len(self.checkboxes)}\",\n                f\"Tables - {len(self.tables)}\",\n                f\"Queries - {len(self.queries)}\",\n                f\"Signatures - {len(self.signatures)}\",\n                f\"Identity Documents - {len(self.identity_documents)}\",\n                f\"Expense Documents - {len(self.expense_documents)}\",\n            ]\n        )\n\n    def to_trp2(self):\n        \"\"\"\n        Parses the response to the trp2 format for backward compatibility\n\n        :return: TDocument object that can be used with the older Textractor libraries\n        :rtype: TDocument\n        \"\"\"\n        from trp.trp2 import TDocument, TDocumentSchema\n        \n        if not self._trp2_document:\n            self._trp2_document = TDocumentSchema().load(self.response)\n        return self._trp2_document\n\n    def visualize(self, *args, **kwargs):\n        \"\"\"\n        Returns the object's children in a visualization EntityList object\n\n        :return: Returns an EntityList object\n        :rtype: EntityList\n        \"\"\"\n        return EntityList(self.pages).visualize(*args, **kwargs)\n\n    def keys(self, include_checkboxes: bool = True) -> List[str]:\n        \"\"\"\n        Prints all keys for key-value pairs and checkboxes if the document contains them.\n\n        :param include_checkboxes: True/False. Set False if checkboxes need to be excluded.\n        :type include_checkboxes: bool\n\n        :return: List of strings containing key names in the Document\n        :rtype: List[str]\n        \"\"\"\n        keys = []\n        keys = [keyvalue.key for keyvalue in self.key_values]\n        if include_checkboxes:\n            keys += [keyvalue.key for keyvalue in self.checkboxes]\n        return keys\n\n    def filter_checkboxes(\n        self, selected: bool = True, not_selected: bool = True\n    ) -> List[KeyValue]:\n        \"\"\"\n        Return a list of :class:`KeyValue` objects containing checkboxes if the document contains them.\n\n        :param selected: True/False Return SELECTED checkboxes\n        :type selected: bool\n        :param not_selected: True/False Return NOT_SELECTED checkboxes\n        :type not_selected: bool\n\n        :return: Returns checkboxes that match the conditions set by the flags.\n        :rtype: EntityList[KeyValue]\n        \"\"\"\n\n        checkboxes = EntityList([])\n        for page in self.pages:\n            checkboxes.extend(\n                page.filter_checkboxes(selected=selected, not_selected=not_selected)\n            )\n        return checkboxes\n\n    def get_words_by_type(self, text_type: TextTypes = TextTypes.PRINTED) -> List[Word]:\n        \"\"\"\n        Returns list of :class:`Word` entities that match the input text type.\n\n        :param text_type: TextTypes.PRINTED or TextTypes.HANDWRITING\n        :type text_type: TextTypes\n        :return: Returns list of Word entities that match the input text type.\n        :rtype: EntityList[Word]\n        \"\"\"\n        if not self.words:\n            logging.warn(\"Document contains no word entities.\")\n            return []\n\n        filtered_words = EntityList()\n        for page in self.pages:\n            filtered_words.extend(page.get_words_by_type(text_type=text_type))\n        return filtered_words\n\n    def search_words(\n        self,\n        keyword: str,\n        top_k: int = 1,\n        similarity_metric: SimilarityMetric = SimilarityMetric.LEVENSHTEIN,\n        similarity_threshold: float = 0.6,\n    ) -> List[Word]:\n        \"\"\"\n        Return a list of top_k words that match the keyword.\n\n        :param keyword: Keyword that is used to query the document.\n        :type keyword: str\n        :param top_k: Number of closest word objects to be returned\n        :type top_k: int\n        :param similarity_metric: SimilarityMetric.COSINE, SimilarityMetric.EUCLIDEAN or SimilarityMetric.LEVENSHTEIN. SimilarityMetric.COSINE is chosen as default.\n        :type similarity_metric: SimilarityMetric\n        :param similarity_threshold: Measure of how similar document key is to queried key. default=0.6\n        :type similarity_threshold: float\n\n        :return: Returns a list of words that match the queried key sorted from highest\n                 to lowest similarity.\n        :rtype: EntityList[Word]\n        \"\"\"\n\n        top_n_words = []\n        for page in self.pages:\n            top_n_words.extend(\n                page._search_words_with_similarity(\n                    keyword=keyword,\n                    top_k=top_k,\n                    similarity_metric=similarity_metric,\n                    similarity_threshold=similarity_threshold,\n                )\n            )\n\n        top_n_words = sorted(top_n_words, key=lambda x: x[0], reverse=True)[:top_k]\n        top_n_words = EntityList([ent[1] for ent in top_n_words])\n\n        return top_n_words\n\n    def search_lines(\n        self,\n        keyword: str,\n        top_k: int = 1,\n        similarity_metric: SimilarityMetric = SimilarityMetric.LEVENSHTEIN,\n        similarity_threshold: float = 0.6,\n    ) -> List[Line]:\n        \"\"\"\n        Return a list of top_k lines that contain the queried keyword.\n\n        :param keyword: Keyword that is used to query the document.\n        :type keyword: str\n        :param top_k: Number of closest line objects to be returned\n        :type top_k: int\n        :param similarity_metric: SimilarityMetric.COSINE, SimilarityMetric.EUCLIDEAN or SimilarityMetric.LEVENSHTEIN. SimilarityMetric.COSINE is chosen as default.\n        :type similarity_metric: SimilarityMetric\n        :param similarity_threshold: Measure of how similar document key is to queried key. default=0.6\n        :type similarity_threshold: float\n\n        :return: Returns a list of lines that contain the queried key sorted from highest\n                 to lowest similarity.\n        :rtype: EntityList[Line]\n        \"\"\"\n        if not isinstance(similarity_metric, SimilarityMetric):\n            raise InputError(\n                \"similarity_metric parameter should be of SimilarityMetric type. Find input choices from textractor.data.constants\"\n            )\n\n        top_n_lines = []\n        for page in self.pages:\n            top_n_lines.extend(\n                page._search_lines_with_similarity(\n                    keyword=keyword,\n                    top_k=top_k,\n                    similarity_metric=similarity_metric,\n                    similarity_threshold=similarity_threshold,\n                )\n            )\n\n        top_n_lines = EntityList([ent[1] for ent in top_n_lines][:top_k])\n\n        return top_n_lines\n\n    # KeyValue entity related functions\n    def get(\n        self,\n        key: str,\n        top_k_matches: int = 1,\n        similarity_metric: SimilarityMetric = SimilarityMetric.LEVENSHTEIN,\n        similarity_threshold: float = 0.6,\n    ):\n        \"\"\"\n        Return upto top_k_matches of key-value pairs for the key that is queried from the document.\n\n        :param key: Query key to match\n        :type key: str\n        :param top_k_matches: Maximum number of matches to return\n        :type top_k_matches: int\n        :param similarity_metric: SimilarityMetric.COSINE, SimilarityMetric.EUCLIDEAN or SimilarityMetric.LEVENSHTEIN. SimilarityMetric.COSINE is chosen as default.\n        :type similarity_metric: SimilarityMetric\n        :param similarity_threshold: Measure of how similar document key is to queried key. default=0.6\n        :type similarity_threshold: float\n\n        :return: Returns a list of key-value pairs that match the queried key sorted from highest to lowest similarity.\n        :rtype: EntityList[KeyValue]\n        \"\"\"\n        if not isinstance(similarity_metric, SimilarityMetric):\n            raise InputError(\n                \"similarity_metric parameter should be of SimilarityMetric type. Find input choices from textractor.data.constants\"\n            )\n\n        top_n = []\n        similarity_threshold = (\n            -similarity_threshold\n            if similarity_metric == SimilarityMetric.EUCLIDEAN\n            else similarity_threshold\n        )\n        lowest_similarity = similarity_threshold\n\n        for kv in self.key_values + self.checkboxes:\n            try:\n                edited_document_key = \"\".join(\n                    [\n                        char\n                        for char in kv.key.__repr__()\n                        if char not in string.punctuation\n                    ]\n                )\n            except:\n                pass\n            key = \"\".join([char for char in key if char not in string.punctuation])\n\n            similarity = [\n                SearchUtils.get_word_similarity(key, word, similarity_metric)\n                for word in edited_document_key.split(\" \")\n            ]\n            similarity.append(\n                SearchUtils.get_word_similarity(\n                    key, edited_document_key, similarity_metric\n                )\n            )\n\n            similarity = (\n                min(similarity)\n                if similarity_metric == SimilarityMetric.EUCLIDEAN\n                else max(similarity)\n            )\n\n            if similarity > similarity_threshold:\n                if len(top_n) < top_k_matches:\n                    top_n.append((kv, similarity))\n                elif similarity > lowest_similarity:\n                    top_n[-1] = (kv, similarity)\n                top_n = sorted(top_n, key=lambda x: x[1], reverse=True)\n                lowest_similarity = top_n[-1][1]\n\n        if not top_n:\n            logging.warning(\n                f\"Query key does not match any existing keys in the document.{os.linesep}{self.keys()}\"\n            )\n            return EntityList([])\n\n        logging.info(f\"Query key matched {len(top_n)} key-values in the document.\")\n\n        return EntityList([value[0] for value in top_n])\n\n    # Export document entities into supported formats\n    def export_kv_to_csv(\n        self,\n        include_kv: bool = True,\n        include_checkboxes: bool = True,\n        filepath: str = \"Key-Values.csv\",\n        sep: str = \";\",\n    ):\n        \"\"\"\n        Export key-value entities and checkboxes in csv format.\n\n        :param include_kv: True if KVs are to be exported. Else False.\n        :type include_kv: bool\n        :param include_checkboxes: True if checkboxes are to be exported. Else False.\n        :type include_checkboxes: bool\n        :param filepath: Path to where file is to be stored.\n        :type filepath: str\n        :param sep: Separator to be used in the csv file.\n        :type sep: str\n        \"\"\"\n        keys = []\n        values = []\n        if include_kv and not self.key_values:\n            logging.warning(\"Document does not contain key-values.\")\n        elif include_kv:\n            for kv in self.key_values:\n                keys.append(\" \".join([w.text for w in kv.key]))\n                values.append(kv.value.get_text())\n\n        if include_checkboxes and not self.checkboxes:\n            logging.warning(\"Document does not contain checkbox elements.\")\n        elif include_checkboxes:\n            for kv in self.checkboxes:\n                keys.append(\" \".join([w.text for w in kv.key]))\n                values.append(kv.value.children[0].status.name)\n\n        with open(filepath, \"w\") as f:\n            f.write(f\"Key{sep}Value{os.linesep}\")\n            for k, v in zip(keys, values):\n                f.write(f\"{k}{sep}{v}{os.linesep}\")\n\n        logging.info(\n            f\"csv file stored at location {os.path.join(os.getcwd(),filepath)}\"\n        )\n\n    def export_kv_to_txt(\n        self,\n        include_kv: bool = True,\n        include_checkboxes: bool = True,\n        filepath: str = \"Key-Values.txt\",\n    ):\n        \"\"\"\n        Export key-value entities and checkboxes in txt format.\n\n        :param include_kv: True if KVs are to be exported. Else False.\n        :type include_kv: bool\n        :param include_checkboxes: True if checkboxes are to be exported. Else False.\n        :type include_checkboxes: bool\n        :param filepath: Path to where file is to be stored.\n        :type filepath: str\n        \"\"\"\n        export_str = \"\"\n        index = 1\n        if include_kv and not self.key_values:\n            logging.warning(\"Document does not contain key-values.\")\n        elif include_kv:\n            for kv in self.key_values:\n                export_str += (\n                    f\"{index}. {kv.key.__repr__()} : {kv.value.__repr__()}{os.linesep}\"\n                )\n                index += 1\n\n        if include_checkboxes and not self.checkboxes:\n            logging.warning(\"Document does not contain checkbox elements.\")\n        elif include_checkboxes:\n            for kv in self.checkboxes:\n                export_str += f\"{index}. {kv.key.__repr__()} : {kv.value.children[0].status.name}{os.linesep}\"\n                index += 1\n\n        with open(filepath, \"w\") as text_file:\n            text_file.write(export_str)\n        logging.info(\n            f\"txt file stored at location {os.path.join(os.getcwd(),filepath)}\"\n        )\n\n    def export_tables_to_excel(self, filepath):\n        \"\"\"\n        Creates an excel file and writes each table on a separate worksheet within the workbook.\n        This is stored on the filepath passed by the user.\n\n        :param filepath: Path to store the exported Excel file.\n        :type filepath: str, required\n        \"\"\"\n        if not filepath:\n            logging.error(\"Filepath required to store excel file.\")\n        workbook = xlsxwriter.Workbook(filepath)\n        for table in self.tables:\n            workbook = table.to_excel(\n                filepath=None, workbook=workbook, save_workbook=False\n            )\n        workbook.close()\n\n    def independent_words(self):\n        \"\"\"\n        :return: Return all words in the document, outside of tables, checkboxes, key-values.\n        :rtype: EntityList[Word]\n        \"\"\"\n        if not self.words:\n            logging.warning(\"Words have not been assigned to this Document object.\")\n            return []\n\n        else:\n            table_words = sum([table.words for table in self.tables], [])\n            kv_words = sum([kv.words for kv in self.key_values], [])\n            checkbox_words = sum([kv.words for kv in self.checkboxes], [])\n            dependent_words = table_words + checkbox_words + kv_words\n            dependent_word_ids = set([word.id for word in dependent_words])\n            independent_words = [\n                word for word in self.words if word.id not in dependent_word_ids\n            ]\n            return EntityList(independent_words)\n\n    def return_duplicates(self):\n        \"\"\"\n        Returns a dictionary containing page numbers as keys and list of :class:`EntityList` objects as values.\n        Each :class:`EntityList` instance contains the key-values and the last item is the table which contains duplicate information.\n        This function is intended to let the Textract user know of duplicate objects extracted by the various Textract models.\n\n        :return: Dictionary containing page numbers as keys and list of EntityList objects as values.\n        :rtype: Dict[page_num, List[EntityList[DocumentEntity]]]\n        \"\"\"\n        document_duplicates = defaultdict(list)\n\n        for page in self.pages:\n            document_duplicates[page.page_num].extend(page.return_duplicates())\n\n        return document_duplicates\n\n    def directional_finder(\n        self,\n        word_1: str = \"\",\n        word_2: str = \"\",\n        page: int = -1,\n        prefix: str = \"\",\n        direction=Direction.BELOW,\n        entities=[],\n    ):\n        \"\"\"\n        The function returns entity types present in entities by prepending the prefix provided by te user. This helps in cases of repeating\n        key-values and checkboxes. The user can manipulate original data or produce a copy. The main advantage of this function is to be able to define direction.\n\n        :param word_1: The reference word from where x1, y1 coordinates are derived\n        :type word_1: str, required\n        :param word_2: The second word preferably in the direction indicated by the parameter direction. When it isn't given the end of page coordinates are used in the given direction.\n        :type word_2: str, optional\n        :param page: page number of the page in the document to search the entities in.\n        :type page: int, required\n        :param prefix: User provided prefix to prepend to the key . Without prefix, the method acts as a search by geometry function\n        :type prefix: str, optional\n        :param entities: List of DirectionalFinderType inputs.\n        :type entities: List[DirectionalFinderType]\n\n        :return: Returns the EntityList of modified key-value and/or checkboxes\n        :rtype: EntityList\n        \"\"\"\n\n        if not word_1 or page == -1:\n            return EntityList([])\n\n        x1, x2, y1, y2 = self._get_coords(word_1, word_2, direction, page)\n\n        if x1 == -1:\n            return EntityList([])\n\n        page_obj = self.pages[page - 1]\n        entity_dict = {\n            DirectionalFinderType.KEY_VALUE_SET: self.key_values,\n            DirectionalFinderType.SELECTION_ELEMENT: self.checkboxes,\n        }\n\n        entitylist = []\n        for entity_type in entities:\n            entitylist.extend(list(entity_dict[entity_type]))\n\n        new_key_values = self._get_kv_with_direction(\n            direction, entitylist, (x1, x2, y1, y2)\n        )\n\n        final_kv = []\n        for kv in new_key_values:\n            if kv.key:\n                key_words = [deepcopy(word) for word in kv.key]\n                key_words[0].text = prefix + key_words[0].text\n                new_kv = deepcopy(kv)\n                new_kv.key = key_words\n                final_kv.append(new_kv)\n            else:\n                final_kv.append(kv)\n\n        return EntityList(final_kv)\n\n    def _get_kv_with_direction(self, direction, entitylist, coords):\n        \"\"\"Return key-values and checkboxes in entitylist present in the direction given with respect to the coordinates.\"\"\"\n        if direction == Direction.ABOVE:\n            new_key_values = [\n                kv\n                for kv in entitylist\n                if kv.bbox.y <= coords[2] and kv.bbox.y >= coords[-1]\n            ]\n\n        elif direction == Direction.BELOW:\n            new_key_values = [\n                kv\n                for kv in entitylist\n                if kv.bbox.y >= coords[2] and kv.bbox.y <= coords[-1]\n            ]\n\n        elif direction == Direction.RIGHT:\n            new_key_values = [\n                kv\n                for kv in entitylist\n                if kv.bbox.x >= coords[0] and kv.bbox.x <= coords[1]\n            ]\n            new_key_values = [\n                kv\n                for kv in new_key_values\n                if kv.bbox.y >= coords[2] - kv.bbox.height\n                and kv.bbox.y <= coords[-1] + 3 * kv.bbox.height\n            ]\n\n        elif direction == Direction.LEFT:\n            new_key_values = [\n                kv\n                for kv in entitylist\n                if kv.bbox.x <= coords[0] and kv.bbox.x >= coords[1]\n            ]\n            new_key_values = [\n                kv\n                for kv in new_key_values\n                if kv.bbox.y >= coords[2] - kv.bbox.height\n                and kv.bbox.y <= coords[-1] + 3 * kv.bbox.height\n            ]\n\n        return new_key_values\n\n    def _get_coords(self, word_1, word_2, direction, page):\n        \"\"\"\n        Returns coordinates for the area within which to search for key-values with the directional_finder by retrieving coordinates of word_1 \\\n        and word_2 if it exists else end of page.\n        \"\"\"\n        word_1_objects = self.search_lines(\n            keyword=word_1,\n            top_k=5,\n            similarity_metric=SimilarityMetric.COSINE,\n            similarity_threshold=0.5,\n        )\n        word_1_objects = (\n            [word for word in word_1_objects if word.page == page] if page != -1 else []\n        )\n\n        if not word_1_objects:\n            logging.warning(f\"{word_1} not found in page {page}\")\n            return -1, -1, -1, -1\n        else:\n            word_1_obj = word_1_objects[0]\n            x1, y1 = word_1_obj.bbox.x, word_1_obj.bbox.y\n\n        if word_2:\n            word_2_objects = self.search_lines(\n                keyword=word_2,\n                top_k=5,\n                similarity_metric=SimilarityMetric.COSINE,\n                similarity_threshold=0.5,\n            )\n            word_2_objects = [word for word in word_2_objects if word.page == page]\n            if not word_2_objects:\n                logging.warning(f\"{word_2} not found in page {page}\")\n                return -1, -1, -1, -1\n            else:\n                word_2_obj = word_2_objects[0]\n                x2, y2 = word_2_obj.bbox.x, word_2_obj.bbox.y\n        else:\n            x2, y2 = x1, y1\n\n        if direction == Direction.ABOVE:\n            x1, x2, y1, y2 = (x1, x2, y1, y2) if y2 < y1 else (x1, 0, y1, 0)\n\n        elif direction == Direction.BELOW:\n            x1, x2, y1, y2 = (x1, x2, y1, y2) if y2 > y1 else (x1, 1, y1, 1)\n\n        elif direction == Direction.RIGHT:\n            x1, x2, y1, y2 = (x1, x2, y1, y2) if x2 > x1 else (x1, 1, y1, y1)\n\n        elif direction == Direction.LEFT:\n            x1, x2, y1, y2 = (x1, x2, y1, y2) if x2 < x1 else (x1, 0, y1, y1)\n\n        else:\n            return -1, -1, -1, -1\n\n        return x1, x2, y1, y2\n"
+  },
+  "GT_src_dict": {
+    "textractor/entities/document.py": {
+      "Document.open": {
+        "code": "    def open(cls, fp: Union[dict, str, Path, IO[AnyStr]]):\n        \"\"\"Create a Document object from various input sources, including JSON files, file handles, or response dictionaries. This method provides flexibility for constructing Document instances based on different data formats, catering to various use cases like direct JSON responses or files stored locally or on Amazon S3.\n\nParameters:\n- fp (Union[dict, str, Path, IO[AnyStr]]): The input source which can be a dictionary representing a parsed JSON response, a string path to a JSON file, a Path object, or a file handle. The function raises an InputError if the input type does not match the specified options.\n\nReturns:\n- Document: An instance of the Document class encapsulating the parsed data.\n\nRaises:\n- InputError: If the provided input does not match the expected types.\n\nThis method interacts with the `response_parser` to parse the input data, and uses the `download_from_s3` utility from `textractor.utils.s3_utils` to fetch JSON files from S3. The function also employs the `boto3` library to create an S3 client for downloading files. Constants such as `InputError` are defined in the `textractor.exceptions` module to handle invalid input scenarios appropriately.\"\"\"\n        'Create a Document object from a JSON file path, file handle or response dictionary\\n\\n        :param fp: _description_\\n        :type fp: Union[dict, str, Path, IO[AnyStr]]\\n        :raises InputError: Raised on input not being of type Union[dict, str, Path, IO[AnyStr]]\\n        :return: Document object\\n        :rtype: Document\\n        '\n        from textractor.parsers import response_parser\n        if isinstance(fp, dict):\n            return response_parser.parse(fp)\n        elif isinstance(fp, str):\n            if fp.startswith('s3://'):\n                client = boto3.client('s3')\n                return response_parser.parse(json.load(download_from_s3(client, fp)))\n            with open(fp, 'r') as f:\n                return response_parser.parse(json.load(f))\n        elif isinstance(fp, Path):\n            with open(fp, 'r') as f:\n                return response_parser.parse(json.load(f))\n        elif isinstance(fp, io.IOBase):\n            return response_parser.parse(json.load(fp))\n        else:\n            raise InputError(f'Document.open() input must be of type dict, str, Path or a file handle, not {type(fp)}')",
+        "docstring": "Create a Document object from various input sources, including JSON files, file handles, or response dictionaries. This method provides flexibility for constructing Document instances based on different data formats, catering to various use cases like direct JSON responses or files stored locally or on Amazon S3.\n\nParameters:\n- fp (Union[dict, str, Path, IO[AnyStr]]): The input source which can be a dictionary representing a parsed JSON response, a string path to a JSON file, a Path object, or a file handle. The function raises an InputError if the input type does not match the specified options.\n\nReturns:\n- Document: An instance of the Document class encapsulating the parsed data.\n\nRaises:\n- InputError: If the provided input does not match the expected types.\n\nThis method interacts with the `response_parser` to parse the input data, and uses the `download_from_s3` utility from `textractor.utils.s3_utils` to fetch JSON files from S3. The function also employs the `boto3` library to create an S3 client for downloading files. Constants such as `InputError` are defined in the `textractor.exceptions` module to handle invalid input scenarios appropriately.",
+        "signature": "def open(cls, fp: Union[dict, str, Path, IO[AnyStr]]):",
+        "type": "Method",
+        "class_signature": "class Document(SpatialObject, Linearizable):"
+      },
+      "Document.text": {
+        "code": "    def text(self) -> str:\n        \"\"\"Returns the concatenated text of all pages in the Document as a single string, with each page's text separated by the operating system's line separator. This method relies on the `pages` attribute, which is a list of `Page` objects, where each `Page` contains its own `text` property. The method uses `os.linesep` to ensure that the correct line ending is applied for the current operating system. There are no input parameters for this method, and the return type is a string representing the full document text.\"\"\"\n        'Returns the document text as one string\\n\\n        :return: Page text seperated by line return\\n        :rtype: str\\n        '\n        return os.linesep.join([page.text for page in self.pages])",
+        "docstring": "Returns the concatenated text of all pages in the Document as a single string, with each page's text separated by the operating system's line separator. This method relies on the `pages` attribute, which is a list of `Page` objects, where each `Page` contains its own `text` property. The method uses `os.linesep` to ensure that the correct line ending is applied for the current operating system. There are no input parameters for this method, and the return type is a string representing the full document text.",
+        "signature": "def text(self) -> str:",
+        "type": "Method",
+        "class_signature": "class Document(SpatialObject, Linearizable):"
+      }
+    }
+  },
+  "dependency_dict": {
+    "textractor/entities/document.py:Document:open": {
+      "textractor/parsers/response_parser.py": {
+        "parse": {
+          "code": "def parse(response: dict) -> Document:\n    \"\"\"\n    Ingests response data and API Call Mode and calls the appropriate function for it.\n    Presently supports only SYNC and ASYNC API calls. Will be extended to Analyze ID and Expense in the future.\n\n    :param response: JSON response data in a format readable by the ResponseParser.\n    :type response: dict\n\n    :return: Document object returned after making respective parse function calls.\n    :rtype: Document\n    \"\"\"\n    if \"IdentityDocuments\" in response:\n        return parse_analyze_id_response(response)\n    if \"ExpenseDocuments\" in response:\n        return parser_analyze_expense_response(response)\n    else:\n        return parse_document_api_response(converter(response))",
+          "docstring": "Ingests response data and API Call Mode and calls the appropriate function for it.\nPresently supports only SYNC and ASYNC API calls. Will be extended to Analyze ID and Expense in the future.\n\n:param response: JSON response data in a format readable by the ResponseParser.\n:type response: dict\n\n:return: Document object returned after making respective parse function calls.\n:rtype: Document",
+          "signature": "def parse(response: dict) -> Document:",
+          "type": "Function",
+          "class_signature": null
+        }
+      }
+    },
+    "textractor/entities/document.py:Document:text": {
+      "textractor/entities/document.py": {
+        "Document.pages": {
+          "code": "    def pages(self, pages: List[Page]):\n        \"\"\"\n        Add Page objects to the Document.\n\n        :param pages: List of Page objects, each representing a page within the document.\n        No specific ordering is assumed with input.\n        :type pages: List[Page]\n        \"\"\"\n        self._pages = sorted(pages, key=lambda x: x.page_num)",
+          "docstring": "Add Page objects to the Document.\n\n:param pages: List of Page objects, each representing a page within the document.\nNo specific ordering is assumed with input.\n:type pages: List[Page]",
+          "signature": "def pages(self, pages: List[Page]):",
+          "type": "Method",
+          "class_signature": "class Document(SpatialObject, Linearizable):"
+        }
+      },
+      "textractor/entities/page.py": {
+        "Page.text": {
+          "code": "    def text(self) -> str:\n        \"\"\"\n        Returns the page text\n\n        :return: Linearized page text\n        :rtype: str\n        \"\"\"\n        return self.get_text()",
+          "docstring": "Returns the page text\n\n:return: Linearized page text\n:rtype: str",
+          "signature": "def text(self) -> str:",
+          "type": "Method",
+          "class_signature": "class Page(SpatialObject, Linearizable):"
+        }
+      }
+    }
+  },
+  "call_tree": {
+    "tests/test_layout.py:TestLayout:test_layout": {
+      "tests/utils.py:get_fixture_path": {},
+      "textractor/entities/document.py:Document:open": {
+        "textractor/parsers/response_parser.py:parse": {
+          "textractor/utils/legacy_utils.py:converter": {},
+          "textractor/parsers/response_parser.py:parse_document_api_response": {
+            "textractor/parsers/response_parser.py:_create_document_object": {
+              "textractor/entities/document.py:Document:__init__": {
+                "textractor/entities/bbox.py:SpatialObject:__init__": {}
+              }
+            },
+            "textractor/parsers/response_parser.py:_create_page_objects": {
+              "textractor/parsers/response_parser.py:_filter_block_type": {},
+              "textractor/parsers/response_parser.py:_get_relationship_ids": {},
+              "textractor/entities/page.py:Page:__init__": {
+                "textractor/entities/bbox.py:SpatialObject:__init__": {},
+                "textractor/visualizers/entitylist.py:EntityList:__init__": {}
+              }
+            },
+            "textractor/parsers/response_parser.py:_create_line_objects": {
+              "textractor/parsers/response_parser.py:_get_relationship_ids": {},
+              "textractor/parsers/response_parser.py:_create_word_objects": {
+                "textractor/entities/bbox.py:BoundingBox:from_normalized_dict": {
+                  "textractor/entities/bbox.py:BoundingBox:_from_dict": {
+                    "textractor/entities/bbox.py:BoundingBox:__init__": {
+                      "textractor/entities/bbox.py:SpatialObject:__init__": {}
+                    }
+                  }
+                },
+                "textractor/entities/word.py:Word:__init__": {
+                  "textractor/entities/document_entity.py:DocumentEntity:__init__": {}
+                },
+                "textractor/entities/document_entity.py:DocumentEntity:raw_object": {},
+                "textractor/entities/word.py:Word:page": {},
+                "textractor/entities/word.py:Word:page_id": {}
+              },
+              "textractor/entities/bbox.py:BoundingBox:from_normalized_dict": {
+                "textractor/entities/bbox.py:BoundingBox:_from_dict": {
+                  "textractor/entities/bbox.py:BoundingBox:__init__": {
+                    "textractor/entities/bbox.py:SpatialObject:__init__": {}
+                  }
+                }
+              },
+              "textractor/entities/line.py:Line:__init__": {
+                "textractor/entities/document_entity.py:DocumentEntity:__init__": {},
+                "textractor/entities/document_entity.py:DocumentEntity:bbox": {}
+              },
+              "textractor/entities/document_entity.py:DocumentEntity:bbox": {},
+              "textractor/entities/document_entity.py:DocumentEntity:raw_object": {},
+              "textractor/entities/line.py:Line:page": {},
+              "textractor/entities/line.py:Line:page_id": {}
+            },
+            "textractor/entities/page.py:Page:lines": {
+              "textractor/utils/geometry_util.py:sort_by_position": {
+                "textractor/entities/document_entity.py:DocumentEntity:bbox": {}
+              },
+              "textractor/visualizers/entitylist.py:EntityList:__init__": {}
+            },
+            "textractor/parsers/response_parser.py:_create_layout_objects": {
+              "textractor/entities/bbox.py:BoundingBox:from_normalized_dict": {
+                "textractor/entities/bbox.py:BoundingBox:_from_dict": {
+                  "textractor/entities/bbox.py:BoundingBox:__init__": {
+                    "textractor/entities/bbox.py:SpatialObject:__init__": {}
+                  }
+                }
+              },
+              "textractor/entities/layout.py:Layout:__init__": {
+                "textractor/entities/document_entity.py:DocumentEntity:__init__": {}
+              },
+              "textractor/entities/document_entity.py:DocumentEntity:raw_object": {},
+              "textractor/entities/document_entity.py:DocumentEntity:add_children": {},
+              "textractor/entities/layout.py:Layout:page": {},
+              "textractor/entities/layout.py:Layout:page_id": {}
+            },
+            "textractor/parsers/response_parser.py:_create_keyvalue_objects": {
+              "textractor/parsers/response_parser.py:_filter_by_entity": {},
+              "textractor/parsers/response_parser.py:_get_relationship_ids": {},
+              "textractor/parsers/response_parser.py:_create_value_objects": {
+                "textractor/entities/bbox.py:BoundingBox:from_normalized_dict": {
+                  "textractor/entities/bbox.py:BoundingBox:_from_dict": {
+                    "textractor/entities/bbox.py:BoundingBox:__init__": {
+                      "textractor/entities/bbox.py:SpatialObject:__init__": {}
+                    }
+                  }
+                },
+                "textractor/entities/value.py:Value:__init__": {
+                  "textractor/entities/document_entity.py:DocumentEntity:__init__": {}
+                },
+                "textractor/entities/document_entity.py:DocumentEntity:raw_object": {},
+                "textractor/parsers/response_parser.py:_create_selection_objects": {},
+                "textractor/parsers/response_parser.py:_get_relationship_ids": {},
+                "textractor/parsers/response_parser.py:_create_word_objects": {
+                  "textractor/entities/word.py:Word:page": {},
+                  "textractor/entities/word.py:Word:page_id": {}
+                },
+                "textractor/entities/value.py:Value:words": {
+                  "textractor/entities/value.py:Value:contains_checkbox": {},
+                  "textractor/visualizers/entitylist.py:EntityList:__init__": {},
+                  "textractor/entities/document_entity.py:DocumentEntity:bbox": {}
+                },
+                "textractor/entities/document_entity.py:DocumentEntity:add_children": {},
+                "textractor/entities/value.py:Value:page": {},
+                "textractor/entities/value.py:Value:page_id": {}
+              },
+              "textractor/entities/bbox.py:BoundingBox:from_normalized_dict": {
+                "textractor/entities/bbox.py:BoundingBox:_from_dict": {
+                  "textractor/entities/bbox.py:BoundingBox:__init__": {
+                    "textractor/entities/bbox.py:SpatialObject:__init__": {}
+                  }
+                }
+              },
+              "textractor/entities/value.py:Value:contains_checkbox": {},
+              "textractor/entities/key_value.py:KeyValue:__init__": {
+                "textractor/entities/document_entity.py:DocumentEntity:__init__": {}
+              },
+              "textractor/entities/document_entity.py:DocumentEntity:raw_object": {},
+              "textractor/entities/key_value.py:KeyValue:value": {},
+              "textractor/entities/value.py:Value:key_id": {},
+              "textractor/entities/value.py:Value:words": {
+                "textractor/entities/value.py:Value:contains_checkbox": {},
+                "textractor/visualizers/entitylist.py:EntityList:__init__": {}
+              },
+              "textractor/parsers/response_parser.py:_create_word_objects": {
+                "textractor/entities/word.py:Word:page": {},
+                "textractor/entities/word.py:Word:page_id": {}
+              },
+              "textractor/entities/key_value.py:KeyValue:key": {
+                "textractor/visualizers/entitylist.py:EntityList:__init__": {}
+              },
+              "textractor/entities/document_entity.py:DocumentEntity:add_children": {},
+              "textractor/entities/document_entity.py:DocumentEntity:bbox": {},
+              "textractor/entities/bbox.py:BoundingBox:enclosing_bbox": {
+                "textractor/entities/bbox.py:BoundingBox:__init__": {
+                  "textractor/entities/bbox.py:SpatialObject:__init__": {}
+                }
+              },
+              "textractor/entities/key_value.py:KeyValue:page": {},
+              "textractor/entities/key_value.py:KeyValue:page_id": {}
+            },
+            "textractor/entities/page.py:Page:key_values": {
+              "textractor/utils/geometry_util.py:sort_by_position": {
+                "textractor/entities/document_entity.py:DocumentEntity:bbox": {}
+              },
+              "textractor/visualizers/entitylist.py:EntityList:__init__": {}
+            },
+            "textractor/entities/page.py:Page:checkboxes": {
+              "textractor/utils/geometry_util.py:sort_by_position": {},
+              "textractor/visualizers/entitylist.py:EntityList:__init__": {}
+            },
+            "textractor/parsers/response_parser.py:_create_table_objects": {
+              "textractor/entities/bbox.py:BoundingBox:from_normalized_dict": {
+                "textractor/entities/bbox.py:BoundingBox:_from_dict": {
+                  "textractor/entities/bbox.py:BoundingBox:__init__": {
+                    "textractor/entities/bbox.py:SpatialObject:__init__": {}
+                  }
+                }
+              },
+              "textractor/entities/table.py:Table:__init__": {
+                "textractor/entities/document_entity.py:DocumentEntity:__init__": {}
+              },
+              "textractor/entities/table.py:Table:table_type": {},
+              "textractor/entities/document_entity.py:DocumentEntity:raw_object": {},
+              "textractor/parsers/response_parser.py:_create_table_cell_objects": {
+                "textractor/parsers/response_parser.py:_get_relationship_ids": {},
+                "textractor/entities/bbox.py:BoundingBox:from_normalized_dict": {
+                  "textractor/entities/bbox.py:BoundingBox:_from_dict": {
+                    "textractor/entities/bbox.py:BoundingBox:__init__": {
+                      "textractor/entities/bbox.py:SpatialObject:__init__": {}
+                    }
+                  }
+                },
+                "textractor/entities/table_cell.py:TableCell:__init__": {
+                  "textractor/entities/document_entity.py:DocumentEntity:__init__": {}
+                },
+                "textractor/entities/document_entity.py:DocumentEntity:raw_object": {},
+                "textractor/entities/table_cell.py:TableCell:page": {},
+                "textractor/entities/table_cell.py:TableCell:page_id": {}
+              },
+              "textractor/parsers/response_parser.py:_get_relationship_ids": {},
+              "textractor/parsers/response_parser.py:_create_word_objects": {
+                "textractor/entities/word.py:Word:page": {},
+                "textractor/entities/word.py:Word:page_id": {}
+              },
+              "textractor/entities/document_entity.py:DocumentEntity:bbox": {},
+              "textractor/entities/table_cell.py:TableCell:row_span": {},
+              "textractor/entities/table_cell.py:TableCell:col_span": {},
+              "textractor/entities/table_cell.py:TableCell:row_index": {},
+              "textractor/entities/table_cell.py:TableCell:col_index": {},
+              "textractor/entities/document_entity.py:DocumentEntity:add_children": {},
+              "textractor/entities/table_cell.py:TableCell:_update_response_metadata": {},
+              "textractor/entities/key_value.py:KeyValue:words": {
+                "textractor/entities/key_value.py:KeyValue:value": {},
+                "textractor/entities/value.py:Value:words": {
+                  "textractor/entities/value.py:Value:contains_checkbox": {},
+                  "textractor/visualizers/entitylist.py:EntityList:__init__": {}
+                },
+                "textractor/visualizers/entitylist.py:EntityList:__add__": {
+                  "textractor/visualizers/entitylist.py:EntityList:__init__": {}
+                },
+                "textractor/entities/document_entity.py:DocumentEntity:bbox": {},
+                "textractor/visualizers/entitylist.py:EntityList:__init__": {}
+              },
+              "textractor/entities/table.py:Table:footers": {},
+              "textractor/entities/table_footer.py:TableFooter:__init__": {
+                "textractor/entities/document_entity.py:DocumentEntity:__init__": {}
+              },
+              "textractor/entities/table_footer.py:TableFooter:words": {
+                "textractor/visualizers/entitylist.py:EntityList:__init__": {}
+              },
+              "textractor/entities/table_cell.py:TableCell:is_title": {},
+              "textractor/entities/table_cell.py:TableCell:words": {
+                "textractor/entities/table_cell.py:TableCell:get_text_and_words": {
+                  "textractor/entities/document_entity.py:DocumentEntity:children": {},
+                  "textractor/utils/text_utils.py:linearize_children": {
+                    "textractor/entities/word.py:Word:Word": {},
+                    "textractor/entities/document_entity.py:DocumentEntity:bbox": {},
+                    "textractor/entities/line.py:Line:__init__": {
+                      "textractor/entities/document_entity.py:DocumentEntity:__init__": {}
+                    },
+                    "textractor/utils/text_utils.py:group_elements_horizontally": {
+                      "textractor/utils/text_utils.py:compare_bounding_box": {},
+                      "textractor/utils/text_utils.py:should_group": {}
+                    },
+                    "textractor/entities/line.py:Line:get_text_and_words": {
+                      "textractor/entities/document_entity.py:DocumentEntity:bbox": {},
+                      "textractor/entities/line.py:Line:words": {},
+                      "textractor/entities/line.py:Line:text": {},
+                      "textractor/utils/html_utils.py:escape_text": {
+                        "textractor/data/html_linearization_config.py:HTMLLinearizationConfig": {}
+                      }
+                    },
+                    "textractor/entities/bbox.py:BoundingBox:enclosing_bbox": {
+                      "textractor/entities/bbox.py:BoundingBox:__init__": {}
+                    },
+                    "textractor/utils/text_utils.py:part_of_same_paragraph": {
+                      "textractor/entities/document_entity.py:DocumentEntity:bbox": {}
+                    }
+                  }
+                },
+                "textractor/visualizers/entitylist.py:EntityList:__init__": {}
+              },
+              "textractor/entities/table.py:Table:add_cells": {
+                "textractor/entities/table_cell.py:TableCell:table_id": {},
+                "textractor/entities/table_cell.py:TableCell:row_index": {},
+                "textractor/entities/table_cell.py:TableCell:col_index": {}
+              },
+              "textractor/entities/page.py:Page:leaf_layouts": {},
+              "textractor/entities/bbox.py:BoundingBox:get_intersection": {
+                "textractor/entities/bbox.py:BoundingBox": {},
+                "textractor/entities/bbox.py:BoundingBox:from_denormalized_corners": {
+                  "textractor/entities/bbox.py:BoundingBox:__init__": {
+                    "textractor/entities/bbox.py:SpatialObject:__init__": {}
+                  }
+                }
+              },
+              "textractor/entities/bbox.py:BoundingBox:area": {},
+              "textractor/entities/table.py:Table:words": {
+                "textractor/entities/table_cell.py:TableCell:words": {
+                  "textractor/entities/table_cell.py:TableCell:get_text_and_words": {
+                    "textractor/entities/document_entity.py:DocumentEntity:children": {},
+                    "textractor/utils/text_utils.py:linearize_children": {
+                      "textractor/entities/document_entity.py:DocumentEntity:bbox": {},
+                      "textractor/entities/line.py:Line:__init__": {},
+                      "textractor/utils/text_utils.py:group_elements_horizontally": {},
+                      "textractor/entities/line.py:Line:get_text_and_words": {},
+                      "textractor/entities/bbox.py:BoundingBox:enclosing_bbox": {},
+                      "textractor/utils/text_utils.py:part_of_same_paragraph": {}
+                    }
+                  },
+                  "textractor/visualizers/entitylist.py:EntityList:__init__": {}
+                },
+                "textractor/visualizers/entitylist.py:EntityList:__init__": {}
+              },
+              "textractor/entities/document_entity.py:DocumentEntity:remove": {
+                "textractor/entities/document_entity.py:DocumentEntity:remove": {
+                  "[ignored_or_cut_off]": "..."
+                },
+                "textractor/entities/document_entity.py:DocumentEntity:children": {}
+              },
+              "textractor/entities/document_entity.py:DocumentEntity:children": {},
+              "textractor/entities/bbox.py:BoundingBox:enclosing_bbox": {
+                "textractor/entities/document_entity.py:DocumentEntity:bbox": {},
+                "textractor/entities/bbox.py:BoundingBox:__init__": {
+                  "textractor/entities/bbox.py:SpatialObject:__init__": {}
+                }
+              },
+              "textractor/entities/layout.py:Layout:__init__": {
+                "textractor/entities/document_entity.py:DocumentEntity:__init__": {}
+              },
+              "textractor/entities/layout.py:Layout:page": {},
+              "textractor/entities/layout.py:Layout:page_id": {},
+              "textractor/entities/table.py:Table:page": {},
+              "textractor/entities/table.py:Table:page_id": {}
+            },
+            "textractor/entities/page.py:Page:tables": {
+              "textractor/visualizers/entitylist.py:EntityList:__init__": {}
+            },
+            "textractor/entities/page.py:Page:leaf_layouts": {
+              "textractor/visualizers/entitylist.py:EntityList:__init__": {}
+            },
+            "textractor/entities/document_entity.py:DocumentEntity:bbox": {},
+            "textractor/entities/bbox.py:BoundingBox:get_intersection": {
+              "textractor/entities/bbox.py:BoundingBox:from_denormalized_corners": {
+                "textractor/entities/bbox.py:BoundingBox:__init__": {
+                  "textractor/entities/bbox.py:SpatialObject:__init__": {}
+                }
+              }
+            },
+            "textractor/entities/bbox.py:BoundingBox:area": {},
+            "textractor/entities/key_value.py:KeyValue:words": {
+              "textractor/entities/key_value.py:KeyValue:value": {},
+              "textractor/entities/value.py:Value:words": {
+                "textractor/entities/value.py:Value:contains_checkbox": {},
+                "textractor/visualizers/entitylist.py:EntityList:__init__": {}
+              },
+              "textractor/visualizers/entitylist.py:EntityList:__add__": {
+                "textractor/visualizers/entitylist.py:EntityList:__init__": {}
+              },
+              "textractor/entities/document_entity.py:DocumentEntity:bbox": {},
+              "textractor/visualizers/entitylist.py:EntityList:__init__": {}
+            },
+            "textractor/entities/document_entity.py:DocumentEntity:remove": {
+              "textractor/entities/document_entity.py:DocumentEntity:remove": {
+                "[ignored_or_cut_off]": "..."
+              },
+              "textractor/entities/document_entity.py:DocumentEntity:children": {}
+            },
+            "textractor/entities/document_entity.py:DocumentEntity:children": {},
+            "textractor/entities/layout.py:Layout:__init__": {
+              "textractor/entities/document_entity.py:DocumentEntity:__init__": {}
+            },
+            "textractor/entities/layout.py:Layout:page": {},
+            "textractor/entities/layout.py:Layout:page_id": {},
+            "textractor/entities/page.py:Page:words": {
+              "textractor/utils/geometry_util.py:sort_by_position": {
+                "textractor/entities/document_entity.py:DocumentEntity:bbox": {}
+              },
+              "textractor/visualizers/entitylist.py:EntityList:__init__": {}
+            },
+            "textractor/parsers/response_parser.py:_create_query_objects": {
+              "textractor/parsers/response_parser.py:_create_query_result_objects": {}
+            },
+            "textractor/entities/page.py:Page:queries": {
+              "textractor/visualizers/entitylist.py:EntityList:__init__": {}
+            },
+            "textractor/parsers/response_parser.py:_create_signature_objects": {
+              "textractor/entities/page.py:Page:leaf_layouts": {},
+              "textractor/entities/document_entity.py:DocumentEntity:bbox": {}
+            },
+            "textractor/entities/page.py:Page:signatures": {
+              "textractor/visualizers/entitylist.py:EntityList:__init__": {}
+            },
+            "textractor/entities/page.py:Page:layouts": {
+              "textractor/visualizers/entitylist.py:EntityList:__add__": {
+                "textractor/visualizers/entitylist.py:EntityList:__init__": {}
+              },
+              "textractor/visualizers/entitylist.py:EntityList:__init__": {}
+            },
+            "textractor/entities/document_entity.py:DocumentEntity:visit": {
+              "textractor/entities/document_entity.py:DocumentEntity:visit": {
+                "[ignored_or_cut_off]": "..."
+              }
+            },
+            "textractor/entities/document.py:Document:pages": {}
+          }
+        }
+      },
+      "textractor/entities/document.py:Document:text": {
+        "textractor/entities/document.py:Document:pages": {},
+        "textractor/entities/page.py:Page:text": {
+          "textractor/entities/linearizable.py:Linearizable:get_text": {
+            "textractor/entities/page.py:Page:get_text_and_words": {
+              "textractor/entities/page.py:Page:layouts": {
+                "textractor/visualizers/entitylist.py:EntityList:__add__": {
+                  "textractor/visualizers/entitylist.py:EntityList:__init__": {}
+                },
+                "textractor/visualizers/entitylist.py:EntityList:__init__": {}
+              },
+              "textractor/entities/layout.py:Layout:get_text_and_words": {
+                "textractor/entities/document_entity.py:DocumentEntity:children": {},
+                "textractor/utils/text_utils.py:linearize_children": {
+                  "textractor/utils/text_utils.py:group_elements_horizontally": {
+                    "textractor/utils/text_utils.py:compare_bounding_box": {
+                      "textractor/entities/document_entity.py:DocumentEntity:bbox": {}
+                    },
+                    "textractor/utils/text_utils.py:should_group": {}
+                  },
+                  "textractor/entities/document_entity.py:DocumentEntity:bbox": {},
+                  "textractor/entities/line.py:Line:get_text_and_words": {
+                    "textractor/entities/document_entity.py:DocumentEntity:bbox": {},
+                    "textractor/entities/line.py:Line:words": {},
+                    "textractor/entities/line.py:Line:text": {
+                      "textractor/entities/line.py:Line:words": {},
+                      "textractor/entities/word.py:Word:text": {}
+                    },
+                    "textractor/utils/html_utils.py:escape_text": {}
+                  },
+                  "textractor/entities/bbox.py:BoundingBox:enclosing_bbox": {
+                    "textractor/entities/bbox.py:BoundingBox:__init__": {
+                      "textractor/entities/bbox.py:SpatialObject:__init__": {}
+                    }
+                  },
+                  "textractor/entities/line.py:Line:__init__": {
+                    "textractor/entities/document_entity.py:DocumentEntity:__init__": {}
+                  },
+                  "textractor/entities/table.py:Table:get_text_and_words": {
+                    "textractor/entities/table.py:Table:words": {
+                      "textractor/entities/table_cell.py:TableCell:words": {},
+                      "textractor/visualizers/entitylist.py:EntityList:__init__": {}
+                    },
+                    "textractor/entities/table_cell.py:TableCell:row_index": {},
+                    "textractor/entities/table_cell.py:TableCell:col_index": {},
+                    "textractor/entities/document_entity.py:DocumentEntity:bbox": {},
+                    "textractor/entities/table_cell.py:TableCell:col_span": {},
+                    "textractor/entities/table_cell.py:TableCell:row_span": {},
+                    "textractor/entities/table_cell.py:TableCell:get_text_and_words": {
+                      "textractor/entities/document_entity.py:DocumentEntity:children": {},
+                      "textractor/utils/text_utils.py:linearize_children": {
+                        "[ignored_or_cut_off]": "..."
+                      }
+                    },
+                    "textractor/utils/html_utils.py:add_id_to_html_tag": {},
+                    "textractor/entities/table_cell.py:TableCell:_get_merged_cell_range": {
+                      "textractor/entities/table_cell.py:TableCell:row_index": {},
+                      "textractor/entities/table_cell.py:TableCell:col_index": {}
+                    },
+                    "textractor/entities/bbox.py:BoundingBox:enclosing_bbox": {
+                      "textractor/entities/document_entity.py:DocumentEntity:bbox": {},
+                      "textractor/entities/bbox.py:BoundingBox:__init__": {}
+                    },
+                    "textractor/entities/document_entity.py:DocumentEntity:children": {},
+                    "textractor/utils/text_utils.py:linearize_children": {
+                      "[ignored_or_cut_off]": "..."
+                    }
+                  },
+                  "textractor/utils/text_utils.py:part_of_same_paragraph": {
+                    "textractor/entities/document_entity.py:DocumentEntity:bbox": {}
+                  },
+                  "textractor/entities/key_value.py:KeyValue:get_text_and_words": {
+                    "textractor/entities/key_value.py:KeyValue:key": {},
+                    "textractor/entities/word.py:Word:text": {},
+                    "textractor/entities/key_value.py:KeyValue:value": {},
+                    "textractor/entities/value.py:Value:get_text_and_words": {
+                      "textractor/entities/value.py:Value:contains_checkbox": {},
+                      "textractor/entities/value.py:Value:words": {},
+                      "textractor/utils/text_utils.py:linearize_children": {
+                        "[ignored_or_cut_off]": "..."
+                      },
+                      "textractor/utils/html_utils.py:add_id_to_html_tag": {},
+                      "textractor/entities/document_entity.py:DocumentEntity:bbox": {}
+                    },
+                    "textractor/utils/html_utils.py:add_id_to_html_tag": {},
+                    "textractor/visualizers/entitylist.py:EntityList:__add__": {
+                      "textractor/visualizers/entitylist.py:EntityList:__init__": {}
+                    },
+                    "textractor/entities/document_entity.py:DocumentEntity:bbox": {}
+                  }
+                },
+                "textractor/utils/html_utils.py:add_id_to_html_tag": {
+                  "textractor/data/html_linearization_config.py:HTMLLinearizationConfig": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "PRD": "# PROJECT NAME: amazon_textract_textractor-test_layout\n\n# FOLDER STRUCTURE:\n```\n..\n\u2514\u2500\u2500 textractor/\n    \u2514\u2500\u2500 entities/\n        \u2514\u2500\u2500 document.py\n            \u251c\u2500\u2500 Document.open\n            \u2514\u2500\u2500 Document.text\n```\n\n# IMPLEMENTATION REQUIREMENTS:\n## MODULE DESCRIPTION:\nThis module facilitates the automated extraction and analysis of text, layout, tables, forms, and key-value pairs from image-based documents using Amazon Textract. It provides capabilities for initializing a Textract-based analysis workflow, processing documents with specified features, and converting the extracted data into structured formats for subsequent usage. By leveraging Textract's advanced OCR and document analysis capabilities, the module solves the problem of efficiently digitizing, understanding, and processing complex documents, enabling developers to integrate sophisticated document data extraction into their applications seamlessly. This allows users and systems to programmatically access textual and structural data from previously unstructured content such as scanned forms, invoices, or receipts.\n\n## FILE 1: textractor/entities/document.py\n\n- CLASS METHOD: Document.text\n  - CLASS SIGNATURE: class Document(SpatialObject, Linearizable):\n  - SIGNATURE: def text(self) -> str:\n  - DOCSTRING: \n```python\n\"\"\"\nReturns the concatenated text of all pages in the Document as a single string, with each page's text separated by the operating system's line separator. This method relies on the `pages` attribute, which is a list of `Page` objects, where each `Page` contains its own `text` property. The method uses `os.linesep` to ensure that the correct line ending is applied for the current operating system. There are no input parameters for this method, and the return type is a string representing the full document text.\n\"\"\"\n```\n\n- CLASS METHOD: Document.open\n  - CLASS SIGNATURE: class Document(SpatialObject, Linearizable):\n  - SIGNATURE: def open(cls, fp: Union[dict, str, Path, IO[AnyStr]]):\n  - DOCSTRING: \n```python\n\"\"\"\nCreate a Document object from various input sources, including JSON files, file handles, or response dictionaries. This method provides flexibility for constructing Document instances based on different data formats, catering to various use cases like direct JSON responses or files stored locally or on Amazon S3.\n\nParameters:\n- fp (Union[dict, str, Path, IO[AnyStr]]): The input source which can be a dictionary representing a parsed JSON response, a string path to a JSON file, a Path object, or a file handle. The function raises an InputError if the input type does not match the specified options.\n\nReturns:\n- Document: An instance of the Document class encapsulating the parsed data.\n\nRaises:\n- InputError: If the provided input does not match the expected types.\n\nThis method interacts with the `response_parser` to parse the input data, and uses the `download_from_s3` utility from `textractor.utils.s3_utils` to fetch JSON files from S3. The function also employs the `boto3` library to create an S3 client for downloading files. Constants such as `InputError` are defined in the `textractor.exceptions` module to handle invalid input scenarios appropriately.\n\"\"\"\n```\n\n# TASK DESCRIPTION:\nIn this project, you need to implement the functions and methods listed above. The functions have been removed from the code but their docstrings remain.\nYour task is to:\n1. Read and understand the docstrings of each function/method\n2. Understand the dependencies and how they interact with the target functions\n3. Implement the functions/methods according to their docstrings and signatures\n4. Ensure your implementations work correctly with the rest of the codebase\n",
+  "file_code": {
+    "textractor/entities/document.py": "\"\"\"The Document class is defined to host all the various DocumentEntity objects within it. :class:`DocumentEntity` objects can be \naccessed, searched and exported the functions given below.\"\"\"\nimport boto3\nimport json\nimport os\nimport string\nimport logging\nimport xlsxwriter\nimport io\nfrom pathlib import Path\nfrom typing import List, IO, Union, AnyStr, Tuple\nfrom copy import deepcopy\nfrom collections import defaultdict\nfrom PIL import Image\nfrom textractor.entities.expense_document import ExpenseDocument\nfrom textractor.entities.identity_document import IdentityDocument\nfrom textractor.entities.word import Word\nfrom textractor.entities.line import Line\nfrom textractor.entities.page import Page\nfrom textractor.entities.table import Table\nfrom textractor.entities.query import Query\nfrom textractor.entities.signature import Signature\nfrom textractor.entities.layout import Layout\nfrom textractor.exceptions import InputError\nfrom textractor.entities.key_value import KeyValue\nfrom textractor.entities.bbox import SpatialObject\nfrom textractor.utils.s3_utils import download_from_s3\nfrom textractor.visualizers.entitylist import EntityList\nfrom textractor.data.constants import TextTypes, SimilarityMetric, Direction, DirectionalFinderType\nfrom textractor.utils.search_utils import SearchUtils\nfrom textractor.data.text_linearization_config import TextLinearizationConfig\nfrom textractor.data.html_linearization_config import HTMLLinearizationConfig\nfrom textractor.entities.linearizable import Linearizable\n\nclass Document(SpatialObject, Linearizable):\n    \"\"\"\n    Represents the description of a single document, as it would appear in the input to the Textract API.\n    Document serves as the root node of the object model hierarchy,\n    which should be used as an intermediate form for most analytic purposes.\n    The Document node also contains the metadata of the document.\n    \"\"\"\n\n    def __init__(self, num_pages: int=1):\n        \"\"\"\n        Creates a new document, ideally containing entity objects pertaining to each page.\n\n        :param num_pages: Number of pages in the input Document.\n        \"\"\"\n        super().__init__(width=0, height=0)\n        self.num_pages: int = num_pages\n        self._pages: List[Page] = []\n        self._identity_documents: List[IdentityDocument] = []\n        self._trp2_document = None\n        self.response = None\n\n    @property\n    def words(self) -> EntityList[Word]:\n        \"\"\"\n        Returns all the :class:`Word` objects present in the Document.\n\n        :return: List of Word objects, each representing a word within the Document.\n        :rtype: EntityList[Word]\n        \"\"\"\n        return EntityList(sum([page.words for page in self.pages], []))\n\n    @property\n    def identity_documents(self) -> EntityList[IdentityDocument]:\n        \"\"\"\n        Returns all the :class:`IdentityDocument` objects present in the Document.\n\n        :return: List of IdentityDocument objects, each representing an identity document within the Document.\n        :rtype: EntityList[IdentityDocument]\n        \"\"\"\n        return EntityList(self._identity_documents)\n\n    @identity_documents.setter\n    def identity_documents(self, identity_documents: List[IdentityDocument]):\n        \"\"\"\n        Set all the identity documents detected inside the Document\n        \"\"\"\n        self._identity_documents = identity_documents\n\n    @property\n    def expense_documents(self) -> EntityList[ExpenseDocument]:\n        \"\"\"\n        Returns all the :class:`ExpenseDocument` objects present in the Document.\n\n        :return: List of ExpenseDocument objects, each representing an expense document within the Document.\n        :rtype: EntityList[ExpenseDocument]\n        \"\"\"\n        return EntityList(sum([page.expense_documents for page in self.pages], []))\n\n    @property\n    def lines(self) -> EntityList[Line]:\n        \"\"\"\n        Returns all the :class:`Line` objects present in the Document.\n\n        :return: List of Line objects, each representing a line within the Document.\n        :rtype: EntityList[Line]\n        \"\"\"\n        return EntityList(sum([page.lines for page in self.pages], []))\n\n    @property\n    def key_values(self) -> EntityList[KeyValue]:\n        \"\"\"\n        Returns all the :class:`KeyValue` objects present in the Document.\n\n        :return: List of KeyValue objects, each representing a key-value pair within the Document.\n        :rtype: EntityList[KeyValue]\n        \"\"\"\n        return EntityList(sum([page.key_values for page in self.pages], []))\n\n    @property\n    def checkboxes(self) -> EntityList[KeyValue]:\n        \"\"\"\n        Returns all the :class:`KeyValue` objects with SelectionElements present in the Document.\n\n        :return: List of KeyValue objects, each representing a checkbox within the Document.\n        :rtype: EntityList[KeyValue]\n        \"\"\"\n        return EntityList(sum([page.checkboxes for page in self.pages], []))\n\n    @property\n    def tables(self) -> EntityList[Table]:\n        \"\"\"\n        Returns all the :class:`Table` objects present in the Document.\n\n        :return: List of Table objects, each representing a table within the Document.\n        :rtype: EntityList[Table]\n        \"\"\"\n        return EntityList(sum([page.tables for page in self.pages], []))\n\n    @property\n    def queries(self) -> EntityList[Query]:\n        \"\"\"\n        Returns all the :class:`Query` objects present in the Document.\n\n        :return: List of Query objects.\n        :rtype: EntityList[Query]\n        \"\"\"\n        return EntityList(sum([page.queries for page in self.pages], []))\n\n    @property\n    def signatures(self) -> EntityList[Signature]:\n        \"\"\"\n        Returns all the :class:`Signature` objects present in the Document.\n\n        :return: List of Signature objects.\n        :rtype: EntityList[Signature]\n        \"\"\"\n        return EntityList(sum([page.signatures for page in self.pages], []))\n\n    @property\n    def layouts(self) -> EntityList[Layout]:\n        \"\"\"\n        Returns all the :class:`Layout` objects present in the Document\n\n        :return: List of Layout objects\n        :rtype: EntityList[Layout]\n        \"\"\"\n        return EntityList(sum([page.layouts for page in self.pages], []))\n\n    @property\n    def identity_document(self) -> EntityList[IdentityDocument]:\n        \"\"\"\n        Returns all the :class:`IdentityDocument` objects present in the Page.\n\n        :return: List of IdentityDocument objects.\n        :rtype: EntityList\n        \"\"\"\n        return EntityList(self._identity_documents)\n\n    @identity_document.setter\n    def identity_document(self, identity_documents: List[IdentityDocument]):\n        \"\"\"\n        Add IdentityDocument objects to the Page.\n\n        :param tables: List of IdentityDocument objects.\n        :type identity_documents: list\n        \"\"\"\n        self._identity_document = identity_documents\n\n    @property\n    def images(self) -> List[Image.Image]:\n        \"\"\"\n        Returns all the page images in the Document.\n\n        :return: List of PIL Image objects.\n        :rtype: PIL.Image\n        \"\"\"\n        return [page.image for page in self._pages]\n\n    @property\n    def pages(self) -> List[Page]:\n        \"\"\"\n        Returns all the :class:`Page` objects present in the Document.\n\n        :return: List of Page objects, each representing a Page within the Document.\n        :rtype: List\n        \"\"\"\n        return self._pages\n\n    @pages.setter\n    def pages(self, pages: List[Page]):\n        \"\"\"\n        Add Page objects to the Document.\n\n        :param pages: List of Page objects, each representing a page within the document.\n        No specific ordering is assumed with input.\n        :type pages: List[Page]\n        \"\"\"\n        self._pages = sorted(pages, key=lambda x: x.page_num)\n\n    def get_text_and_words(self, config: TextLinearizationConfig=TextLinearizationConfig()) -> Tuple[str, List]:\n        text, words_lists = zip(*[p.get_text_and_words(config) for p in self.pages])\n        flattened_words = []\n        for words in words_lists:\n            flattened_words.extend(words)\n        return (config.layout_element_separator.join(text), flattened_words)\n\n    def page(self, page_no: int=0):\n        \"\"\"\n        Returns :class:`Page` object/s depending on the input page_no. Follows zero-indexing.\n\n        :param page_no: if int, returns single Page Object, else if list, it returns a list of\n                        Page objects.\n        :type page_no: int if single page, list of int if multiple pages\n\n        :return: Filters and returns Page objects depending on the input page_no\n        :rtype: Page or List[Page]\n        \"\"\"\n        if isinstance(page_no, int):\n            return self.pages[page_no]\n        elif isinstance(page_no, list):\n            return [self.pages[num] for num in page_no]\n        else:\n            raise InputError(\"page_no parameter doesn't match required data type.\")\n\n    def to_html(self, config: HTMLLinearizationConfig=HTMLLinearizationConfig()):\n        \"\"\"\n        Returns the HTML representation of the document, effectively calls Linearizable.to_html()\n        but add <html><body></body></html> around the result and put each page in a <div>. \n\n        :return: HTML text of the entity\n        :rtype: str\n        \"\"\"\n        html = '<html><body>'\n        for page in self.pages:\n            html += f'<div>{page.to_html(config=config)}</div>'\n        html += '</body></html>'\n        return html\n\n    def __repr__(self):\n        return os.linesep.join(['This document holds the following data:', f'Pages - {len(self.pages)}', f'Words - {len(self.words)}', f'Lines - {len(self.lines)}', f'Key-values - {len(self.key_values)}', f'Checkboxes - {len(self.checkboxes)}', f'Tables - {len(self.tables)}', f'Queries - {len(self.queries)}', f'Signatures - {len(self.signatures)}', f'Identity Documents - {len(self.identity_documents)}', f'Expense Documents - {len(self.expense_documents)}'])\n\n    def to_trp2(self):\n        \"\"\"\n        Parses the response to the trp2 format for backward compatibility\n\n        :return: TDocument object that can be used with the older Textractor libraries\n        :rtype: TDocument\n        \"\"\"\n        from trp.trp2 import TDocument, TDocumentSchema\n        if not self._trp2_document:\n            self._trp2_document = TDocumentSchema().load(self.response)\n        return self._trp2_document\n\n    def visualize(self, *args, **kwargs):\n        \"\"\"\n        Returns the object's children in a visualization EntityList object\n\n        :return: Returns an EntityList object\n        :rtype: EntityList\n        \"\"\"\n        return EntityList(self.pages).visualize(*args, **kwargs)\n\n    def keys(self, include_checkboxes: bool=True) -> List[str]:\n        \"\"\"\n        Prints all keys for key-value pairs and checkboxes if the document contains them.\n\n        :param include_checkboxes: True/False. Set False if checkboxes need to be excluded.\n        :type include_checkboxes: bool\n\n        :return: List of strings containing key names in the Document\n        :rtype: List[str]\n        \"\"\"\n        keys = []\n        keys = [keyvalue.key for keyvalue in self.key_values]\n        if include_checkboxes:\n            keys += [keyvalue.key for keyvalue in self.checkboxes]\n        return keys\n\n    def filter_checkboxes(self, selected: bool=True, not_selected: bool=True) -> List[KeyValue]:\n        \"\"\"\n        Return a list of :class:`KeyValue` objects containing checkboxes if the document contains them.\n\n        :param selected: True/False Return SELECTED checkboxes\n        :type selected: bool\n        :param not_selected: True/False Return NOT_SELECTED checkboxes\n        :type not_selected: bool\n\n        :return: Returns checkboxes that match the conditions set by the flags.\n        :rtype: EntityList[KeyValue]\n        \"\"\"\n        checkboxes = EntityList([])\n        for page in self.pages:\n            checkboxes.extend(page.filter_checkboxes(selected=selected, not_selected=not_selected))\n        return checkboxes\n\n    def get_words_by_type(self, text_type: TextTypes=TextTypes.PRINTED) -> List[Word]:\n        \"\"\"\n        Returns list of :class:`Word` entities that match the input text type.\n\n        :param text_type: TextTypes.PRINTED or TextTypes.HANDWRITING\n        :type text_type: TextTypes\n        :return: Returns list of Word entities that match the input text type.\n        :rtype: EntityList[Word]\n        \"\"\"\n        if not self.words:\n            logging.warn('Document contains no word entities.')\n            return []\n        filtered_words = EntityList()\n        for page in self.pages:\n            filtered_words.extend(page.get_words_by_type(text_type=text_type))\n        return filtered_words\n\n    def search_words(self, keyword: str, top_k: int=1, similarity_metric: SimilarityMetric=SimilarityMetric.LEVENSHTEIN, similarity_threshold: float=0.6) -> List[Word]:\n        \"\"\"\n        Return a list of top_k words that match the keyword.\n\n        :param keyword: Keyword that is used to query the document.\n        :type keyword: str\n        :param top_k: Number of closest word objects to be returned\n        :type top_k: int\n        :param similarity_metric: SimilarityMetric.COSINE, SimilarityMetric.EUCLIDEAN or SimilarityMetric.LEVENSHTEIN. SimilarityMetric.COSINE is chosen as default.\n        :type similarity_metric: SimilarityMetric\n        :param similarity_threshold: Measure of how similar document key is to queried key. default=0.6\n        :type similarity_threshold: float\n\n        :return: Returns a list of words that match the queried key sorted from highest\n                 to lowest similarity.\n        :rtype: EntityList[Word]\n        \"\"\"\n        top_n_words = []\n        for page in self.pages:\n            top_n_words.extend(page._search_words_with_similarity(keyword=keyword, top_k=top_k, similarity_metric=similarity_metric, similarity_threshold=similarity_threshold))\n        top_n_words = sorted(top_n_words, key=lambda x: x[0], reverse=True)[:top_k]\n        top_n_words = EntityList([ent[1] for ent in top_n_words])\n        return top_n_words\n\n    def search_lines(self, keyword: str, top_k: int=1, similarity_metric: SimilarityMetric=SimilarityMetric.LEVENSHTEIN, similarity_threshold: float=0.6) -> List[Line]:\n        \"\"\"\n        Return a list of top_k lines that contain the queried keyword.\n\n        :param keyword: Keyword that is used to query the document.\n        :type keyword: str\n        :param top_k: Number of closest line objects to be returned\n        :type top_k: int\n        :param similarity_metric: SimilarityMetric.COSINE, SimilarityMetric.EUCLIDEAN or SimilarityMetric.LEVENSHTEIN. SimilarityMetric.COSINE is chosen as default.\n        :type similarity_metric: SimilarityMetric\n        :param similarity_threshold: Measure of how similar document key is to queried key. default=0.6\n        :type similarity_threshold: float\n\n        :return: Returns a list of lines that contain the queried key sorted from highest\n                 to lowest similarity.\n        :rtype: EntityList[Line]\n        \"\"\"\n        if not isinstance(similarity_metric, SimilarityMetric):\n            raise InputError('similarity_metric parameter should be of SimilarityMetric type. Find input choices from textractor.data.constants')\n        top_n_lines = []\n        for page in self.pages:\n            top_n_lines.extend(page._search_lines_with_similarity(keyword=keyword, top_k=top_k, similarity_metric=similarity_metric, similarity_threshold=similarity_threshold))\n        top_n_lines = EntityList([ent[1] for ent in top_n_lines][:top_k])\n        return top_n_lines\n\n    def get(self, key: str, top_k_matches: int=1, similarity_metric: SimilarityMetric=SimilarityMetric.LEVENSHTEIN, similarity_threshold: float=0.6):\n        \"\"\"\n        Return upto top_k_matches of key-value pairs for the key that is queried from the document.\n\n        :param key: Query key to match\n        :type key: str\n        :param top_k_matches: Maximum number of matches to return\n        :type top_k_matches: int\n        :param similarity_metric: SimilarityMetric.COSINE, SimilarityMetric.EUCLIDEAN or SimilarityMetric.LEVENSHTEIN. SimilarityMetric.COSINE is chosen as default.\n        :type similarity_metric: SimilarityMetric\n        :param similarity_threshold: Measure of how similar document key is to queried key. default=0.6\n        :type similarity_threshold: float\n\n        :return: Returns a list of key-value pairs that match the queried key sorted from highest to lowest similarity.\n        :rtype: EntityList[KeyValue]\n        \"\"\"\n        if not isinstance(similarity_metric, SimilarityMetric):\n            raise InputError('similarity_metric parameter should be of SimilarityMetric type. Find input choices from textractor.data.constants')\n        top_n = []\n        similarity_threshold = -similarity_threshold if similarity_metric == SimilarityMetric.EUCLIDEAN else similarity_threshold\n        lowest_similarity = similarity_threshold\n        for kv in self.key_values + self.checkboxes:\n            try:\n                edited_document_key = ''.join([char for char in kv.key.__repr__() if char not in string.punctuation])\n            except:\n                pass\n            key = ''.join([char for char in key if char not in string.punctuation])\n            similarity = [SearchUtils.get_word_similarity(key, word, similarity_metric) for word in edited_document_key.split(' ')]\n            similarity.append(SearchUtils.get_word_similarity(key, edited_document_key, similarity_metric))\n            similarity = min(similarity) if similarity_metric == SimilarityMetric.EUCLIDEAN else max(similarity)\n            if similarity > similarity_threshold:\n                if len(top_n) < top_k_matches:\n                    top_n.append((kv, similarity))\n                elif similarity > lowest_similarity:\n                    top_n[-1] = (kv, similarity)\n                top_n = sorted(top_n, key=lambda x: x[1], reverse=True)\n                lowest_similarity = top_n[-1][1]\n        if not top_n:\n            logging.warning(f'Query key does not match any existing keys in the document.{os.linesep}{self.keys()}')\n            return EntityList([])\n        logging.info(f'Query key matched {len(top_n)} key-values in the document.')\n        return EntityList([value[0] for value in top_n])\n\n    def export_kv_to_csv(self, include_kv: bool=True, include_checkboxes: bool=True, filepath: str='Key-Values.csv', sep: str=';'):\n        \"\"\"\n        Export key-value entities and checkboxes in csv format.\n\n        :param include_kv: True if KVs are to be exported. Else False.\n        :type include_kv: bool\n        :param include_checkboxes: True if checkboxes are to be exported. Else False.\n        :type include_checkboxes: bool\n        :param filepath: Path to where file is to be stored.\n        :type filepath: str\n        :param sep: Separator to be used in the csv file.\n        :type sep: str\n        \"\"\"\n        keys = []\n        values = []\n        if include_kv and (not self.key_values):\n            logging.warning('Document does not contain key-values.')\n        elif include_kv:\n            for kv in self.key_values:\n                keys.append(' '.join([w.text for w in kv.key]))\n                values.append(kv.value.get_text())\n        if include_checkboxes and (not self.checkboxes):\n            logging.warning('Document does not contain checkbox elements.')\n        elif include_checkboxes:\n            for kv in self.checkboxes:\n                keys.append(' '.join([w.text for w in kv.key]))\n                values.append(kv.value.children[0].status.name)\n        with open(filepath, 'w') as f:\n            f.write(f'Key{sep}Value{os.linesep}')\n            for k, v in zip(keys, values):\n                f.write(f'{k}{sep}{v}{os.linesep}')\n        logging.info(f'csv file stored at location {os.path.join(os.getcwd(), filepath)}')\n\n    def export_kv_to_txt(self, include_kv: bool=True, include_checkboxes: bool=True, filepath: str='Key-Values.txt'):\n        \"\"\"\n        Export key-value entities and checkboxes in txt format.\n\n        :param include_kv: True if KVs are to be exported. Else False.\n        :type include_kv: bool\n        :param include_checkboxes: True if checkboxes are to be exported. Else False.\n        :type include_checkboxes: bool\n        :param filepath: Path to where file is to be stored.\n        :type filepath: str\n        \"\"\"\n        export_str = ''\n        index = 1\n        if include_kv and (not self.key_values):\n            logging.warning('Document does not contain key-values.')\n        elif include_kv:\n            for kv in self.key_values:\n                export_str += f'{index}. {kv.key.__repr__()} : {kv.value.__repr__()}{os.linesep}'\n                index += 1\n        if include_checkboxes and (not self.checkboxes):\n            logging.warning('Document does not contain checkbox elements.')\n        elif include_checkboxes:\n            for kv in self.checkboxes:\n                export_str += f'{index}. {kv.key.__repr__()} : {kv.value.children[0].status.name}{os.linesep}'\n                index += 1\n        with open(filepath, 'w') as text_file:\n            text_file.write(export_str)\n        logging.info(f'txt file stored at location {os.path.join(os.getcwd(), filepath)}')\n\n    def export_tables_to_excel(self, filepath):\n        \"\"\"\n        Creates an excel file and writes each table on a separate worksheet within the workbook.\n        This is stored on the filepath passed by the user.\n\n        :param filepath: Path to store the exported Excel file.\n        :type filepath: str, required\n        \"\"\"\n        if not filepath:\n            logging.error('Filepath required to store excel file.')\n        workbook = xlsxwriter.Workbook(filepath)\n        for table in self.tables:\n            workbook = table.to_excel(filepath=None, workbook=workbook, save_workbook=False)\n        workbook.close()\n\n    def independent_words(self):\n        \"\"\"\n        :return: Return all words in the document, outside of tables, checkboxes, key-values.\n        :rtype: EntityList[Word]\n        \"\"\"\n        if not self.words:\n            logging.warning('Words have not been assigned to this Document object.')\n            return []\n        else:\n            table_words = sum([table.words for table in self.tables], [])\n            kv_words = sum([kv.words for kv in self.key_values], [])\n            checkbox_words = sum([kv.words for kv in self.checkboxes], [])\n            dependent_words = table_words + checkbox_words + kv_words\n            dependent_word_ids = set([word.id for word in dependent_words])\n            independent_words = [word for word in self.words if word.id not in dependent_word_ids]\n            return EntityList(independent_words)\n\n    def return_duplicates(self):\n        \"\"\"\n        Returns a dictionary containing page numbers as keys and list of :class:`EntityList` objects as values.\n        Each :class:`EntityList` instance contains the key-values and the last item is the table which contains duplicate information.\n        This function is intended to let the Textract user know of duplicate objects extracted by the various Textract models.\n\n        :return: Dictionary containing page numbers as keys and list of EntityList objects as values.\n        :rtype: Dict[page_num, List[EntityList[DocumentEntity]]]\n        \"\"\"\n        document_duplicates = defaultdict(list)\n        for page in self.pages:\n            document_duplicates[page.page_num].extend(page.return_duplicates())\n        return document_duplicates\n\n    def directional_finder(self, word_1: str='', word_2: str='', page: int=-1, prefix: str='', direction=Direction.BELOW, entities=[]):\n        \"\"\"\n        The function returns entity types present in entities by prepending the prefix provided by te user. This helps in cases of repeating\n        key-values and checkboxes. The user can manipulate original data or produce a copy. The main advantage of this function is to be able to define direction.\n\n        :param word_1: The reference word from where x1, y1 coordinates are derived\n        :type word_1: str, required\n        :param word_2: The second word preferably in the direction indicated by the parameter direction. When it isn't given the end of page coordinates are used in the given direction.\n        :type word_2: str, optional\n        :param page: page number of the page in the document to search the entities in.\n        :type page: int, required\n        :param prefix: User provided prefix to prepend to the key . Without prefix, the method acts as a search by geometry function\n        :type prefix: str, optional\n        :param entities: List of DirectionalFinderType inputs.\n        :type entities: List[DirectionalFinderType]\n\n        :return: Returns the EntityList of modified key-value and/or checkboxes\n        :rtype: EntityList\n        \"\"\"\n        if not word_1 or page == -1:\n            return EntityList([])\n        x1, x2, y1, y2 = self._get_coords(word_1, word_2, direction, page)\n        if x1 == -1:\n            return EntityList([])\n        page_obj = self.pages[page - 1]\n        entity_dict = {DirectionalFinderType.KEY_VALUE_SET: self.key_values, DirectionalFinderType.SELECTION_ELEMENT: self.checkboxes}\n        entitylist = []\n        for entity_type in entities:\n            entitylist.extend(list(entity_dict[entity_type]))\n        new_key_values = self._get_kv_with_direction(direction, entitylist, (x1, x2, y1, y2))\n        final_kv = []\n        for kv in new_key_values:\n            if kv.key:\n                key_words = [deepcopy(word) for word in kv.key]\n                key_words[0].text = prefix + key_words[0].text\n                new_kv = deepcopy(kv)\n                new_kv.key = key_words\n                final_kv.append(new_kv)\n            else:\n                final_kv.append(kv)\n        return EntityList(final_kv)\n\n    def _get_kv_with_direction(self, direction, entitylist, coords):\n        \"\"\"Return key-values and checkboxes in entitylist present in the direction given with respect to the coordinates.\"\"\"\n        if direction == Direction.ABOVE:\n            new_key_values = [kv for kv in entitylist if kv.bbox.y <= coords[2] and kv.bbox.y >= coords[-1]]\n        elif direction == Direction.BELOW:\n            new_key_values = [kv for kv in entitylist if kv.bbox.y >= coords[2] and kv.bbox.y <= coords[-1]]\n        elif direction == Direction.RIGHT:\n            new_key_values = [kv for kv in entitylist if kv.bbox.x >= coords[0] and kv.bbox.x <= coords[1]]\n            new_key_values = [kv for kv in new_key_values if kv.bbox.y >= coords[2] - kv.bbox.height and kv.bbox.y <= coords[-1] + 3 * kv.bbox.height]\n        elif direction == Direction.LEFT:\n            new_key_values = [kv for kv in entitylist if kv.bbox.x <= coords[0] and kv.bbox.x >= coords[1]]\n            new_key_values = [kv for kv in new_key_values if kv.bbox.y >= coords[2] - kv.bbox.height and kv.bbox.y <= coords[-1] + 3 * kv.bbox.height]\n        return new_key_values\n\n    def _get_coords(self, word_1, word_2, direction, page):\n        \"\"\"\n        Returns coordinates for the area within which to search for key-values with the directional_finder by retrieving coordinates of word_1         and word_2 if it exists else end of page.\n        \"\"\"\n        word_1_objects = self.search_lines(keyword=word_1, top_k=5, similarity_metric=SimilarityMetric.COSINE, similarity_threshold=0.5)\n        word_1_objects = [word for word in word_1_objects if word.page == page] if page != -1 else []\n        if not word_1_objects:\n            logging.warning(f'{word_1} not found in page {page}')\n            return (-1, -1, -1, -1)\n        else:\n            word_1_obj = word_1_objects[0]\n            x1, y1 = (word_1_obj.bbox.x, word_1_obj.bbox.y)\n        if word_2:\n            word_2_objects = self.search_lines(keyword=word_2, top_k=5, similarity_metric=SimilarityMetric.COSINE, similarity_threshold=0.5)\n            word_2_objects = [word for word in word_2_objects if word.page == page]\n            if not word_2_objects:\n                logging.warning(f'{word_2} not found in page {page}')\n                return (-1, -1, -1, -1)\n            else:\n                word_2_obj = word_2_objects[0]\n                x2, y2 = (word_2_obj.bbox.x, word_2_obj.bbox.y)\n        else:\n            x2, y2 = (x1, y1)\n        if direction == Direction.ABOVE:\n            x1, x2, y1, y2 = (x1, x2, y1, y2) if y2 < y1 else (x1, 0, y1, 0)\n        elif direction == Direction.BELOW:\n            x1, x2, y1, y2 = (x1, x2, y1, y2) if y2 > y1 else (x1, 1, y1, 1)\n        elif direction == Direction.RIGHT:\n            x1, x2, y1, y2 = (x1, x2, y1, y2) if x2 > x1 else (x1, 1, y1, y1)\n        elif direction == Direction.LEFT:\n            x1, x2, y1, y2 = (x1, x2, y1, y2) if x2 < x1 else (x1, 0, y1, y1)\n        else:\n            return (-1, -1, -1, -1)\n        return (x1, x2, y1, y2)"
+  }
+}

@@ -1,0 +1,487 @@
+{
+  "dir_path": "/app/elasticsearch_curator",
+  "package_name": "elasticsearch_curator",
+  "sample_name": "elasticsearch_curator-test_validators",
+  "src_dir": "curator/",
+  "test_dir": "tests/",
+  "test_file": "tests/unit/test_validators.py",
+  "test_code": "\"\"\"Test filter and schema validators\"\"\"\nfrom unittest import TestCase\nfrom voluptuous import Schema\nfrom es_client.exceptions import FailedValidation\nfrom es_client.helpers.schemacheck import SchemaCheck\nfrom curator.exceptions import ConfigurationError\nfrom curator.validators.filter_functions import validfilters, singlefilter\n\n\ndef shared_result(config, action):\n    \"\"\"Test functions should be able to reuse this\"\"\"\n    return SchemaCheck(\n        config,\n        Schema(validfilters(action)),\n        'filters',\n        'testing'\n    ).result()\n\nclass TestFilters(TestCase):\n    def test_single_raises_configuration_error(self):\n        data = {'max_num_segments': 1, 'exclude': True}\n        self.assertRaises(\n            ConfigurationError,\n            singlefilter,\n            'forcemerge',\n            data\n        )\n\nclass TestFilterTypes(TestCase):\n    def test_alias(self):\n        action = 'delete_indices'\n        config = [\n            {\n                'filtertype' : 'alias',\n                'aliases' : ['alias1', 'alias2'],\n                'exclude' : False,\n            }\n        ]\n        self.assertEqual(config, shared_result(config, action))\n    def test_age(self):\n        action = 'delete_indices'\n        config = [\n            {\n                'filtertype' : 'age',\n                'direction' : 'older',\n                'unit' : 'days',\n                'unit_count' : 1,\n                'source' : 'field_stats',\n                'field'  : '@timestamp',\n            }\n        ]\n        self.assertEqual(config, shared_result(config, action))\n    def test_age_with_string_unit_count(self):\n        action = 'delete_indices'\n        config = [\n            {\n                'filtertype' : 'age',\n                'direction' : 'older',\n                'unit' : 'days',\n                'unit_count' : \"1\",\n                'source' : 'field_stats',\n                'field'  : '@timestamp',\n            }\n        ]\n        result = shared_result(config, action)\n        self.assertEqual(1, result[0]['unit_count'])\n    def test_allocated(self):\n        action = 'delete_indices'\n        config = [\n            {\n                'filtertype' : 'allocated',\n                'key' : 'foo',\n                'value' : 'bar',\n                'allocation_type' : 'require',\n                'exclude' : False,\n            }\n        ]\n        self.assertEqual(config, shared_result(config, action))\n    def test_closed(self):\n        action = 'delete_indices'\n        config = [\n            {\n                'filtertype' : 'closed',\n                'exclude' : False,\n            }\n        ]\n        self.assertEqual(config, shared_result(config, action))\n    def test_count(self):\n        action = 'delete_indices'\n        config = [\n            {\n                'filtertype' : 'count',\n                'count' : 1,\n                'reverse' : True,\n                'exclude' : False,\n            }\n        ]\n        self.assertEqual(config, shared_result(config, action))\n    def test_forcemerged(self):\n        action = 'delete_indices'\n        config = [\n            {\n                'filtertype' : 'forcemerged',\n                'max_num_segments' : 1,\n                'exclude' : False,\n            }\n        ]\n        self.assertEqual(config, shared_result(config, action))\n    def test_kibana(self):\n        action = 'delete_indices'\n        config = [\n            {\n                'filtertype' : 'kibana',\n                'exclude' : False,\n            }\n        ]\n        self.assertEqual(config, shared_result(config, action))\n    def test_opened(self):\n        action = 'delete_indices'\n        config = [\n            {\n                'filtertype' : 'opened',\n                'exclude' : False,\n            }\n        ]\n        self.assertEqual(config, shared_result(config, action))\n    def test_space_name_age(self):\n        action = 'delete_indices'\n        config = [\n            {\n                'filtertype' : 'space',\n                'disk_space' : 1,\n                'use_age' : True,\n                'exclude' : False,\n                'source' : 'name',\n                'timestring' : '%Y.%m.%d',\n            }\n        ]\n        self.assertEqual(config, shared_result(config, action))\n    def test_space_name_age_string_float(self):\n        action = 'delete_indices'\n        config = [\n            {\n                'filtertype' : 'space',\n                'disk_space' : \"1.0\",\n                'use_age' : True,\n                'exclude' : False,\n                'source' : 'name',\n                'timestring' : '%Y.%m.%d',\n            }\n        ]\n        result = shared_result(config, action)\n        self.assertEqual(1.0, result[0]['disk_space'])\n    def test_space_name_age_no_ts(self):\n        action = 'delete_indices'\n        config = [\n            {\n                'filtertype' : 'space',\n                'disk_space' : 1,\n                'use_age' : True,\n                'exclude' : False,\n                'source' : 'name',\n            }\n        ]\n        schema = SchemaCheck(\n            config,\n            Schema(validfilters(action)),\n            'filters',\n            'testing'\n        )\n        self.assertRaises(FailedValidation, schema.result)\n    def test_space_field_stats_age(self):\n        action = 'delete_indices'\n        config = [\n            {\n                'filtertype' : 'space',\n                'disk_space' : 1,\n                'use_age' : True,\n                'exclude' : False,\n                'source' : 'field_stats',\n                'field' : '@timestamp',\n            }\n        ]\n        self.assertEqual(config, shared_result(config, action))\n    def test_space_field_stats_age_no_field(self):\n        action = 'delete_indices'\n        config = [\n            {\n                'filtertype' : 'space',\n                'disk_space' : 1,\n                'use_age' : True,\n                'exclude' : False,\n                'source' : 'field_stats',\n            }\n        ]\n        schema = SchemaCheck(\n            config,\n            Schema(validfilters(action)),\n            'filters',\n            'testing'\n        )\n        self.assertRaises(FailedValidation, schema.result)\n    def test_space_creation_date_age(self):\n        action = 'delete_indices'\n        config = [\n            {\n                'filtertype' : 'space',\n                'disk_space' : 1,\n                'use_age' : True,\n                'exclude' : False,\n                'source' : 'creation_date',\n            }\n        ]\n        self.assertEqual(config, shared_result(config, action))\n    def test_state(self):\n        action = 'delete_snapshots'\n        config = [\n            {\n                'filtertype' : 'state',\n                'state' : 'SUCCESS',\n                'exclude' : False,\n            }\n        ]\n        self.assertEqual(config, shared_result(config, action))\n    def test_shards(self):\n        action = 'shrink'\n        config = [\n            {\n                'filtertype' : 'shards',\n                'number_of_shards' : 5,\n                'shard_filter_behavior': 'greater_than',\n                'exclude' : False,\n            }\n        ]\n        self.assertEqual(config, shared_result(config, action))\n",
+  "GT_file_code": {
+    "curator/exceptions.py": "\"\"\"Curator Exceptions\"\"\"\nclass CuratorException(Exception):\n    \"\"\"\n    Base class for all exceptions raised by Curator which are not Elasticsearch\n    exceptions.\n    \"\"\"\n\nclass ConfigurationError(CuratorException):\n    \"\"\"\n    Exception raised when a misconfiguration is detected\n    \"\"\"\n\nclass MissingArgument(CuratorException):\n    \"\"\"\n    Exception raised when a needed argument is not passed.\n    \"\"\"\n\nclass NoIndices(CuratorException):\n    \"\"\"\n    Exception raised when an operation is attempted against an empty index_list\n    \"\"\"\n\nclass NoSnapshots(CuratorException):\n    \"\"\"\n    Exception raised when an operation is attempted against an empty snapshot_list\n    \"\"\"\n\nclass ActionError(CuratorException):\n    \"\"\"\n    Exception raised when an action (against an index_list or snapshot_list) cannot be taken.\n    \"\"\"\n\nclass FailedExecution(CuratorException):\n    \"\"\"\n    Exception raised when an action fails to execute for some reason.\n    \"\"\"\n\nclass SnapshotInProgress(ActionError):\n    \"\"\"\n    Exception raised when a snapshot is already in progress\n    \"\"\"\n\nclass ActionTimeout(CuratorException):\n    \"\"\"\n    Exception raised when an action fails to complete in the allotted time\n    \"\"\"\n\nclass FailedSnapshot(CuratorException):\n    \"\"\"\n    Exception raised when a snapshot does not complete with state SUCCESS\n    \"\"\"\n\nclass FailedRestore(CuratorException):\n    \"\"\"\n    Exception raised when a Snapshot Restore does not restore all selected indices\n    \"\"\"\n\nclass FailedReindex(CuratorException):\n    \"\"\"\n    Exception raised when failures are found in the reindex task response\n    \"\"\"\n\nclass ClientException(CuratorException):\n    \"\"\"\n    Exception raised when the Elasticsearch client and/or connection is the source of the problem.\n    \"\"\"\n\nclass LoggingException(CuratorException):\n    \"\"\"\n    Exception raised when Curator cannot either log or configure logging\n    \"\"\"\n\nclass RepositoryException(CuratorException):\n    \"\"\"\n    Exception raised when Curator cannot verify a snapshot repository\n    \"\"\"\n\nclass SearchableSnapshotException(CuratorException):\n    \"\"\"\n    Exception raised when Curator finds something out of order with a Searchable Snapshot\n    \"\"\"\n",
+    "curator/validators/filter_functions.py": "\"\"\"Functions validating the ``filter`` Schema of an ``action``\"\"\"\nimport logging\nfrom voluptuous import Any, In, Required, Schema\nfrom es_client.helpers.schemacheck import SchemaCheck\nfrom es_client.helpers.utils import prune_nones\nfrom curator.defaults import settings, filtertypes\nfrom curator.exceptions import ConfigurationError\n\nlogger = logging.getLogger(__name__)\n\ndef filtertype():\n    \"\"\"\n    Return a :py:class:`~.voluptuous.schema_builder.Schema` object that uses\n    :py:func:`~.curator.defaults.settings.all_filtertypes` to populate acceptable values\n\n    :returns: A :py:class:`~.voluptuous.schema_builder.Schema` object\n    \"\"\"\n    return {\n        Required('filtertype'): Any(\n            In(settings.all_filtertypes()),\n            msg=f'filtertype must be one of {settings.all_filtertypes()}'\n        )\n    }\n\ndef filterstructure():\n    \"\"\"\n    Return a :py:class:`~.voluptuous.schema_builder.Schema` object that uses the return value from\n    :py:func:`~.curator.defaults.settings.structural_filter_elements` to populate acceptable values\n    and updates/merges the Schema object with the return value from\n    :py:func:`filtertype`\n\n    :returns: A :py:class:`~.voluptuous.schema_builder.Schema` object\n    \"\"\"\n    # This is to first ensure that only the possible keys/filter elements are\n    # there, and get a dictionary back to work with.\n    retval = settings.structural_filter_elements()\n    retval.update(filtertype())\n    return Schema(retval)\n\ndef singlefilter(action, data):\n    \"\"\"\n    Return a :py:class:`~.voluptuous.schema_builder.Schema` object that is created using the return\n    value from :py:func:`filtertype` to create a local variable ``ftype``. The values from\n    ``action`` and ``data`` are used to update ``ftype`` based on matching function names in\n    :py:mod:`~.curator.defaults.filtertypes`.\n\n    :py:func:`~.curator.defaults.settings.structural_filter_elements` to populate acceptable values\n    and updates/merges the Schema object with the return value from\n    :py:func:`filtertype`\n\n    :param action: The Curator action name\n    :type action: str\n    :param data: The filter block of the action\n\n    :returns: A :py:class:`~.voluptuous.schema_builder.Schema` object\n    \"\"\"\n    try:\n        ftdata = data['filtertype']\n    except KeyError as exc:\n        raise ConfigurationError('Missing key \"filtertype\"') from exc\n    ftype = filtertype()\n    for each in getattr(filtertypes, ftdata)(action, data):\n        ftype.update(each)\n    return Schema(ftype)\n\ndef validfilters(action, location=None):\n    \"\"\"Validate the filters in a list\"\"\"\n    def func(val):\n        \"\"\"This validator method simply validates all filters in the list.\"\"\"\n        for idx, value in enumerate(val):\n            pruned = prune_nones(value)\n            filter_dict = SchemaCheck(\n                pruned,\n                singlefilter(action, pruned),\n                'filter',\n                f'{location}, filter #{idx}: {pruned}'\n            ).result()\n            logger.debug('Filter #%s: %s', idx, filter_dict)\n            val[idx] = filter_dict\n        # If we've made it here without raising an Exception, it's valid\n        return val\n    return func\n"
+  },
+  "GT_src_dict": {
+    "curator/exceptions.py": {},
+    "curator/validators/filter_functions.py": {
+      "singlefilter": {
+        "code": "def singlefilter(action, data):\n    \"\"\"Generate a Voluptuous Schema object for a filter block in a Curator action.\n\nThis function validates and constructs a schema specific to the given action and filter data. It retrieves the 'filtertype' from the provided data and updates the schema based on functions defined in the `filtertypes` module, corresponding to the specified filter type. If 'filtertype' is missing from the data, it raises a ConfigurationError.\n\nParameters:\n- action (str): The name of the Curator action to which the filter belongs.\n- data (dict): The filter block of the action, which must include a key 'filtertype'.\n\nReturns:\n- Schema: A Schema object that defines the structure of the filter block based on the specified filtertype and additional criteria.\n\nDependencies:\n- Requires the `filtertype` function to define initial schema requirements based on allowed filter types.\n- Utilizes the `filtertypes` module for adding constraints specific to the filter type.\n- Raises `ConfigurationError` if the required 'filtertype' key is absent in the `data`.\"\"\"\n    '\\n    Return a :py:class:`~.voluptuous.schema_builder.Schema` object that is created using the return\\n    value from :py:func:`filtertype` to create a local variable ``ftype``. The values from\\n    ``action`` and ``data`` are used to update ``ftype`` based on matching function names in\\n    :py:mod:`~.curator.defaults.filtertypes`.\\n\\n    :py:func:`~.curator.defaults.settings.structural_filter_elements` to populate acceptable values\\n    and updates/merges the Schema object with the return value from\\n    :py:func:`filtertype`\\n\\n    :param action: The Curator action name\\n    :type action: str\\n    :param data: The filter block of the action\\n\\n    :returns: A :py:class:`~.voluptuous.schema_builder.Schema` object\\n    '\n    try:\n        ftdata = data['filtertype']\n    except KeyError as exc:\n        raise ConfigurationError('Missing key \"filtertype\"') from exc\n    ftype = filtertype()\n    for each in getattr(filtertypes, ftdata)(action, data):\n        ftype.update(each)\n    return Schema(ftype)",
+        "docstring": "Generate a Voluptuous Schema object for a filter block in a Curator action.\n\nThis function validates and constructs a schema specific to the given action and filter data. It retrieves the 'filtertype' from the provided data and updates the schema based on functions defined in the `filtertypes` module, corresponding to the specified filter type. If 'filtertype' is missing from the data, it raises a ConfigurationError.\n\nParameters:\n- action (str): The name of the Curator action to which the filter belongs.\n- data (dict): The filter block of the action, which must include a key 'filtertype'.\n\nReturns:\n- Schema: A Schema object that defines the structure of the filter block based on the specified filtertype and additional criteria.\n\nDependencies:\n- Requires the `filtertype` function to define initial schema requirements based on allowed filter types.\n- Utilizes the `filtertypes` module for adding constraints specific to the filter type.\n- Raises `ConfigurationError` if the required 'filtertype' key is absent in the `data`.",
+        "signature": "def singlefilter(action, data):",
+        "type": "Function",
+        "class_signature": null
+      },
+      "validfilters": {
+        "code": "def validfilters(action, location=None):\n    \"\"\"Validate a list of filters for a given action.\n\nThis function returns a validator that checks each filter in the provided list against defined schemas. It utilizes the `singlefilter` function to create schema specifications based on the action name and the current filter data. The `prune_nones` function is used to remove any `None` values from the filter data before validation. \n\nParameters:\n- action (str): The name of the Curator action to validate against.\n- location (str, optional): A descriptive context for where the validation is being applied, used in error messages.\n\nReturns:\n- func: A function that takes a list of filter dictionaries and returns a validated list of those filters.\n\nDependencies:\n- `prune_nones`: A utility function that removes None values from dictionaries.\n- `SchemaCheck`: A helper class that checks filter validity against schemas.\n- `singlefilter`: A function that generates a schema object based on the action and data.\n- `logger`: A logger for debug information during validation.\"\"\"\n    'Validate the filters in a list'\n\n    def func(val):\n        \"\"\"Validate and process a list of filters by pruning `None` values and checking each filter's schema against the expected structure for the given action.\n\n:param val: A list of filter dictionaries to validate.\n:type val: list\n:raises ConfigurationError: If any filter does not conform to the expected schema as defined by `singlefilter` for the given action.\n:returns: A validated list of filters with any `None` values removed and schema-check results applied.\n:rtype: list\n:note: This function utilizes `prune_nones` to remove entries with `None` values and `SchemaCheck` to validate each filter against the schema returned by `singlefilter`. It also logs the validated filter details at the debug level using the `logger` from the standard Python logging library.\"\"\"\n        'This validator method simply validates all filters in the list.'\n        for idx, value in enumerate(val):\n            pruned = prune_nones(value)\n            filter_dict = SchemaCheck(pruned, singlefilter(action, pruned), 'filter', f'{location}, filter #{idx}: {pruned}').result()\n            logger.debug('Filter #%s: %s', idx, filter_dict)\n            val[idx] = filter_dict\n        return val\n    return func",
+        "docstring": "Validate a list of filters for a given action.\n\nThis function returns a validator that checks each filter in the provided list against defined schemas. It utilizes the `singlefilter` function to create schema specifications based on the action name and the current filter data. The `prune_nones` function is used to remove any `None` values from the filter data before validation. \n\nParameters:\n- action (str): The name of the Curator action to validate against.\n- location (str, optional): A descriptive context for where the validation is being applied, used in error messages.\n\nReturns:\n- func: A function that takes a list of filter dictionaries and returns a validated list of those filters.\n\nDependencies:\n- `prune_nones`: A utility function that removes None values from dictionaries.\n- `SchemaCheck`: A helper class that checks filter validity against schemas.\n- `singlefilter`: A function that generates a schema object based on the action and data.\n- `logger`: A logger for debug information during validation.",
+        "signature": "def validfilters(action, location=None):",
+        "type": "Function",
+        "class_signature": null
+      },
+      "func": {
+        "code": "    def func(val):\n        \"\"\"Validate and process a list of filters by pruning `None` values and checking each filter's schema against the expected structure for the given action.\n\n:param val: A list of filter dictionaries to validate.\n:type val: list\n:raises ConfigurationError: If any filter does not conform to the expected schema as defined by `singlefilter` for the given action.\n:returns: A validated list of filters with any `None` values removed and schema-check results applied.\n:rtype: list\n:note: This function utilizes `prune_nones` to remove entries with `None` values and `SchemaCheck` to validate each filter against the schema returned by `singlefilter`. It also logs the validated filter details at the debug level using the `logger` from the standard Python logging library.\"\"\"\n        'This validator method simply validates all filters in the list.'\n        for idx, value in enumerate(val):\n            pruned = prune_nones(value)\n            filter_dict = SchemaCheck(pruned, singlefilter(action, pruned), 'filter', f'{location}, filter #{idx}: {pruned}').result()\n            logger.debug('Filter #%s: %s', idx, filter_dict)\n            val[idx] = filter_dict\n        return val",
+        "docstring": "Validate and process a list of filters by pruning `None` values and checking each filter's schema against the expected structure for the given action.\n\n:param val: A list of filter dictionaries to validate.\n:type val: list\n:raises ConfigurationError: If any filter does not conform to the expected schema as defined by `singlefilter` for the given action.\n:returns: A validated list of filters with any `None` values removed and schema-check results applied.\n:rtype: list\n:note: This function utilizes `prune_nones` to remove entries with `None` values and `SchemaCheck` to validate each filter against the schema returned by `singlefilter`. It also logs the validated filter details at the debug level using the `logger` from the standard Python logging library.",
+        "signature": "def func(val):",
+        "type": "Function",
+        "class_signature": null
+      }
+    }
+  },
+  "dependency_dict": {
+    "curator/validators/filter_functions.py:func": {}
+  },
+  "call_tree": {
+    "tests/unit/test_validators.py:TestFilters:test_single_raises_configuration_error": {
+      "curator/validators/filter_functions.py:singlefilter": {}
+    },
+    "tests/unit/test_validators.py:TestFilterTypes:test_age": {
+      "tests/unit/test_validators.py:shared_result": {
+        "curator/validators/filter_functions.py:validfilters": {},
+        "curator/validators/filter_functions.py:func": {
+          "curator/validators/filter_functions.py:singlefilter": {
+            "curator/validators/filter_functions.py:filtertype": {
+              "curator/defaults/settings.py:all_filtertypes": {
+                "curator/defaults/settings.py:index_filtertypes": {},
+                "curator/defaults/settings.py:snapshot_filtertypes": {}
+              }
+            },
+            "curator/defaults/filtertypes.py:age": {
+              "curator/defaults/filter_elements.py:direction": {},
+              "curator/defaults/filter_elements.py:unit": {},
+              "curator/defaults/filter_elements.py:unit_count": {},
+              "curator/defaults/filter_elements.py:unit_count_pattern": {},
+              "curator/defaults/filter_elements.py:epoch": {},
+              "curator/defaults/filter_elements.py:exclude": {},
+              "curator/defaults/filtertypes.py:_age_elements": {
+                "curator/defaults/filter_elements.py:source": {
+                  "curator/defaults/settings.py:snapshot_actions": {}
+                },
+                "curator/defaults/settings.py:index_actions": {},
+                "curator/defaults/filter_elements.py:stats_result": {},
+                "curator/defaults/filter_elements.py:field": {},
+                "curator/defaults/filter_elements.py:timestring": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "tests/unit/test_validators.py:TestFilterTypes:test_age_with_string_unit_count": {
+      "tests/unit/test_validators.py:shared_result": {
+        "curator/validators/filter_functions.py:validfilters": {},
+        "curator/validators/filter_functions.py:func": {
+          "curator/validators/filter_functions.py:singlefilter": {
+            "curator/validators/filter_functions.py:filtertype": {
+              "curator/defaults/settings.py:all_filtertypes": {
+                "curator/defaults/settings.py:index_filtertypes": {},
+                "curator/defaults/settings.py:snapshot_filtertypes": {}
+              }
+            },
+            "curator/defaults/filtertypes.py:age": {
+              "curator/defaults/filter_elements.py:direction": {},
+              "curator/defaults/filter_elements.py:unit": {},
+              "curator/defaults/filter_elements.py:unit_count": {},
+              "curator/defaults/filter_elements.py:unit_count_pattern": {},
+              "curator/defaults/filter_elements.py:epoch": {},
+              "curator/defaults/filter_elements.py:exclude": {},
+              "curator/defaults/filtertypes.py:_age_elements": {
+                "curator/defaults/filter_elements.py:source": {
+                  "curator/defaults/settings.py:snapshot_actions": {}
+                },
+                "curator/defaults/settings.py:index_actions": {},
+                "curator/defaults/filter_elements.py:stats_result": {},
+                "curator/defaults/filter_elements.py:field": {},
+                "curator/defaults/filter_elements.py:timestring": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "tests/unit/test_validators.py:TestFilterTypes:test_alias": {
+      "tests/unit/test_validators.py:shared_result": {
+        "curator/validators/filter_functions.py:validfilters": {},
+        "curator/validators/filter_functions.py:func": {
+          "curator/validators/filter_functions.py:singlefilter": {
+            "curator/validators/filter_functions.py:filtertype": {
+              "curator/defaults/settings.py:all_filtertypes": {
+                "curator/defaults/settings.py:index_filtertypes": {},
+                "curator/defaults/settings.py:snapshot_filtertypes": {}
+              }
+            },
+            "curator/defaults/filtertypes.py:alias": {
+              "curator/defaults/filter_elements.py:aliases": {},
+              "curator/defaults/filter_elements.py:exclude": {}
+            }
+          }
+        }
+      }
+    },
+    "tests/unit/test_validators.py:TestFilterTypes:test_allocated": {
+      "tests/unit/test_validators.py:shared_result": {
+        "curator/validators/filter_functions.py:validfilters": {},
+        "curator/validators/filter_functions.py:func": {
+          "curator/validators/filter_functions.py:singlefilter": {
+            "curator/validators/filter_functions.py:filtertype": {
+              "curator/defaults/settings.py:all_filtertypes": {
+                "curator/defaults/settings.py:index_filtertypes": {},
+                "curator/defaults/settings.py:snapshot_filtertypes": {}
+              }
+            },
+            "curator/defaults/filtertypes.py:allocated": {
+              "curator/defaults/filter_elements.py:key": {},
+              "curator/defaults/filter_elements.py:value": {},
+              "curator/defaults/filter_elements.py:allocation_type": {},
+              "curator/defaults/filter_elements.py:exclude": {}
+            }
+          }
+        }
+      }
+    },
+    "tests/unit/test_validators.py:TestFilterTypes:test_closed": {
+      "tests/unit/test_validators.py:shared_result": {
+        "curator/validators/filter_functions.py:validfilters": {},
+        "curator/validators/filter_functions.py:func": {
+          "curator/validators/filter_functions.py:singlefilter": {
+            "curator/validators/filter_functions.py:filtertype": {
+              "curator/defaults/settings.py:all_filtertypes": {
+                "curator/defaults/settings.py:index_filtertypes": {},
+                "curator/defaults/settings.py:snapshot_filtertypes": {}
+              }
+            },
+            "curator/defaults/filtertypes.py:closed": {
+              "curator/defaults/filter_elements.py:exclude": {}
+            }
+          }
+        }
+      }
+    },
+    "tests/unit/test_validators.py:TestFilterTypes:test_count": {
+      "tests/unit/test_validators.py:shared_result": {
+        "curator/validators/filter_functions.py:validfilters": {},
+        "curator/validators/filter_functions.py:func": {
+          "curator/validators/filter_functions.py:singlefilter": {
+            "curator/validators/filter_functions.py:filtertype": {
+              "curator/defaults/settings.py:all_filtertypes": {
+                "curator/defaults/settings.py:index_filtertypes": {},
+                "curator/defaults/settings.py:snapshot_filtertypes": {}
+              }
+            },
+            "curator/defaults/filtertypes.py:count": {
+              "curator/defaults/filter_elements.py:count": {},
+              "curator/defaults/filter_elements.py:use_age": {},
+              "curator/defaults/filter_elements.py:pattern": {},
+              "curator/defaults/filter_elements.py:reverse": {},
+              "curator/defaults/filter_elements.py:exclude": {},
+              "curator/defaults/filtertypes.py:_age_elements": {
+                "curator/defaults/filter_elements.py:source": {
+                  "curator/defaults/settings.py:snapshot_actions": {}
+                },
+                "curator/defaults/settings.py:index_actions": {},
+                "curator/defaults/filter_elements.py:stats_result": {},
+                "curator/defaults/filter_elements.py:field": {},
+                "curator/defaults/filter_elements.py:timestring": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "tests/unit/test_validators.py:TestFilterTypes:test_forcemerged": {
+      "tests/unit/test_validators.py:shared_result": {
+        "curator/validators/filter_functions.py:validfilters": {},
+        "curator/validators/filter_functions.py:func": {
+          "curator/validators/filter_functions.py:singlefilter": {
+            "curator/validators/filter_functions.py:filtertype": {
+              "curator/defaults/settings.py:all_filtertypes": {
+                "curator/defaults/settings.py:index_filtertypes": {},
+                "curator/defaults/settings.py:snapshot_filtertypes": {}
+              }
+            },
+            "curator/defaults/filtertypes.py:forcemerged": {
+              "curator/defaults/filter_elements.py:max_num_segments": {},
+              "curator/defaults/filter_elements.py:exclude": {}
+            }
+          }
+        }
+      }
+    },
+    "tests/unit/test_validators.py:TestFilterTypes:test_kibana": {
+      "tests/unit/test_validators.py:shared_result": {
+        "curator/validators/filter_functions.py:validfilters": {},
+        "curator/validators/filter_functions.py:func": {
+          "curator/validators/filter_functions.py:singlefilter": {
+            "curator/validators/filter_functions.py:filtertype": {
+              "curator/defaults/settings.py:all_filtertypes": {
+                "curator/defaults/settings.py:index_filtertypes": {},
+                "curator/defaults/settings.py:snapshot_filtertypes": {}
+              }
+            },
+            "curator/defaults/filtertypes.py:kibana": {
+              "curator/defaults/filter_elements.py:exclude": {}
+            }
+          }
+        }
+      }
+    },
+    "tests/unit/test_validators.py:TestFilterTypes:test_opened": {
+      "tests/unit/test_validators.py:shared_result": {
+        "curator/validators/filter_functions.py:validfilters": {},
+        "curator/validators/filter_functions.py:func": {
+          "curator/validators/filter_functions.py:singlefilter": {
+            "curator/validators/filter_functions.py:filtertype": {
+              "curator/defaults/settings.py:all_filtertypes": {
+                "curator/defaults/settings.py:index_filtertypes": {},
+                "curator/defaults/settings.py:snapshot_filtertypes": {}
+              }
+            },
+            "curator/defaults/filtertypes.py:opened": {
+              "curator/defaults/filter_elements.py:exclude": {}
+            }
+          }
+        }
+      }
+    },
+    "tests/unit/test_validators.py:TestFilterTypes:test_shards": {
+      "tests/unit/test_validators.py:shared_result": {
+        "curator/validators/filter_functions.py:validfilters": {},
+        "curator/validators/filter_functions.py:func": {
+          "curator/validators/filter_functions.py:singlefilter": {
+            "curator/validators/filter_functions.py:filtertype": {
+              "curator/defaults/settings.py:all_filtertypes": {
+                "curator/defaults/settings.py:index_filtertypes": {},
+                "curator/defaults/settings.py:snapshot_filtertypes": {}
+              }
+            },
+            "curator/defaults/filtertypes.py:shards": {
+              "curator/defaults/filter_elements.py:number_of_shards": {},
+              "curator/defaults/filter_elements.py:shard_filter_behavior": {},
+              "curator/defaults/filter_elements.py:exclude": {}
+            }
+          }
+        }
+      }
+    },
+    "tests/unit/test_validators.py:TestFilterTypes:test_space_creation_date_age": {
+      "tests/unit/test_validators.py:shared_result": {
+        "curator/validators/filter_functions.py:validfilters": {},
+        "curator/validators/filter_functions.py:func": {
+          "curator/validators/filter_functions.py:singlefilter": {
+            "curator/validators/filter_functions.py:filtertype": {
+              "curator/defaults/settings.py:all_filtertypes": {
+                "curator/defaults/settings.py:index_filtertypes": {},
+                "curator/defaults/settings.py:snapshot_filtertypes": {}
+              }
+            },
+            "curator/defaults/filtertypes.py:space": {
+              "curator/defaults/filter_elements.py:disk_space": {},
+              "curator/defaults/filter_elements.py:reverse": {},
+              "curator/defaults/filter_elements.py:use_age": {},
+              "curator/defaults/filter_elements.py:exclude": {},
+              "curator/defaults/filter_elements.py:threshold_behavior": {},
+              "curator/defaults/filtertypes.py:_age_elements": {
+                "curator/defaults/filter_elements.py:source": {
+                  "curator/defaults/settings.py:snapshot_actions": {}
+                },
+                "curator/defaults/settings.py:index_actions": {},
+                "curator/defaults/filter_elements.py:stats_result": {},
+                "curator/defaults/filter_elements.py:field": {},
+                "curator/defaults/filter_elements.py:timestring": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "tests/unit/test_validators.py:TestFilterTypes:test_space_field_stats_age": {
+      "tests/unit/test_validators.py:shared_result": {
+        "curator/validators/filter_functions.py:validfilters": {},
+        "curator/validators/filter_functions.py:func": {
+          "curator/validators/filter_functions.py:singlefilter": {
+            "curator/validators/filter_functions.py:filtertype": {
+              "curator/defaults/settings.py:all_filtertypes": {
+                "curator/defaults/settings.py:index_filtertypes": {},
+                "curator/defaults/settings.py:snapshot_filtertypes": {}
+              }
+            },
+            "curator/defaults/filtertypes.py:space": {
+              "curator/defaults/filter_elements.py:disk_space": {},
+              "curator/defaults/filter_elements.py:reverse": {},
+              "curator/defaults/filter_elements.py:use_age": {},
+              "curator/defaults/filter_elements.py:exclude": {},
+              "curator/defaults/filter_elements.py:threshold_behavior": {},
+              "curator/defaults/filtertypes.py:_age_elements": {
+                "curator/defaults/filter_elements.py:source": {
+                  "curator/defaults/settings.py:snapshot_actions": {}
+                },
+                "curator/defaults/settings.py:index_actions": {},
+                "curator/defaults/filter_elements.py:stats_result": {},
+                "curator/defaults/filter_elements.py:field": {},
+                "curator/defaults/filter_elements.py:timestring": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "tests/unit/test_validators.py:TestFilterTypes:test_space_field_stats_age_no_field": {
+      "curator/validators/filter_functions.py:validfilters": {},
+      "curator/validators/filter_functions.py:func": {
+        "curator/validators/filter_functions.py:singlefilter": {
+          "curator/validators/filter_functions.py:filtertype": {
+            "curator/defaults/settings.py:all_filtertypes": {
+              "curator/defaults/settings.py:index_filtertypes": {},
+              "curator/defaults/settings.py:snapshot_filtertypes": {}
+            }
+          },
+          "curator/defaults/filtertypes.py:space": {
+            "curator/defaults/filter_elements.py:disk_space": {},
+            "curator/defaults/filter_elements.py:reverse": {},
+            "curator/defaults/filter_elements.py:use_age": {},
+            "curator/defaults/filter_elements.py:exclude": {},
+            "curator/defaults/filter_elements.py:threshold_behavior": {},
+            "curator/defaults/filtertypes.py:_age_elements": {
+              "curator/defaults/filter_elements.py:source": {
+                "curator/defaults/settings.py:snapshot_actions": {}
+              },
+              "curator/defaults/settings.py:index_actions": {},
+              "curator/defaults/filter_elements.py:stats_result": {},
+              "curator/defaults/filter_elements.py:field": {},
+              "curator/defaults/filter_elements.py:timestring": {}
+            }
+          }
+        }
+      }
+    },
+    "tests/unit/test_validators.py:TestFilterTypes:test_space_name_age": {
+      "tests/unit/test_validators.py:shared_result": {
+        "curator/validators/filter_functions.py:validfilters": {},
+        "curator/validators/filter_functions.py:func": {
+          "curator/validators/filter_functions.py:singlefilter": {
+            "curator/validators/filter_functions.py:filtertype": {
+              "curator/defaults/settings.py:all_filtertypes": {
+                "curator/defaults/settings.py:index_filtertypes": {},
+                "curator/defaults/settings.py:snapshot_filtertypes": {}
+              }
+            },
+            "curator/defaults/filtertypes.py:space": {
+              "curator/defaults/filter_elements.py:disk_space": {},
+              "curator/defaults/filter_elements.py:reverse": {},
+              "curator/defaults/filter_elements.py:use_age": {},
+              "curator/defaults/filter_elements.py:exclude": {},
+              "curator/defaults/filter_elements.py:threshold_behavior": {},
+              "curator/defaults/filtertypes.py:_age_elements": {
+                "curator/defaults/filter_elements.py:source": {
+                  "curator/defaults/settings.py:snapshot_actions": {}
+                },
+                "curator/defaults/settings.py:index_actions": {},
+                "curator/defaults/filter_elements.py:stats_result": {},
+                "curator/defaults/filter_elements.py:timestring": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "tests/unit/test_validators.py:TestFilterTypes:test_space_name_age_no_ts": {
+      "curator/validators/filter_functions.py:validfilters": {},
+      "curator/validators/filter_functions.py:func": {
+        "curator/validators/filter_functions.py:singlefilter": {
+          "curator/validators/filter_functions.py:filtertype": {
+            "curator/defaults/settings.py:all_filtertypes": {
+              "curator/defaults/settings.py:index_filtertypes": {},
+              "curator/defaults/settings.py:snapshot_filtertypes": {}
+            }
+          },
+          "curator/defaults/filtertypes.py:space": {
+            "curator/defaults/filter_elements.py:disk_space": {},
+            "curator/defaults/filter_elements.py:reverse": {},
+            "curator/defaults/filter_elements.py:use_age": {},
+            "curator/defaults/filter_elements.py:exclude": {},
+            "curator/defaults/filter_elements.py:threshold_behavior": {},
+            "curator/defaults/filtertypes.py:_age_elements": {
+              "curator/defaults/filter_elements.py:source": {
+                "curator/defaults/settings.py:snapshot_actions": {}
+              },
+              "curator/defaults/settings.py:index_actions": {},
+              "curator/defaults/filter_elements.py:stats_result": {},
+              "curator/defaults/filter_elements.py:timestring": {}
+            }
+          }
+        }
+      }
+    },
+    "tests/unit/test_validators.py:TestFilterTypes:test_space_name_age_string_float": {
+      "tests/unit/test_validators.py:shared_result": {
+        "curator/validators/filter_functions.py:validfilters": {},
+        "curator/validators/filter_functions.py:func": {
+          "curator/validators/filter_functions.py:singlefilter": {
+            "curator/validators/filter_functions.py:filtertype": {
+              "curator/defaults/settings.py:all_filtertypes": {
+                "curator/defaults/settings.py:index_filtertypes": {},
+                "curator/defaults/settings.py:snapshot_filtertypes": {}
+              }
+            },
+            "curator/defaults/filtertypes.py:space": {
+              "curator/defaults/filter_elements.py:disk_space": {},
+              "curator/defaults/filter_elements.py:reverse": {},
+              "curator/defaults/filter_elements.py:use_age": {},
+              "curator/defaults/filter_elements.py:exclude": {},
+              "curator/defaults/filter_elements.py:threshold_behavior": {},
+              "curator/defaults/filtertypes.py:_age_elements": {
+                "curator/defaults/filter_elements.py:source": {
+                  "curator/defaults/settings.py:snapshot_actions": {}
+                },
+                "curator/defaults/settings.py:index_actions": {},
+                "curator/defaults/filter_elements.py:stats_result": {},
+                "curator/defaults/filter_elements.py:timestring": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "tests/unit/test_validators.py:TestFilterTypes:test_state": {
+      "tests/unit/test_validators.py:shared_result": {
+        "curator/validators/filter_functions.py:validfilters": {},
+        "curator/validators/filter_functions.py:func": {
+          "curator/validators/filter_functions.py:singlefilter": {
+            "curator/validators/filter_functions.py:filtertype": {
+              "curator/defaults/settings.py:all_filtertypes": {
+                "curator/defaults/settings.py:index_filtertypes": {},
+                "curator/defaults/settings.py:snapshot_filtertypes": {}
+              }
+            },
+            "curator/defaults/filtertypes.py:state": {
+              "curator/defaults/filter_elements.py:state": {},
+              "curator/defaults/filter_elements.py:exclude": {}
+            }
+          }
+        }
+      }
+    },
+    "/mnt/sfs_turbo/yaxindu/tmp/elasticsearch_curator-image-test_validators/elasticsearch_curator-test_validators/tests/integration/test_cli.py:TestCLIMethods:test_action_is_none": {
+      "curator/exceptions.py:ConfigurationError:ConfigurationError": {}
+    },
+    "/mnt/sfs_turbo/yaxindu/tmp/elasticsearch_curator-image-test_validators/elasticsearch_curator-test_validators/tests/integration/test_cli.py:TestCLIMethods:test_no_action": {
+      "curator/exceptions.py:ConfigurationError:ConfigurationError": {}
+    },
+    "/mnt/sfs_turbo/yaxindu/tmp/elasticsearch_curator-image-test_validators/elasticsearch_curator-test_validators/tests/integration/test_integrations.py:TestFilters:test_filter_by_alias_bad_aliases": {
+      "curator/exceptions.py:ConfigurationError:ConfigurationError": {}
+    }
+  },
+  "PRD": "# PROJECT NAME: elasticsearch_curator-test_validators\n\n# FOLDER STRUCTURE:\n```\n..\n\u2514\u2500\u2500 curator/\n    \u251c\u2500\u2500 exceptions.py\n    \u2502   \u2514\u2500\u2500 ConfigurationError.ConfigurationError\n    \u2514\u2500\u2500 validators/\n        \u2514\u2500\u2500 filter_functions.py\n            \u251c\u2500\u2500 func\n            \u251c\u2500\u2500 singlefilter\n            \u2514\u2500\u2500 validfilters\n```\n\n# IMPLEMENTATION REQUIREMENTS:\n## MODULE DESCRIPTION:\nThe module is designed to validate and enforce schema compliance for configuration filters used in Elasticsearch index and snapshot management actions. It ensures that user-provided filter definitions, such as those for filtering indices or snapshots based on attributes like age, state, space, or alias, conform to the expected schema and adhere to valid parameters for specific actions. By performing robust validation and handling edge cases, the module facilitates the creation of error-free filter configurations, reducing the risk of misconfigurations that could lead to unintended operational behavior. This capability streamlines the development and deployment process for users and developers working with index management tools, ensuring reliability and correctness in defining filters for various use cases.\n\n## FILE 1: curator/exceptions.py\n\n## FILE 2: curator/validators/filter_functions.py\n\n- FUNCTION NAME: singlefilter\n  - SIGNATURE: def singlefilter(action, data):\n  - DOCSTRING: \n```python\n\"\"\"\nGenerate a Voluptuous Schema object for a filter block in a Curator action.\n\nThis function validates and constructs a schema specific to the given action and filter data. It retrieves the 'filtertype' from the provided data and updates the schema based on functions defined in the `filtertypes` module, corresponding to the specified filter type. If 'filtertype' is missing from the data, it raises a ConfigurationError.\n\nParameters:\n- action (str): The name of the Curator action to which the filter belongs.\n- data (dict): The filter block of the action, which must include a key 'filtertype'.\n\nReturns:\n- Schema: A Schema object that defines the structure of the filter block based on the specified filtertype and additional criteria.\n\nDependencies:\n- Requires the `filtertype` function to define initial schema requirements based on allowed filter types.\n- Utilizes the `filtertypes` module for adding constraints specific to the filter type.\n- Raises `ConfigurationError` if the required 'filtertype' key is absent in the `data`.\n\"\"\"\n```\n\n- FUNCTION NAME: validfilters\n  - SIGNATURE: def validfilters(action, location=None):\n  - DOCSTRING: \n```python\n\"\"\"\nValidate a list of filters for a given action.\n\nThis function returns a validator that checks each filter in the provided list against defined schemas. It utilizes the `singlefilter` function to create schema specifications based on the action name and the current filter data. The `prune_nones` function is used to remove any `None` values from the filter data before validation. \n\nParameters:\n- action (str): The name of the Curator action to validate against.\n- location (str, optional): A descriptive context for where the validation is being applied, used in error messages.\n\nReturns:\n- func: A function that takes a list of filter dictionaries and returns a validated list of those filters.\n\nDependencies:\n- `prune_nones`: A utility function that removes None values from dictionaries.\n- `SchemaCheck`: A helper class that checks filter validity against schemas.\n- `singlefilter`: A function that generates a schema object based on the action and data.\n- `logger`: A logger for debug information during validation.\n\"\"\"\n```\n\n- FUNCTION NAME: func\n  - SIGNATURE: def func(val):\n  - DOCSTRING: \n```python\n\"\"\"\nValidate and process a list of filters by pruning `None` values and checking each filter's schema against the expected structure for the given action.\n\n:param val: A list of filter dictionaries to validate.\n:type val: list\n:raises ConfigurationError: If any filter does not conform to the expected schema as defined by `singlefilter` for the given action.\n:returns: A validated list of filters with any `None` values removed and schema-check results applied.\n:rtype: list\n:note: This function utilizes `prune_nones` to remove entries with `None` values and `SchemaCheck` to validate each filter against the schema returned by `singlefilter`. It also logs the validated filter details at the debug level using the `logger` from the standard Python logging library.\n\"\"\"\n```\n  - DEPENDENCIES:\n    - curator/validators/filter_functions.py:singlefilter\n\n# TASK DESCRIPTION:\nIn this project, you need to implement the functions and methods listed above. The functions have been removed from the code but their docstrings remain.\nYour task is to:\n1. Read and understand the docstrings of each function/method\n2. Understand the dependencies and how they interact with the target functions\n3. Implement the functions/methods according to their docstrings and signatures\n4. Ensure your implementations work correctly with the rest of the codebase\n",
+  "file_code": {
+    "curator/exceptions.py": "\"\"\"Curator Exceptions\"\"\"\n\nclass CuratorException(Exception):\n    \"\"\"\n    Base class for all exceptions raised by Curator which are not Elasticsearch\n    exceptions.\n    \"\"\"\n\nclass ConfigurationError(CuratorException):\n    \"\"\"\n    Exception raised when a misconfiguration is detected\n    \"\"\"\n\nclass MissingArgument(CuratorException):\n    \"\"\"\n    Exception raised when a needed argument is not passed.\n    \"\"\"\n\nclass NoIndices(CuratorException):\n    \"\"\"\n    Exception raised when an operation is attempted against an empty index_list\n    \"\"\"\n\nclass NoSnapshots(CuratorException):\n    \"\"\"\n    Exception raised when an operation is attempted against an empty snapshot_list\n    \"\"\"\n\nclass ActionError(CuratorException):\n    \"\"\"\n    Exception raised when an action (against an index_list or snapshot_list) cannot be taken.\n    \"\"\"\n\nclass FailedExecution(CuratorException):\n    \"\"\"\n    Exception raised when an action fails to execute for some reason.\n    \"\"\"\n\nclass SnapshotInProgress(ActionError):\n    \"\"\"\n    Exception raised when a snapshot is already in progress\n    \"\"\"\n\nclass ActionTimeout(CuratorException):\n    \"\"\"\n    Exception raised when an action fails to complete in the allotted time\n    \"\"\"\n\nclass FailedSnapshot(CuratorException):\n    \"\"\"\n    Exception raised when a snapshot does not complete with state SUCCESS\n    \"\"\"\n\nclass FailedRestore(CuratorException):\n    \"\"\"\n    Exception raised when a Snapshot Restore does not restore all selected indices\n    \"\"\"\n\nclass FailedReindex(CuratorException):\n    \"\"\"\n    Exception raised when failures are found in the reindex task response\n    \"\"\"\n\nclass ClientException(CuratorException):\n    \"\"\"\n    Exception raised when the Elasticsearch client and/or connection is the source of the problem.\n    \"\"\"\n\nclass LoggingException(CuratorException):\n    \"\"\"\n    Exception raised when Curator cannot either log or configure logging\n    \"\"\"\n\nclass RepositoryException(CuratorException):\n    \"\"\"\n    Exception raised when Curator cannot verify a snapshot repository\n    \"\"\"\n\nclass SearchableSnapshotException(CuratorException):\n    \"\"\"\n    Exception raised when Curator finds something out of order with a Searchable Snapshot\n    \"\"\"",
+    "curator/validators/filter_functions.py": "\"\"\"Functions validating the ``filter`` Schema of an ``action``\"\"\"\nimport logging\nfrom voluptuous import Any, In, Required, Schema\nfrom es_client.helpers.schemacheck import SchemaCheck\nfrom es_client.helpers.utils import prune_nones\nfrom curator.defaults import settings, filtertypes\nfrom curator.exceptions import ConfigurationError\nlogger = logging.getLogger(__name__)\n\ndef filtertype():\n    \"\"\"\n    Return a :py:class:`~.voluptuous.schema_builder.Schema` object that uses\n    :py:func:`~.curator.defaults.settings.all_filtertypes` to populate acceptable values\n\n    :returns: A :py:class:`~.voluptuous.schema_builder.Schema` object\n    \"\"\"\n    return {Required('filtertype'): Any(In(settings.all_filtertypes()), msg=f'filtertype must be one of {settings.all_filtertypes()}')}\n\ndef filterstructure():\n    \"\"\"\n    Return a :py:class:`~.voluptuous.schema_builder.Schema` object that uses the return value from\n    :py:func:`~.curator.defaults.settings.structural_filter_elements` to populate acceptable values\n    and updates/merges the Schema object with the return value from\n    :py:func:`filtertype`\n\n    :returns: A :py:class:`~.voluptuous.schema_builder.Schema` object\n    \"\"\"\n    retval = settings.structural_filter_elements()\n    retval.update(filtertype())\n    return Schema(retval)"
+  }
+}
