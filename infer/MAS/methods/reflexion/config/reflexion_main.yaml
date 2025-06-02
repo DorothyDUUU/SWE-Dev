@@ -1,4 +1,0 @@
-# ReflexionGeneral配置文件
-max_iters: 4    # 最大反思迭代次数
-verbose: true   # 是否启用详细输出
-task_type: "general"  # 任务类型

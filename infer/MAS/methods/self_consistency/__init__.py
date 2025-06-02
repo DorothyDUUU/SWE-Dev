@@ -1,2 +1,0 @@
-from .self_consistency_main import SelfConsistency
-from .self_consistency_package import SelfConsistency_package

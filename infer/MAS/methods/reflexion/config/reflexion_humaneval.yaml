@@ -1,5 +1,0 @@
-# ReflexionHumanEval配置文件
-language: "py"  # 编程语言，目前支持py
-max_iters: 2    # 最大反思迭代次数
-verbose: true   # 是否启用详细输出
-dataset: "mbpp"  # 支持的数据集类型: "humaneval" 或 "mbpp"
