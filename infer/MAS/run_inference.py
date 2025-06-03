@@ -48,6 +48,7 @@ parser.add_argument("--max_workers", type=int, default=50,
                    help="Maximum parallel threads for metadata processing")
 parser.add_argument("--method_config_name", type=str, default=None,
                    help="Configuration preset for the selected method")
+
 parser.add_argument("--model_name", type=str, default="gpt-4o-mini",
                    help="Target LLM for code generation")
 parser.add_argument("--model_api_config", type=str, default="model_api_configs/model_api_config.json",
@@ -156,13 +157,11 @@ def process_sample(general_config, sample, output_file, lock):
     metadata_name = os.path.splitext(os.path.basename(general_config['metadata_path']))[0]
     # Dynamic method class instantiation
     MAS_METHOD = get_method_class(general_config['method_name'], metadata_name)
-    
     # Initialize method class with appropriate configuration
     if general_config['method_config_name'] is not None:
         mas = MAS_METHOD(general_config, method_config_name=general_config['method_config_name'])
     else:
         mas = MAS_METHOD(general_config)
-    
     save_data = sample.copy()  # Initialize result container
     query = sample["query"]
     metadata_file = sample['file_code']
@@ -175,6 +174,7 @@ def process_sample(general_config, sample, output_file, lock):
         # Execute inference with output suppression control
         with SuppressPrints(suppress=not general_config['show_method_prints']):
             response = mas.inference(query=query, file_code=metadata_file)
+            
         save_data["generated_output"] = {filename: code for filename, code in response.items()}
     except Exception as e:
         # Capture full error trace for diagnostics
@@ -204,16 +204,15 @@ def run_inference(metadata_file):
         'output_path': tmp_result_dir,
         'show_method_prints': args.show_method_prints
     }
-    
+
     # Load and preprocess dataset
     test_dataset = load_sample_from_metadata(metadata_file)
     metadata_name = os.path.splitext(os.path.basename(metadata_file))[0]
     output_file = os.path.join(tmp_result_dir, f"{metadata_name}_results.jsonl")
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
-    
+
     # Filter processed samples
     test_dataset = reserve_unprocessed(output_file, test_dataset)
-    
     # Optional validation setup
     if args.require_val:
         MAS_METHOD = get_method_class(args.method, metadata_name)
@@ -221,7 +220,6 @@ def run_inference(metadata_file):
             mas = MAS_METHOD(general_config, method_config_name=args.method_config_name)
         else:
             mas = MAS_METHOD(general_config)
-    
     # Process remaining samples
     if test_dataset:
         # Determine optimal concurrency from API config
@@ -232,12 +230,11 @@ def run_inference(metadata_file):
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
             # Map samples to processing function
             executor.map(lambda sample: process_sample(general_config, sample, output_file, lock), test_dataset)
-    
+
     # Organize final outputs
     folder_name = os.path.basename(args.metadata_folder)
     output_dir = f"{args.method}_result_{folder_name}"  # Structured output directory
     os.makedirs(output_dir, exist_ok=True)
-    
     # Copy original metadata to results directory
     copied_metadata_path = os.path.join(output_dir, os.path.basename(metadata_file))
     shutil.copy(metadata_file, copied_metadata_path)
@@ -260,7 +257,6 @@ def run_inference(metadata_file):
 if __name__ == "__main__":
     # Discover all metadata files in target directory
     metadata_files = glob.glob(os.path.join(args.metadata_folder, "*.json"))
-    
     # Progress-tracked parallel processing
     with tqdm(total=len(metadata_files), desc="Processing metadata files") as pbar:
         with concurrent.futures.ThreadPoolExecutor(max_workers=args.max_workers) as executor:
