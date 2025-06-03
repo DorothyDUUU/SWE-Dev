@@ -44,7 +44,6 @@ The provided file_code is in the format: {{file_path1: code1, file_path2: code2,
 
 
         prompt = prompt + "\n\nLet's think step by step."
-        
         response = self.call_llm(prompt=prompt)
         response = self.extract_and_format_final_answer(response)
         print(f"[DEBUG] CoT response: {response}")

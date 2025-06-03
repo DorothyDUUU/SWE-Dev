@@ -4,7 +4,7 @@ import re
 from ..mas_base import MAS
 from ..utils import load_config
 from .mad_utils import Agent
-from .mad_prompt import *
+from .package_prompt import *
 
 NAME_LIST = [
     "Affirmative side",
@@ -12,7 +12,7 @@ NAME_LIST = [
     "Moderator",
 ]
 
-class MAD(MAS):
+class MAD_Package(MAS):
     def __init__(self, general_config, method_config_name="config"):
         super().__init__(general_config)
         self.method_config = load_config(os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs", f"{method_config_name}.yaml"))

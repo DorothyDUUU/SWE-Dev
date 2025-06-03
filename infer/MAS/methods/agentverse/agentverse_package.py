@@ -7,7 +7,7 @@ from ..utils import load_config
 from .prompt_package import *
 
 # Define the NEWMAS class which inherits from MAS and implements the inference method
-class Agentverse_Package1(MAS):
+class Agentverse_Package(MAS):
     def __init__(self, general_config, method_config_name = "config_main"):
         super().__init__(general_config)
         self.method_config = load_config(os.path.join(os.path.dirname(os.path.abspath(__file__)), "config", f"{method_config_name}.yaml"))

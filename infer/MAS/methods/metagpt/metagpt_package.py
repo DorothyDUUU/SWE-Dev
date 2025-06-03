@@ -6,7 +6,7 @@ from pathlib import Path
 
 from ..mas_base import MAS
 from ..utils import load_config
-from .prompt import *
+from .package_prompt import *
 
 class MetaGPT_Package(MAS):
     def __init__(self, general_config, method_config_name="config"):
@@ -23,6 +23,7 @@ class MetaGPT_Package(MAS):
         # Initialize the directory structure
         tasks = self._process_stage(query, file_code,TASKS_TEMPLATE, 'tasks.json', "tasks generated")
         # Code Generation and Review Stage
+
         code=self._process_code(query, tasks,file_code)
         return code
     
@@ -75,11 +76,10 @@ class MetaGPT_Package(MAS):
         if match := re.search(r'\[CONTENT\](.*?)\[/CONTENT\]', response, re.DOTALL):
             return match.group(1).strip()
     
-    def _generate_code(self, design,  filename, code_context, lang=""):
+    def _generate_code(self, design, filename, code_context, lang=""):
         # Generate new code based on current design documents, task descriptions, and existing code contexts
         prompt = CODE_TEMPLATE.format(
             design=design,
-            # task=task,
             filename=filename,
             code_context=code_context
         )

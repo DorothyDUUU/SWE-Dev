@@ -78,6 +78,7 @@ class MetaGPT(MAS):
     
     def _generate_code(self, design, task, filename, code_context, lang=""):
         # Generate new code based on current design documents, task descriptions, and existing code contexts
+        breakpoint()
         prompt = CODE_TEMPLATE.format(
             design=design,
             task=task,
