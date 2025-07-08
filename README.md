@@ -7,6 +7,7 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
 [![Kaggle](https://img.shields.io/badge/Kaggle-dataset-blue.svg)](https://www.kaggle.com/datasets/dorothydu/fdd-bench)
 [![DockerHub](https://img.shields.io/badge/DockerHub-repository-blue.svg)](https://hub.docker.com/repository/docker/dorothyduuu/swe-dev/general)
+[![HuggingFace](https://img.shields.io/badge/HuggingFace-Dataset-blue?logo=huggingface)](https://huggingface.co/datasets/Dorothydu/SWE-Dev)
 
 > 🎯 **SWE‑Dev** is the **first large‑scale benchmark and training corpus** for **feature‑driven development (FDD)** — the real‑world task of adding new functionality to existing codebases.
 > It ships **14 000 training** and **500 test** tasks, each with a **runnable environment** and **developer‑written unit tests**, enabling both *supervised fine‑tuning* and *reinforcement learning from executable rewards*.
@@ -74,6 +75,10 @@ Train docker: (Need at least 100GB storage space for docker image)
 ```bash
 python download_docker.py --split train
 ```
+**Docker Image for each sample:**
+The docker image for each sample is the `f"{package_name}-image"`, `package_name` is the value of `package_name` in sample metadata.
+
+For instance, the image name for `data/test/advertools-test_ad_create-level1-metadata.json`, which `package_name` is `advertools`, the docker image for this sample is `advertools-image`.
 
 **Build evaluation API:**
 For further usage for RL training, we wrapped the docker test in an API server, which could conviniently build in latter use.
