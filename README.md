@@ -5,9 +5,8 @@
 [![project](https://img.shields.io/badge/project-Page-blue)](https://dorothyduuu.github.io/SWE-Dev/)
 [![arXiv](https://img.shields.io/badge/arXiv-2505.16975-b31b1b.svg)](https://arxiv.org/abs/2505.16975)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
-[![Kaggle](https://img.shields.io/badge/Kaggle-dataset-blue.svg)](https://www.kaggle.com/datasets/dorothydu/fdd-bench)
 [![DockerHub](https://img.shields.io/badge/DockerHub-repository-blue.svg)](https://hub.docker.com/repository/docker/dorothyduuu/swe-dev/general)
-[![HuggingFace](https://img.shields.io/badge/HuggingFace-Dataset-blue?logo=huggingface)](https://huggingface.co/datasets/Dorothydu/SWE-Dev)
+
 
 > 🎯 **SWE‑Dev** is the **first large‑scale benchmark and training corpus** for **feature‑driven development (FDD)** — the real‑world task of adding new functionality to existing codebases.
 > It ships **14 000 training** and **500 test** tasks, each with a **runnable environment** and **developer‑written unit tests**, enabling both *supervised fine‑tuning* and *reinforcement learning from executable rewards*.
