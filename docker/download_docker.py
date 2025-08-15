@@ -28,7 +28,7 @@ if __name__ == "__main__":
     split = args.split
     pkg_ls = docker_map[split]
     for pkg in pkg_ls:
-        image_name = f"dorothyduuu/swe-dev:{pkg}"
+        image_name = f"dorothyduuu/swe-dev:{pkg}-image"
         print(f"Checking {image_name} ...")
         ret = os.system(f"docker manifest inspect {image_name} > /dev/null 2>&1")
         if ret == 0:
