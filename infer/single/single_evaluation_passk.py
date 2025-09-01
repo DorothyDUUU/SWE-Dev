@@ -373,8 +373,8 @@ if __name__ == "__main__":
     parser.add_argument("--num_workers", type=int)
     args = parser.parse_args()
 
-    metadata_dir = f"path/generation"
-    target_dir = f'path/evaluation'
+    metadata_dir = f"path/generation" # you should replace this with the path to the generation results
+    target_dir = f'path/evaluation' # you should replace this with the path to the evaluation results
 
     metadata_ls = [sample for sample in os.listdir(metadata_dir) if sample.startswith(f'{args.save_name}_{args.model_name}_{args.level}')]
     for metadata_path in metadata_ls:

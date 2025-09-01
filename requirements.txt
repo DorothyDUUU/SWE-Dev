@@ -3,3 +3,4 @@ tiktoken==0.9.0
 tokenizers==0.21.1
 litellm==1.63.4.dev1
 tenacity==9.0.0
+datasets==4.0.0

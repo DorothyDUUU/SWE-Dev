@@ -187,7 +187,7 @@ def evaluator(metadata_path: str):
     }
 
     # Save results
-    target_dir = '/mnt/sfs_turbo/yaxindu/MAC/data/app_eval_self_refine_hard'
+    target_dir = 'target_path' # you should replace this with the path to the evaluation results
     next_idx = get_next_metadata_index(target_dir)
     output_path = os.path.join(target_dir, f'metadata_{next_idx}_adjusted.json')
     
