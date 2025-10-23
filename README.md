@@ -134,6 +134,8 @@ We also integrate 10 Multi-Agent Systems inference in the [MASLab](https://githu
 ---
 
 ## 📢 News
+[20250908] 🎉 Our benchmark is used by Kimi-K2 [titter](https://x.com/Kimi_Moonshot/status/1963802687230947698).!
+
 [20250601] 🎉 Release the inference script and docker images for both test split and train split!
 
 [20250522] 📄 Release the preprint version! See the [preprint](https://www.arxiv.org/pdf/2505.16975).
