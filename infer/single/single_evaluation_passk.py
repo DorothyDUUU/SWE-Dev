@@ -149,7 +149,7 @@ def run_tests_in_docker(metadata: Dict, file_code_key: str = "GT_file_code") -> 
 
     try:
         result = subprocess.run(
-            ['docker', 'run', '--rm', '-i', f'{package_name}-image', 'sh', '-s'],
+            ['docker', 'run', '--rm', '-i', f'dorothyduuu/swe-dev:{package_name}-image', 'sh', '-s'],
             input=script_content,
             capture_output=True,
             text=True,
@@ -180,11 +180,11 @@ def evaluator(metadata_path: str, target_dir: str):
     
     # 修改部分
     for key in metadata['GT_file_code'].keys():
-        if key not in metadata['GPT4o_file_code'].keys():
-            metadata['GPT4o_file_code'][key] = metadata['file_code'][key]
+        if key not in metadata['Generate_code'].keys():
+            metadata['Generate_code'][key] = metadata['file_code'][key]
         
     # Then run with generated_file_code
-    gen_results = run_tests_in_docker(metadata, "GPT4o_file_code") #根据生成代码的键进行相应修改
+    gen_results = run_tests_in_docker(metadata, "Generate_code") #根据生成代码的键进行相应修改
 
     for key in gen_results['detailed_dict'].keys():
         if key not in gt_results['detailed_dict'].keys():
