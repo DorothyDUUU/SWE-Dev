@@ -33,6 +33,8 @@ if __name__ == "__main__":
         ret = os.system(f"docker manifest inspect {image_name} > /dev/null 2>&1")
         if ret == 0:
             print(f"✅ {image_name} exists and can be pulled.")
+            print(f"Pulling {image_name} ...")
+            os.system(f"docker pull {image_name}")
         else:
             print(f"❌ {image_name} does NOT exist or cannot be pulled.")
 
